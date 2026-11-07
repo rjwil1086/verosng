@@ -1,0 +1,34 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "commit": "d8d10cb194cbff04725486582faa26ce86321faf",
+  "question": "Which missing Vista exports and loader gaps stop 32-bit notepad++, 7-Zip, git, and Python from starting on the live CD?",
+  "allowedInputs": [
+    "User reports and screenshots of the ReactOS missing-entry-point dialogs while those programs were launched",
+    "Serial logs under output/ntdll-apps, gitignored: notepadpp-boot8.log, 7zip-boot.log, git-boot2.log, python-boot2.log",
+    "ReactOS spec files and loader already in this tree",
+    "Public export names shown by those dialogs"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "ReactOS i386 live CD under QEMU TCG",
+    "name": "ntdll-apps",
+    "traceOrReplayId": "output/ntdll-apps/notepadpp-boot8.log, 7zip-boot.log, git-boot2.log, python-boot2.log"
+  },
+  "cursor": {
+    "prompt": "Milestone 3: make 32-bit notepad++, 7-Zip, git, and Python launch. Clear the missing-export dialogs the user hit on the live CD until those four start.",
+    "model": "unrecorded",
+    "date": "2026-11-07",
+    "session": "95c01aaf-c94a-4823-b9f5-eea78707d578"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "cataloged working launches of 32-bit notepad++, 7-Zip, git, and Python",
+    "before": 0,
+    "after": 4,
+    "note": "The dashboard snapshot was not rebuilt in this commit, so its overall percent stayed 22.1. The user confirmed notepad++ with no pop-up, 7zFM, git --version 2.48.1.windows.1, and python -c \"print(1)\"."
+  }
+}
