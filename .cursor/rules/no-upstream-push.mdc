@@ -1,0 +1,15 @@
+---
+description: Do not push this fork to the official ReactOS repository
+alwaysApply: true
+---
+
+# No upstream push
+
+`upstream` is `https://github.com/reactos/reactos.git`. Do not push commits, tags, or branches there. Do not open a pull request against that repository.
+
+`origin` is this fork, `https://github.com/rjwil1086/reactos.git`. Pushing to `origin` is allowed when the user asks for it.
+
+```text
+Wrong: git push upstream HEAD
+Right: git push origin HEAD
+```
