@@ -1,5 +1,8 @@
 compile_commands.json
 output-*
+/build/
+/output/
+tools/qemu-harness/abi.dll
 modules/optional
 modules/bootcd_extras
 modules/livecd_extras

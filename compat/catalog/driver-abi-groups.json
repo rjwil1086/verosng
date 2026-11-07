@@ -1,0 +1,46 @@
+{
+    "IRP": [
+        "IoCallDriver",
+        "IoCompleteRequest",
+        "IoAllocateIrp",
+        "IoFreeIrp",
+        "IoBuildDeviceIoControlRequest",
+        "IoBuildSynchronousFsdRequest",
+        "IofCallDriver",
+        "IofCompleteRequest",
+        "IoAllocateMdl",
+        "IoFreeMdl"
+    ],
+    "PnP": [
+        "IoReportDetectedDevice",
+        "IoInvalidateDeviceRelations",
+        "IoInvalidateDeviceState",
+        "IoRegisterDeviceInterface",
+        "IoSetDeviceInterfaceState",
+        "IoGetDeviceProperty",
+        "IoAttachDeviceToDeviceStack",
+        "IoDetachDevice"
+    ],
+    "Power": [
+        "PoCallDriver",
+        "PoStartNextPowerIrp",
+        "PoRequestPowerIrp"
+    ],
+    "DMA": [
+        "HalAllocateAdapterChannel",
+        "HalGetAdapter",
+        "HalTranslateBusAddress",
+        "HalGetInterruptVector",
+        "IoAllocateAdapterChannel",
+        "IoMapTransfer",
+        "MmAllocateContiguousMemory",
+        "MmFreeContiguousMemory",
+        "KeFlushIoBuffers"
+    ],
+    "KMDF": [
+        "WdfVersionBind",
+        "WdfVersionUnbind",
+        "WdfLdrQueryInterface",
+        "WdfRegisterLibrary"
+    ]
+}

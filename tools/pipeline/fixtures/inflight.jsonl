@@ -1,0 +1,1 @@
+{"kind":"export","phase":"enter","symbol":"ntoskrnl.exe!IoCallDriver","insn":"call","pc":"0x1000","eax":"0x0","edx":"0x0","result":"seen"}

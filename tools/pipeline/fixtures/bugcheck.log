@@ -1,0 +1,7 @@
+(ntoskrnl/kd/kdio.c:107) ReactOS 0.4.17-dev (Build fixture)
+*** Fatal System Error: 0x0000001E
+                       (0xC0000005,0x00000000,0x00000000,0x00000000)
+Entered debugger on embedded INT3
+kdb:> bt
+<NTOSKRNL.EXE:1 (ntoskrnl/ke/bug.c:100 (KeBugCheckWithTf))>
+Assertion 'Irp->Type == IO_TYPE_IRP' failed at ntoskrnl/io/iomgr/irp.c:10

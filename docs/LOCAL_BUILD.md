@@ -1,0 +1,31 @@
+# Local build
+
+This fork is built and booted on Windows. The first configuration is GCC, i386, Debug, target `bootcd`.
+
+## Tools
+
+- ReactOS Build Environment 2.2.1. The silent installer returned exit code 2, so the same files were extracted to `D:\RosBE`. The scripts also look for `C:\RosBE`. `rosbe-gcc-env.cmd` is the toolchain entry point.
+- QEMU 11.1.0 at `C:\Program Files\qemu\qemu-system-i386.exe`. It is not on `PATH`. `qemu-system-i386 -accel help` lists only `tcg`, so boot tests pass `-accel tcg` and record `accelerator=tcg`. Do not pass `-accel whpx` to this binary.
+
+If a real boot never prints the ReactOS version banner within 20 minutes, switch to a QEMU build that includes WHPX. `WinHvPlatform.dll` is already on this machine.
+
+## Commands
+
+From the source root:
+
+```powershell
+.\tools\qemu-harness\Test-Plugin.ps1
+.\tools\pipeline\Build-Bootcd.ps1
+.\tools\pipeline\Test-Boot.ps1
+.\tools\pipeline\Invoke-Pipeline.ps1
+```
+
+`Build-Bootcd.ps1` configures an out-of-tree `build/` directory and builds `bootcd` with Ninja at `-j 8`. It sets `BISON_PKGDATADIR` and `M4` before the toolchain script, because the extracted RosBE bison otherwise looks for data under its original build path. A parallel MinGW link can fail with `Cannot open output file: Invalid argument`, and `pefixup` can fail with `Can't open` when the image is still being written. The script retries the build up to 8 times, and Ninja resumes at the failed target. `Test-Boot.ps1` boots that ISO for 20 minutes, writes a serial log, and loads `tools/qemu-harness/abi.dll` when the DLL is present. `Invoke-Pipeline.ps1` builds, boots, writes a crash report, and refreshes `dashboard/data/snapshot.json`.
+
+`build/` and `output/` are gitignored. Open `dashboard/index.html` after a snapshot refresh. The page reads `dashboard/data/snapshot.js`, so it works from the filesystem.
+
+## Harness
+
+`abi.dll` logs `SYSENTER`, `SYSCALL`, and `INT 2E`, plus `CALL`/`JMP` targets listed in a map file (`module!Export 0xaddress`). A single instruction that fault-loops is written at most four times so a triple fault cannot fill the disk. Pass the map with `Test-Boot.ps1 -Map path`. Export addresses come from the ReactOS build map for that ISO. The plugin does not contain Windows source.
+
+`Test-Plugin.ps1` builds the DLL and runs a 512-byte guest that executes `INT 2E`, `SYSENTER`, and a `CALL` to `ntoskrnl.exe!IoCallDriver`. It does not need a ReactOS ISO.

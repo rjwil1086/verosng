@@ -1,0 +1,32 @@
+[
+    {
+        "name": "cmd",
+        "status": "untested",
+        "evidence": "in-box base/shell/cmd",
+        "notes": "Untested until a boot log shows it."
+    },
+    {
+        "name": "notepad",
+        "status": "untested",
+        "evidence": "in-box base/applications/notepad",
+        "notes": "Untested until a boot log shows it."
+    },
+    {
+        "name": "explorer",
+        "status": "untested",
+        "evidence": "in-box base/shell/explorer",
+        "notes": "Untested until a boot log shows it."
+    },
+    {
+        "name": "7-Zip",
+        "status": "untested",
+        "evidence": "not in tree",
+        "notes": "Third-party application. No run recorded."
+    },
+    {
+        "name": "Firefox",
+        "status": "untested",
+        "evidence": "not in tree",
+        "notes": "Third-party application. No run recorded."
+    }
+]

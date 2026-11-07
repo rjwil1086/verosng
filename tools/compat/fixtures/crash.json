@@ -1,0 +1,1 @@
+{"kind":"bugcheck","inFlightCall":{"symbol":"ntoskrnl.exe!KeWaitForSingleObject"}}

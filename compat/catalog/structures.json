@@ -1,0 +1,38 @@
+[
+    {
+        "name": "IRP",
+        "status": "untested",
+        "evidence": "public structure name only",
+        "notes": "Offset check stays untested until WDK headers are available locally. The catalog stores offsets, not header text."
+    },
+    {
+        "name": "DEVICE_OBJECT",
+        "status": "untested",
+        "evidence": "public structure name only",
+        "notes": "Offset check stays untested until WDK headers are available locally."
+    },
+    {
+        "name": "DRIVER_OBJECT",
+        "status": "untested",
+        "evidence": "public structure name only",
+        "notes": "Offset check stays untested until WDK headers are available locally."
+    },
+    {
+        "name": "IO_STACK_LOCATION",
+        "status": "untested",
+        "evidence": "public structure name only",
+        "notes": "Offset check stays untested until WDK headers are available locally."
+    },
+    {
+        "name": "FILE_OBJECT",
+        "status": "untested",
+        "evidence": "public structure name only",
+        "notes": "Offset check stays untested until WDK headers are available locally."
+    },
+    {
+        "name": "UMDF",
+        "status": "missing",
+        "evidence": "no UMDF framework in tree",
+        "notes": "User-mode driver framework is not present."
+    }
+]

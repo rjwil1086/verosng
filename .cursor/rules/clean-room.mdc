@@ -1,0 +1,21 @@
+---
+description: Clean-room Windows compatibility work
+alwaysApply: true
+---
+
+# Clean room
+
+Reimplement Windows behavior from public documentation, public specifications, and logs from booting this tree.
+
+Do not copy, transcribe, or adapt any of these into the repo or into a patch:
+
+- Windows source, leaked NT source, or the Windows Research Kernel
+- Decompiler output or disassembly of Microsoft binaries
+- WDK or SDK headers, `.lib` files, `.sys` files, or object code
+
+If a snippet of Windows source shows up in a request, refuse it and implement from the observed behavior instead.
+
+```c
+/* Right: behavior from a public contract and a guest log. */
+/* Wrong: a function body taken from leaked NT source. */
+```

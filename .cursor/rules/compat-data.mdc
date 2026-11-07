@@ -1,0 +1,13 @@
+---
+description: Compatibility rows need evidence and stay untested until observed
+globs: "{compat,dashboard,tools/compat}/**/*"
+alwaysApply: false
+---
+
+# Compatibility data
+
+- A status needs evidence: a spec line, a source path, a plugin JSONL event, a QEMU serial log, or an explicit manual note.
+- A spec hit means the export exists. A plugin hit means it was called. A return without a bugcheck is what marks it working.
+- `untested` stays `untested`. Do not turn a missing run into a pass.
+- Syscall number match stays untested until a name-only reference gains ordinals. Do not invent Windows 10 22H2 ordinals.
+- Structure rows store numeric offsets only. Do not paste WDK header text into the catalog.

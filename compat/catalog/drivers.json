@@ -1,0 +1,50 @@
+[
+    {
+        "name": "uniata",
+        "status": "untested",
+        "evidence": "drivers/storage/ide/uniata",
+        "notes": "In-box storage driver. Loaded-in-boot becomes partial."
+    },
+    {
+        "name": "scsiport",
+        "status": "untested",
+        "evidence": "drivers/storage/port/scsiport",
+        "notes": "In-box storage port."
+    },
+    {
+        "name": "usbhub",
+        "status": "untested",
+        "evidence": "drivers/usb/usbhub",
+        "notes": "In-box USB hub."
+    },
+    {
+        "name": "tcpip",
+        "status": "untested",
+        "evidence": "drivers/network/tcpip",
+        "notes": "In-box TCP/IP driver."
+    },
+    {
+        "name": "i8042prt",
+        "status": "untested",
+        "evidence": "drivers/input/i8042prt",
+        "notes": "In-box keyboard/mouse port."
+    },
+    {
+        "name": "videoprt",
+        "status": "untested",
+        "evidence": "win32ss/drivers/videoprt",
+        "notes": "In-box display port. XPDM, not WDDM."
+    },
+    {
+        "name": "acpi",
+        "status": "untested",
+        "evidence": "drivers/bus/acpi",
+        "notes": "In-box ACPI driver."
+    },
+    {
+        "name": "fastfat",
+        "status": "untested",
+        "evidence": "drivers/filesystems/fastfat",
+        "notes": "In-box FAT filesystem."
+    }
+]

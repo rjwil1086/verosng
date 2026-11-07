@@ -1,0 +1,2 @@
+{"kind":"export","phase":"return","symbol":"ntoskrnl.exe!IoCallDriver","result":"success"}
+{"kind":"export","phase":"enter","symbol":"ntoskrnl.exe!KeWaitForSingleObject","result":"bugcheck"}

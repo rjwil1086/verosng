@@ -1,0 +1,15 @@
+---
+description: Keep every added file GPL-2.0-compatible
+alwaysApply: true
+---
+
+# Open source
+
+- Every file added to this repo is GPL-2.0-compatible and carries an SPDX identifier.
+- The QEMU plugin is `GPL-2.0-or-later` because GPL QEMU loads it.
+- Third-party code is allowed only when its license is GPL-2.0-compatible and it is listed the way `media/doc/3rd Party Files.txt` lists third-party files.
+- Do not add a proprietary blob, a closed-source helper, or a generated file whose source is missing.
+
+```text
+SPDX-License-Identifier: GPL-2.0-or-later
+```

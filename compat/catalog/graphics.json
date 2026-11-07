@@ -1,0 +1,44 @@
+[
+    {
+        "name": "Software framebuffer",
+        "status": "partial",
+        "evidence": "win32ss software display path",
+        "notes": "A framebuffer exists. It is not a Windows 10 22H2 display stack."
+    },
+    {
+        "name": "DRM",
+        "status": "missing",
+        "evidence": "no drm or kms driver in tree",
+        "notes": "DRM/KMS is not this operating system's display path."
+    },
+    {
+        "name": "Compositor",
+        "status": "missing",
+        "evidence": "no Desktop Window Manager",
+        "notes": "No DWM compositor."
+    },
+    {
+        "name": "DXVK",
+        "status": "missing",
+        "evidence": "not in tree",
+        "notes": "DXVK is not part of this tree."
+    },
+    {
+        "name": "D3D11",
+        "status": "untested",
+        "evidence": "dll/directx/wine/d3d11",
+        "notes": "Wine library is present. Runtime is untested."
+    },
+    {
+        "name": "D3D12",
+        "status": "untested",
+        "evidence": "dll/directx/wine/d3d12",
+        "notes": "Wine library is present. Runtime is untested."
+    },
+    {
+        "name": "WDDM",
+        "status": "partial",
+        "evidence": "sdk/include/ddk/d3dkmddi.h and win32ss/gdi/ntgdi/d3dkmt.c",
+        "notes": "Vista d3dkmt skeleton and headers. No WDDM miniport."
+    }
+]
