@@ -2,7 +2,7 @@
 
 # Milestones
 
-Milestones 0–4 are done. Milestone 5 is in progress. The daily boot stays i386 until milestone 6.
+Milestones 0–4 are done. Milestone 5 is in progress. The daily boot stays i386 until milestone 6, which makes the amd64 boot the default. Milestone 7 makes that boot report Windows 10. Milestone 8 moves the build, the applications, and the in-tree drivers onto it.
 
 ## Milestone 0: Project Infrastructure
 
@@ -159,24 +159,67 @@ Common hardware works using Windows 10 drivers.
 
 ## Milestone 6: amd64 boot
 
-Goal: Move the daily boot and the headline score to the Windows 10 22H2 x64 ABI.
+Goal: Make the amd64 boot the daily boot and the headline score.
 
 This starts when a WDK driver returns from `DriverEntry` on the i386 boot and the next failures are pointer width, structure size, or the x64 calling convention. An x64-only driver, such as NVMe or most NICs on the milestone 5 list, is the other trigger.
 
+The kernel still reports NT 5.2 through this milestone. Milestone 7 changes that report.
+
 Deliverables:
 
-- An `ARCH=amd64` bootcd
-- `qemu-system-x86_64` boot and crash collection
+- An `ARCH=amd64` bootcd that the daily boot, the boot test, and crash collection launch
+- `qemu-system-x86_64` is that boot
 - The plugin and syscall-diff rebuilt for `SYSCALL` and the x64 register ABI
+- i386 still builds, and it is no longer the boot that runs by default
 
 Export names stay the same.
 
 Success criteria:
 
-- A Windows 10 22H2 WDK amd64 driver loads and `DriverEntry` returns
-- The top-100 probe is recaptured on that native path
+- The daily boot is the amd64 guest
+- A Windows 10 22H2 WDK amd64 driver loads and `DriverEntry` returns while the kernel still reports 5.2.3790
+- The top-100 probe is recaptured on that native path and is the headline score
 
-## Milestone 7: Graphics HAL (GKAL)
+## Milestone 7: Windows 10 version report
+
+Goal: The default amd64 boot reports Windows 10 22H2.
+
+This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The ReactOS product version stays 0.4.x. In-tree images keep their existing PE version stamp.
+
+Requirements:
+
+- Milestone 6 is done. The same WDK driver has returned from `DriverEntry` while the kernel still reports 5.2.3790. That boot is the before measurement.
+- The exports that driver calls after it accepts version 10 already return.
+- `GetVersion` and `GetVersionEx` for an image without a Windows 10 manifest still return 6.2. `RtlGetVersion` and `SharedUserData` report the real version.
+- `KmWin2k3VersionLie` still forces 5.2.3790 for a driver that fails when the major version is above 5.
+
+Outcome:
+
+- `SharedUserData`, `RtlGetVersion`, and `PsGetVersion` agree on 10.0.19045.
+- `CurrentVersion` stays `6.3`. `CurrentMajorVersionNumber` is 10 and `CurrentBuildNumber` is 19045.
+- That WDK driver passes its version check and `DriverEntry` still returns.
+- A driver covered by the 5.2 shim still observes 5.2.3790.
+- The top-100 probe does not regress.
+
+## Milestone 8: 64-bit migration
+
+Goal: Make the Windows 10 22H2 x64 ABI the project default beyond the boot.
+
+Milestone 6 makes the amd64 boot the daily boot. Milestone 7 makes that boot report Windows 10. This milestone moves the rest of the work onto it: the build, the applications, and the drivers already proven on i386.
+
+Deliverables:
+
+- `ARCH=amd64` is the default build
+- CI and the compatibility snapshot use the amd64 boot
+- The milestone 3 applications run as 64-bit binaries
+- In-tree drivers that loaded on the i386 live CD load on the amd64 boot
+- i386 still builds, and it is not the headline score
+
+Success criteria:
+
+- The apps and those in-tree drivers are no longer scored on i386
+
+## Milestone 9: Graphics HAL (GKAL)
 
 Goal: Future-proof graphics.
 
@@ -203,7 +246,7 @@ Success criteria:
 
 Window manager renders through GKAL.
 
-## Milestone 8: Software Renderer
+## Milestone 10: Software Renderer
 
 Goal: Reliable graphics platform.
 
@@ -222,7 +265,7 @@ Benefits:
 - Deterministic tests
 - Runs everywhere
 
-## Milestone 9: Mesa / DRM Backend
+## Milestone 11: Mesa / DRM Backend
 
 Goal: Hardware acceleration quickly.
 
@@ -242,7 +285,7 @@ Success criteria:
 
 Desktop composition accelerated.
 
-## Milestone 10: Modern Desktop
+## Milestone 12: Modern Desktop
 
 Goal: Make daily usage possible.
 
@@ -258,7 +301,7 @@ Success criteria:
 
 Can use the OS daily.
 
-## Milestone 11: Wine Synchronization Layer
+## Milestone 13: Wine Synchronization Layer
 
 Goal: Continuously ingest Wine improvements.
 
@@ -276,7 +319,7 @@ AI review
 
 Cursor can continuously evaluate Wine commits.
 
-## Milestone 12: DirectX Compatibility
+## Milestone 14: DirectX Compatibility
 
 Leverage:
 
@@ -298,7 +341,7 @@ Target:
 
 Steam games start rendering correctly.
 
-## Milestone 13: Driver Compatibility Expansion
+## Milestone 15: Driver Compatibility Expansion
 
 Focus on:
 
@@ -312,7 +355,7 @@ Success criteria:
 
 Large numbers of retail Windows 10 drivers load successfully.
 
-## Milestone 14: WDDM Compatibility Layer
+## Milestone 16: WDDM Compatibility Layer
 
 Only start this after everything above is stable.
 
@@ -328,7 +371,7 @@ mapped internally to GKAL.
 
 This lets applications think they're talking to WDDM.
 
-## Milestone 15: Native WDDM Drivers (Optional)
+## Milestone 17: Native WDDM Drivers (Optional)
 
 This is the moonshot.
 
@@ -358,7 +401,7 @@ If it were my project, Year 1 would end with:
 
 I would not spend Year 1 touching WDDM.
 
-The amd64 boot is the gate under the later milestones. It is not a reason to start WDDM in Year 1.
+Milestone 6 makes the amd64 boot the daily boot. Milestone 7 reports Windows 10 from that boot. Milestone 8 moves the remaining build, applications, and in-tree drivers onto it before graphics work. None of these is a reason to start WDDM in Year 1.
 
 The biggest force multiplier is getting to this workflow:
 
@@ -382,7 +425,7 @@ I'd make the dashboard the center of the whole project. The goal is not to be pr
 
 "What compatibility improved today, what broke, and where should Cursor work next?"
 
-The percentages in this section are a design specimen. They are not a measured score. The measured score stays the snapshot from the i386 probe.
+The percentages in this section are a design specimen. They are not a measured score. The measured score stays the snapshot from the i386 probe until milestone 6 makes the amd64 boot the daily boot.
 
 ### Top-Level Overview
 
