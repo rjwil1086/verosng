@@ -87,4 +87,43 @@ $text = Get-Content $log -Raw
 if ($text -notmatch '"kind":"syscall"') { Write-Error "Missing syscall event in $log" }
 if ($text -notmatch 'IoCallDriver') { Write-Error "Missing ntoskrnl export event in $log" }
 Write-Host "Plugin fixture passed."
+
+$winBytes = [byte[]]@(
+    0x66, 0x31, 0xC0, 0x8E, 0xD8, 0x8E, 0xC0, 0xFA,
+    0xC7, 0x06, 0xB8, 0x00, 0x1D, 0x7C,
+    0xC7, 0x06, 0xBA, 0x00, 0x00, 0x00,
+    0x66, 0xB8, 0x55, 0x00, 0x00, 0x00,
+    0xCD, 0x2E,
+    0xF4,
+    0x66, 0x31, 0xC0,
+    0xCF
+)
+$winImage = New-Object byte[] 512
+[Array]::Copy($winBytes, $winImage, $winBytes.Length)
+$winImage[510] = 0x55
+$winImage[511] = 0xAA
+$winImg = Join-Path $out "win-guest.img"
+[IO.File]::WriteAllBytes($winImg, $winImage)
+$numbers = Join-Path $out "syscalls.txt"
+Set-Content -Path $numbers -Value "85 NtCreateFile"
+$winLog = Join-Path $out "windows.jsonl"
+$winErr = Join-Path $out "windows.err"
+$winLogFwd = $winLog -replace '\\', '/'
+$numbersFwd = $numbers -replace '\\', '/'
+$status = Join-Path $SourceRoot "tools\windows-trace\ntstatus.txt"
+$statusFwd = $status -replace '\\', '/'
+$winArgs = "-accel tcg -L `"$bios`" -m 64 -fda `"$winImg`" -boot a -display none -no-reboot -plugin `"file=$dllFwd,log=$winLogFwd,mode=windows,syscalls=$numbersFwd,status=$statusFwd`""
+$win = Start-Process -FilePath $Qemu -ArgumentList $winArgs -PassThru -RedirectStandardError $winErr -WindowStyle Hidden
+if (-not $win.WaitForExit(15000)) {
+    Stop-Process -Id $win.Id -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+}
+if (-not (Test-Path $winLog)) {
+    Write-Host (Get-Content $winErr -Raw -ErrorAction SilentlyContinue)
+    Write-Error "Windows-mode log was not written."
+}
+$winText = Get-Content $winLog -Raw
+if ($winText -notmatch '"syscall":"NtCreateFile"') { Write-Error "Windows mode did not name NtCreateFile" }
+if ($winText -notmatch '"status":"STATUS_SUCCESS"') { Write-Error "Windows mode did not record STATUS_SUCCESS" }
+Write-Host "Windows-mode fixture passed."
 Write-Host $log

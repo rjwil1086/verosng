@@ -1,0 +1,12 @@
+---
+description: Hand interactive QEMU guests to the user with written steps
+alwaysApply: true
+---
+
+# Interactive QEMU
+
+When a Windows or ReactOS test needs a QEMU window, launch the guest, then give numbered steps. The user clicks and types. Do not move the pointer, click, or type into the guest.
+
+Each handoff names the window, what ready looks like, the exact clicks or commands, and the moment to report back. Say which window to leave open until the capture log is confirmed.
+
+A monitor `sendkey` attempt is not a substitute after that guest has ignored it. Do not start a second QEMU on a disk the first one still has open.

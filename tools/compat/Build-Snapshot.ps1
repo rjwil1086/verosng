@@ -171,8 +171,25 @@ function Test-LogNamesModule {
     return [regex]::IsMatch($SerialText, [regex]::Escape($Name) + "\." + $Extension, "IgnoreCase")
 }
 
+function Apply-SyscallDiff {
+    param($Items, [string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return }
+    $report = Get-Content $Path -Raw | ConvertFrom-Json
+    foreach ($call in @($report.calls)) {
+        if ($call.status -eq "untested") { continue }
+        foreach ($item in $Items) {
+            if ($item.category -eq "syscalls" -and $item.name -eq $call.name) {
+                $item.status = [string]$call.status
+                $item.notes = "Windows: $($call.windows); ReactOS: $($call.reactos)"
+                $item.source = "diff"
+                $item.evidence = "output/syscall-diff/report.json"
+            }
+        }
+    }
+}
+
 function Build-SnapshotObject {
-    param($Root, $SpecMap, $Plugin, $SerialText, $Boot)
+    param($Root, $SpecMap, $Plugin, $SerialText, $Boot, [string]$DiffPath = "")
     $ref = Join-Path $Root "compat\reference"
     $cat = Join-Path $Root "compat\catalog"
     $items = @()
@@ -230,6 +247,8 @@ function Build-SnapshotObject {
             status = $status; present = $false; source = "manual"; evidence = $row.evidence; notes = $row.notes; numberMatch = "untested"
         }
     }
+
+    Apply-SyscallDiff -Items $items -Path $DiffPath
 
     $weights = [ordered]@{ driverAbi = 40; kernel = 25; syscalls = 15; drivers = 10; graphics = 5; applications = 5 }
     $titles = [ordered]@{ driverAbi = "Driver ABI"; kernel = "Kernel exports"; syscalls = "Syscalls"; drivers = "Drivers"; graphics = "Graphics"; applications = "Applications" }
@@ -319,7 +338,8 @@ $plugin = Read-PluginResults -Path $PluginLog -CrashPath $CrashJson
 $serialText = ""
 if ($SerialLog -and (Test-Path $SerialLog)) { $serialText = Get-Content $SerialLog -Raw }
 $boot = Get-BootStatus -CrashPath $CrashJson -BootJson (Join-Path $SourceRoot "output\boot-latest.json")
-$snapshot = Build-SnapshotObject -Root $SourceRoot -SpecMap $spec -Plugin $plugin -SerialText $serialText -Boot $boot
+$diff = Join-Path $SourceRoot "output\syscall-diff\report.json"
+$snapshot = Build-SnapshotObject -Root $SourceRoot -SpecMap $spec -Plugin $plugin -SerialText $serialText -Boot $boot -DiffPath $diff
 
 $outDir = Join-Path $SourceRoot "dashboard\data"
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null

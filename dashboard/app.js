@@ -52,7 +52,10 @@
         var html = "<p><a href='index.html'>Overview</a></p><h1>" + title + "</h1>" +
             "<p class='sub'>" + percentText(cat && cat.percent) + " · " + countsText(cat && cat.counts) + "</p>";
         if (id === "syscalls") {
-            html += "<section><h2>Top 10</h2><table><thead><tr><th>Syscall</th><th>Status</th><th>Number match</th></tr></thead><tbody>";
+            html = "<p><a href='index.html'>Overview</a></p><h1>Top 100 syscalls</h1>" +
+                "<p class='sub'>Compatibility " + percentText(cat && cat.percent) + " · " +
+                countsText(cat && cat.counts) + "</p>";
+            html += "<section><h2>Top 10</h2><table><thead><tr><th>Syscall</th><th>Status</th><th>Windows / ReactOS</th></tr></thead><tbody>";
             data.topSyscalls.forEach(function (name) {
                 var row = null;
                 data.items.forEach(function (item) {
@@ -61,7 +64,7 @@
                     }
                 });
                 html += "<tr><td>" + name + "</td><td class='" + (row ? row.status : "") + "'>" +
-                    (row ? row.status : "missing") + "</td><td>" + (row ? row.numberMatch : "untested") + "</td></tr>";
+                    (row ? row.status : "missing") + "</td><td>" + (row && row.notes ? row.notes : "") + "</td></tr>";
             });
             html += "</tbody></table></section>";
         }

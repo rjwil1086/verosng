@@ -1,0 +1,22 @@
+---
+description: How Windows 10 observations are captured and what may enter the tree
+alwaysApply: true
+---
+
+# Windows 10 capture
+
+The guest is the powered-off VMware disk `D:\VMware\Windows 10 x64\Windows 10 x64.vmdk`. QEMU opens it with `format=vmdk` and `-snapshot`. `vmrun list` must show no running VMs first. Do not write the VMDK. Boot with TCG. Do not pass `-accel whpx` to `qemu-system-i386`.
+
+Two captures exist. Both stay under `output/`, which is gitignored.
+
+- `tools/windows-trace` records numeric syscall lines: number, status, and `a1`–`a4`. No names and no ordinal map.
+- `tools/syscall-diff` runs one GPL i386 `probe.exe` on Windows WoW64 and on the ReactOS boot. It calls the names in `compat/reference/win10-22h2-syscalls.txt` through `GetProcAddress` and prints `DIFF <name> <status>`, `MISSING`, `CRASH`, or `STARTED`, then `DIFF END OK`. COM1 is `-serial file:` with forward slashes. A FAT sink copy is only a backup.
+
+A Windows result is evidence only when that guest log contains `DIFF END OK`. A host run of the probe is not a Windows 10 22H2 result.
+
+The tree may keep the probe source, the name list, the compare script, and a report of names plus status codes. It may not keep the VMDK, an ISO, a disk image, a trace, a disassembly, a header, a `.lib`, a `.sys`, or an object file.
+
+```text
+Right: DIFF NtCreateFile 0x00000000
+Wrong: a function body, a Windows ordinal, or a pasted WDK declaration
+```

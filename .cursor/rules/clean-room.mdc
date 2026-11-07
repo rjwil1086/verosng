@@ -1,21 +1,25 @@
 ---
-description: Clean-room Windows compatibility work
+description: Implement Windows behavior without copying Microsoft expression
 alwaysApply: true
 ---
 
-# Clean room
+# Independent implementation
 
-Reimplement Windows behavior from public documentation, public specifications, and logs from booting this tree.
+Implement Windows behavior only from public documentation, public specifications, code already in this tree, and logs from booting this tree.
 
-Do not copy, transcribe, or adapt any of these into the repo or into a patch:
+Sizes, offsets, and return codes required for interoperability come from those sources. Do not paste header text or reconstruct a function body.
+
+These inputs stop the task. Do not implement that component in the session:
 
 - Windows source, leaked NT source, or the Windows Research Kernel
 - Decompiler output or disassembly of Microsoft binaries
 - WDK or SDK headers, `.lib` files, `.sys` files, or object code
 
-If a snippet of Windows source shows up in a request, refuse it and implement from the observed behavior instead.
+Do not copy, transcribe, or adapt any of that material into the repo or a patch. Do not continue from observed behavior after it has appeared.
+
+Windows traces from `tools/windows-trace` stay under `output/`. They record observed calls. Do not transcribe those logs into the kernel tree, and do not disassemble the guest to extend the syscall number list.
 
 ```c
-/* Right: behavior from a public contract and a guest log. */
-/* Wrong: a function body taken from leaked NT source. */
+/* Right: a size or return code taken from a public contract or a guest log. */
+/* Wrong: a function body taken from leaked NT source or a decompiler listing. */
 ```
