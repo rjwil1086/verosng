@@ -1636,6 +1636,22 @@ AhciProcessIO (
  * @param Srb
  *
  */
+static
+VOID
+AhciCopyAtaString(
+    _Out_writes_bytes_(Length) PUCHAR Destination,
+    _In_reads_bytes_(Length) PUCHAR Source,
+    _In_ ULONG Length)
+{
+    ULONG i;
+
+    for (i = 0; i < Length; i += sizeof(USHORT))
+    {
+        Destination[i] = Source[i + 1];
+        Destination[i + 1] = Source[i];
+    }
+}
+
 VOID
 AtapiInquiryCompletion (
     __in PVOID _Extension,
@@ -1750,23 +1766,26 @@ InquiryCompletion (
             PortExtension->DeviceParams.MaxLba.LowPart = IdentifyDeviceData->UserAddressableSectors;
         }
 
-        /* Bytes Per Logical Sector */
-        if (IdentifyDeviceData->PhysicalLogicalSectorSize.LogicalSectorLongerThan256Words)
+        /* Bytes Per Logical Sector. The command path assumes 512. */
+        PortExtension->DeviceParams.BytesPerLogicalSector =
+            AtaDevBytesPerLogicalSector(IdentifyDeviceData);
+        if (PortExtension->DeviceParams.BytesPerLogicalSector != DEVICE_ATA_BLOCK_SIZE)
         {
-            AhciDebugPrint("\tBytesPerLogicalSector != DEVICE_ATA_BLOCK_SIZE\n");
+            AhciDebugPrint("\tBytesPerLogicalSector %lu\n",
+                           PortExtension->DeviceParams.BytesPerLogicalSector);
             NT_ASSERT(FALSE);
         }
 
-        PortExtension->DeviceParams.BytesPerLogicalSector = DEVICE_ATA_BLOCK_SIZE;
-
-        /* Bytes Per Physical Sector */
-        if (IdentifyDeviceData->PhysicalLogicalSectorSize.MultipleLogicalSectorsPerPhysicalSector)
+        /* Word 106 can report more than one logical sector per physical sector. */
         {
-            AhciDebugPrint("\tBytesPerPhysicalSector != DEVICE_ATA_BLOCK_SIZE\n");
-            NT_ASSERT(FALSE);
-        }
+            ULONG SectorExponent;
+            ULONG LogicalPerPhysical;
 
-        PortExtension->DeviceParams.BytesPerPhysicalSector = DEVICE_ATA_BLOCK_SIZE;
+            LogicalPerPhysical = AtaDevLogicalSectorsPerPhysicalSector(IdentifyDeviceData,
+                                                                       &SectorExponent);
+            PortExtension->DeviceParams.BytesPerPhysicalSector =
+                PortExtension->DeviceParams.BytesPerLogicalSector * LogicalPerPhysical;
+        }
 
         // last byte should be NULL
         StorPortCopyMemory(PortExtension->DeviceParams.VendorId, IdentifyDeviceData->ModelNumber, sizeof(PortExtension->DeviceParams.VendorId) - 1);
@@ -1808,14 +1827,14 @@ InquiryCompletion (
     InquiryData->DeviceType = PortExtension->DeviceParams.AccessType;
     InquiryData->RemovableMedia = PortExtension->DeviceParams.RemovableDevice;
 
-    // Fill VendorID, Product Revision Level and other string fields
-    StorPortCopyMemory(InquiryData->VendorId, PortExtension->DeviceParams.VendorId, sizeof(InquiryData->VendorId) - 1);
-    StorPortCopyMemory(InquiryData->ProductId, PortExtension->DeviceParams.RevisionID, sizeof(PortExtension->DeviceParams.RevisionID));
-    StorPortCopyMemory(InquiryData->ProductRevisionLevel, PortExtension->DeviceParams.SerialNumber, sizeof(InquiryData->ProductRevisionLevel) - 1);
-
-    InquiryData->VendorId[sizeof(InquiryData->VendorId) - 1] = '\0';
-    InquiryData->ProductId[sizeof(InquiryData->ProductId) - 1] = '\0';
-    InquiryData->ProductRevisionLevel[sizeof(InquiryData->ProductRevisionLevel) - 1] = '\0';
+    /* SAT identifies the vendor as ATA and copies the swapped IDENTIFY strings. */
+    StorPortCopyMemory(InquiryData->VendorId, "ATA     ", sizeof(InquiryData->VendorId));
+    AhciCopyAtaString(InquiryData->ProductId,
+                      IdentifyDeviceData->ModelNumber,
+                      sizeof(InquiryData->ProductId));
+    AhciCopyAtaString(InquiryData->ProductRevisionLevel,
+                      IdentifyDeviceData->FirmwareRevision,
+                      sizeof(InquiryData->ProductRevisionLevel));
 
     // send queue depth
     status = StorPortSetDeviceQueueDepth(PortExtension->AdapterExtension,

@@ -7,6 +7,7 @@
 
 #include <ntddk.h>
 #include <ata.h>
+#include <reactos/drivers/ata/identify_funcs.h>
 #include <storport.h>
 
 #define NDEBUG
