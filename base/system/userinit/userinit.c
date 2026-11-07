@@ -444,7 +444,7 @@ SetUserWallpaper(VOID)
                           &Size);
     RegCloseKey(hKey);
 
-    if (rc == ERROR_SUCCESS && Type == REG_SZ)
+    if (rc == ERROR_SUCCESS && (Type == REG_SZ || Type == REG_EXPAND_SZ))
     {
         ExpandEnvironmentStringsW(szWallpaper, szWallpaper, ARRAYSIZE(szWallpaper));
         TRACE("Using wallpaper %s\n", debugstr_w(szWallpaper));

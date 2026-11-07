@@ -98,7 +98,7 @@ static const PCSTR ReactOSOptionsPrompt =
     "/BASEVIDEO /MAXMEM=64\n"
     "/KERNEL=NTKRNLMP.EXE /HAL=HALMPS.DLL";
 static const PCSTR ReactOSSetupOptionsPrompt =
-    "Enter additional load options you want passed to the ReactOS Setup.\n"
+    "Enter additional load options you want passed to VerOS NG Setup.\n"
     "These options will supplement those obtained from the TXTSETUP.SIF\n"
     "file, unless you also specify the /SIFOPTIONSOVERRIDE option switch.\n"
     "\n"
@@ -119,8 +119,8 @@ VOID OptionMenuCustomBoot(VOID)
         "Boot Sector (Disk/Partition/File)",
         "Linux",
 #endif
-        "ReactOS",
-        "ReactOS Setup"
+        "VerOS NG",
+        "VerOS NG Setup"
     };
     static ULONG MenuActionsMap[RTL_NUMBER_OF(CustomBootMenuList)] = {
 #if defined(_M_IX86) || defined(_M_AMD64)

@@ -1,4 +1,7 @@
 
+add_rc_deps(rosbrand.rc
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/bmp/brand_banner.bmp
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/bmp/brand_bannerline.bmp)
 add_library(rosbrand MODULE
     rosbrand.rc)
 

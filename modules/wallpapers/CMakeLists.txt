@@ -7,6 +7,8 @@ file(GLOB WALLPAPER_FILES
 )
 
 list(REMOVE_ITEM WALLPAPER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt")
+list(REMOVE_ITEM WALLPAPER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/veros-ng.bmp")
+list(REMOVE_ITEM WALLPAPER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/veros-ng.txt")
 
 foreach(f ${WALLPAPER_FILES})
     add_cd_file(FILE "${f}" DESTINATION reactos/Web/Wallpaper FOR all)

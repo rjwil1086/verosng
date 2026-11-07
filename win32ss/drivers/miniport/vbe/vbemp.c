@@ -166,6 +166,180 @@ VBESortModes(PVBE_DEVICE_EXTENSION DeviceExtension)
    }
 }
 
+static BOOLEAN
+VbeStringHas(
+   PCSTR Text,
+   PCSTR Needle)
+{
+   ULONG TextLength, NeedleLength, Index, Pair;
+
+   if (Text == NULL || Needle == NULL)
+      return FALSE;
+
+   TextLength = 0;
+   while (Text[TextLength] != 0)
+      TextLength++;
+   NeedleLength = 0;
+   while (Needle[NeedleLength] != 0)
+      NeedleLength++;
+   if (NeedleLength == 0 || NeedleLength > TextLength)
+      return FALSE;
+
+   for (Index = 0; Index + NeedleLength <= TextLength; Index++)
+   {
+      for (Pair = 0; Pair < NeedleLength; Pair++)
+      {
+         CHAR Left = Text[Index + Pair];
+         CHAR Right = Needle[Pair];
+
+         if (Left >= 'A' && Left <= 'Z')
+            Left = (CHAR)(Left - 'A' + 'a');
+         if (Right >= 'A' && Right <= 'Z')
+            Right = (CHAR)(Right - 'A' + 'a');
+         if (Left != Right)
+            break;
+      }
+      if (Pair == NeedleLength)
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+static VOID
+VbeReadFarString(
+   PVBE_DEVICE_EXTENSION Extension,
+   ULONG FarPointer,
+   PCHAR Buffer,
+   ULONG BufferSize)
+{
+   if (BufferSize == 0)
+      return;
+
+   Buffer[0] = 0;
+   if (FarPointer == 0)
+      return;
+
+   Extension->Int10Interface.Int10ReadMemory(
+      Extension->Int10Interface.Context,
+      HIWORD(FarPointer),
+      LOWORD(FarPointer),
+      Buffer,
+      BufferSize - 1);
+   Buffer[BufferSize - 1] = 0;
+}
+
+/*
+ * Hypervisor display adapters should boot at 1600x900. A physical monitor
+ * keeps the timing it advertises. These vendor IDs and firmware names are
+ * the public identities of those virtual adapters.
+ */
+static BOOLEAN
+VbeIsVirtualAdapter(
+   PVBE_DEVICE_EXTENSION Extension)
+{
+   USHORT PciId[2];
+   ULONG Length;
+   CHAR Text[128];
+   ULONG Pointers[3];
+   ULONG PointerCount, PointerIndex, NeedleIndex;
+   static const USHORT VirtualVendors[] = {
+      0x1234, /* Bochs and QEMU VGA */
+      0x80EE, /* VirtualBox */
+      0x15AD, /* VMware */
+      0x1414, /* Hyper-V */
+      0x1AF4, /* virtio */
+      0x1B36  /* QEMU */
+   };
+   static const PCSTR VirtualNames[] = {
+      "Bochs",
+      "QEMU",
+      "VirtualBox",
+      "VMware",
+      "Hyper-V",
+      "innotek",
+      "QXL"
+   };
+
+   Length = VideoPortGetBusData(Extension,
+                                PCIConfiguration,
+                                0,
+                                PciId,
+                                0,
+                                sizeof(PciId));
+   if (Length >= sizeof(PciId) && PciId[0] != 0 && PciId[0] != 0xFFFF)
+   {
+      for (NeedleIndex = 0; NeedleIndex < ARRAYSIZE(VirtualVendors); NeedleIndex++)
+      {
+         if (PciId[0] == VirtualVendors[NeedleIndex])
+            return TRUE;
+      }
+   }
+
+   Pointers[0] = Extension->VbeInfo.OemStringPtr;
+   PointerCount = 1;
+   if (Extension->VbeInfo.Version >= 0x0200)
+   {
+      Pointers[1] = Extension->VbeInfo.OemVendorNamePtr;
+      Pointers[2] = Extension->VbeInfo.OemProductNamePtr;
+      PointerCount = 3;
+   }
+
+   for (PointerIndex = 0; PointerIndex < PointerCount; PointerIndex++)
+   {
+      VbeReadFarString(Extension, Pointers[PointerIndex], Text, sizeof(Text));
+      for (NeedleIndex = 0; NeedleIndex < ARRAYSIZE(VirtualNames); NeedleIndex++)
+      {
+         if (VbeStringHas(Text, VirtualNames[NeedleIndex]))
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+static ULONG
+VbeFindBestMode(
+   PVBE_DEVICE_EXTENSION Extension,
+   USHORT Width,
+   USHORT Height)
+{
+   ULONG Index, Best, BestBpp;
+
+   Best = (ULONG)-1;
+   BestBpp = 0;
+   for (Index = 0; Index < Extension->ModeCount; Index++)
+   {
+      if (Extension->ModeInfo[Index].XResolution == Width &&
+          Extension->ModeInfo[Index].YResolution == Height &&
+          Extension->ModeInfo[Index].BitsPerPixel > BestBpp &&
+          Extension->ModeInfo[Index].BitsPerPixel <= 32)
+      {
+         BestBpp = Extension->ModeInfo[Index].BitsPerPixel;
+         Best = Index;
+      }
+   }
+
+   return Best;
+}
+
+static VOID
+VbeChoosePreferredMode(
+   PVBE_DEVICE_EXTENSION Extension)
+{
+   USHORT Width, Height;
+
+   Extension->PreferredMode = (ULONG)-1;
+   if (VbeIsVirtualAdapter(Extension))
+   {
+      Extension->PreferredMode = VbeFindBestMode(Extension, 1600, 900);
+      return;
+   }
+
+   if (VBEReadMonitorPreferredMode(Extension, &Width, &Height))
+      Extension->PreferredMode = VbeFindBestMode(Extension, Width, Height);
+}
+
 /*
  * VBEInitialize
  *
@@ -409,6 +583,7 @@ VBEInitialize(PVOID HwDeviceExtension)
     */
 
    VBESortModes(VBEDeviceExtension);
+   VbeChoosePreferredMode(VBEDeviceExtension);
 
    /*
     * Print the supported video modes.
@@ -928,9 +1103,10 @@ VBEQueryMode(
    VideoMode->VideoMemoryBitmapHeight = VBEMode->YResolution;
    VideoMode->AttributeFlags = VIDEO_MODE_GRAPHICS | VIDEO_MODE_COLOR |
       VIDEO_MODE_NO_OFF_SCREEN;
+   VideoMode->DriverSpecificAttributeFlags =
+      (VideoModeId == DeviceExtension->PreferredMode) ? 1 : 0;
    if (VideoMode->BitsPerPlane <= 8)
       VideoMode->AttributeFlags |= VIDEO_MODE_PALETTE_DRIVEN;
-   VideoMode->DriverSpecificAttributeFlags = 0;
 }
 
 /*

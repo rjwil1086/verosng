@@ -1509,7 +1509,7 @@ Phase1InitializationDiscard(IN PVOID Context)
     else
     {
         /* Use hard-coded banner message */
-        Status = RtlStringCbCopyA(EndBuffer, Remaining, "REACTOS (R)\r\n");
+        Status = RtlStringCbCopyA(EndBuffer, Remaining, "VEROS NG\r\n");
         if (!NT_SUCCESS(Status))
         {
             /* Bugcheck */

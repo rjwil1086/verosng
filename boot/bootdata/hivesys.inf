@@ -2455,7 +2455,7 @@ DCOMLAUNCH_SERVICE_DESCRIPTION="DcomLaunch service stub."
 EVENTLOG_SERVICE="Event Logger"
 EVENTLOG_SERVICE_DESCRIPTION="Logs events or messages sent by the operating system in a database accessible via the event log viewer."
 
-MSISERVER_SERVICE="ReactOS Installer"
+MSISERVER_SERVICE="VerOS NG Installer"
 MSISERVER_SERVICE_DESCRIPTION="Controls installation, maintenance, and removal of software packaged as an MSI (Windows Installer)."
 
 NETLOGON_SERVICE="Net Logon"
@@ -2485,13 +2485,13 @@ SPOOLER_SERVICE_DESCRIPTION="Loads files to memory for later printing."
 TCPSVCS_SERVICE="Simple TCP/IP Services"
 TCPSVCS_SERVICE_DECRIPTION="Supports the following TCP/IP services: Chargen, Daytime, Discard, Echo, QOTD."
 
-TELNETD_SERVICE="ReactOS Telnet Service"
-TELNETD_SERVICE_DESCRIPTION="ReactOS Telnet Service"
+TELNETD_SERVICE="VerOS NG Telnet Service"
+TELNETD_SERVICE_DESCRIPTION="VerOS NG Telnet Service"
 
 THEMES_SERVICE="Themes"
 THEMES_SERVICE_DESCRIPTION="Themes support"
 
-WINMGMT_SERVICE="ReactOS Management Infrastructure"
+WINMGMT_SERVICE="VerOS NG Management Infrastructure"
 WINMGMT_SERVICE_DESCRIPTION="Provides interface to system management information."
 
 WLANSVC_SERVICE="WLAN Service"

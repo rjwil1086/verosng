@@ -206,6 +206,12 @@ typedef struct
    PVBE_MODEINFO ModeInfo;
    USHORT CurrentMode;
 
+   /*
+    * Mode used when the registry still has the unset 800x600 default.
+    * (ULONG)-1 means the registry default should be kept.
+    */
+   ULONG PreferredMode;
+
    /* Current child been enumerated */
    ULONG CurrentChildIndex;
 } VBE_DEVICE_EXTENSION, *PVBE_DEVICE_EXTENSION;
@@ -220,6 +226,12 @@ VBEGetVideoChildDescriptor(
    OUT PUCHAR pChildDescriptor,
    OUT PULONG UId,
    OUT PULONG pUnused);
+
+BOOLEAN
+VBEReadMonitorPreferredMode(
+   IN PVBE_DEVICE_EXTENSION VBEDeviceExtension,
+   OUT PUSHORT Width,
+   OUT PUSHORT Height);
 
 /* vbemp.c */
 VP_STATUS NTAPI

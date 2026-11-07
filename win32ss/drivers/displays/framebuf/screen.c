@@ -124,6 +124,7 @@ IntInitScreenInfo(
    PDEVINFO pDevInfo)
 {
    ULONG ModeCount;
+   ULONG InitialModeCount;
    ULONG ModeInfoSize;
    PVIDEO_MODE_INFORMATION ModeInfo, ModeInfoPtr, SelectedMode = NULL;
    VIDEO_COLOR_CAPABILITIES ColorCapabilities;
@@ -138,6 +139,7 @@ IntInitScreenInfo(
    {
       return FALSE;
    }
+   InitialModeCount = ModeCount;
 
    /*
     * Select the video mode depending on the info passed in pDevMode.
@@ -170,6 +172,33 @@ IntInitScreenInfo(
              pDevMode->dmBitsPerPel == (ModeInfoPtr->BitsPerPlane *
                                         ModeInfoPtr->NumberOfPlanes) &&
              pDevMode->dmDisplayFrequency == ModeInfoPtr->Frequency)
+         {
+            SelectedMode = ModeInfoPtr;
+            break;
+         }
+
+         ModeInfoPtr = (PVIDEO_MODE_INFORMATION)
+            (((PUCHAR)ModeInfoPtr) + ModeInfoSize);
+      }
+   }
+
+   /*
+    * 800x600x32 at 1 Hz is the unset registry default. A miniport marks the
+    * mode to use instead: 1600x900 on a virtual adapter, or the monitor's
+    * preferred timing on a real display.
+    */
+   if (SelectedMode != NULL &&
+       pDevMode->dmPelsWidth == 800 &&
+       pDevMode->dmPelsHeight == 600 &&
+       pDevMode->dmBitsPerPel == 32 &&
+       pDevMode->dmDisplayFrequency == 1)
+   {
+      ModeInfoPtr = ModeInfo;
+      ModeCount = InitialModeCount;
+      while (ModeCount-- > 0)
+      {
+         if (ModeInfoPtr->Length > 0 &&
+             (ModeInfoPtr->DriverSpecificAttributeFlags & 1))
          {
             SelectedMode = ModeInfoPtr;
             break;

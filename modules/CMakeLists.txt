@@ -15,6 +15,9 @@ if(ENABLE_WALLPAPERS)
     add_subdirectory(wallpapers)
 endif()
 
+add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/wallpapers/veros-ng.bmp DESTINATION reactos/Web/Wallpaper FOR all)
+add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/wallpapers/veros-ng.txt DESTINATION reactos/Web/Wallpaper FOR all)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/AHK_Tests/)
     add_subdirectory(AHK_Tests)
 endif()

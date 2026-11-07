@@ -225,6 +225,9 @@ BochsGetModeInfo(
     ModeInfo->BlueMask = 0x0000ff;
 
     ModeInfo->AttributeFlags = VIDEO_MODE_GRAPHICS | VIDEO_MODE_COLOR | VIDEO_MODE_NO_OFF_SCREEN;
+    ModeInfo->DriverSpecificAttributeFlags =
+        (AvailableModeInfo->XResolution == 1600 &&
+         AvailableModeInfo->YResolution == 900) ? 1 : 0;
     ModeInfo->VideoMemoryBitmapWidth = AvailableModeInfo->XResolution;
     ModeInfo->VideoMemoryBitmapHeight = AvailableModeInfo->YResolution;
 }

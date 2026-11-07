@@ -226,6 +226,42 @@ VBEReadEdid(
    return TRUE;
 }
 
+/*
+ * The first detailed timing is the monitor's preferred mode when EDID
+ * feature bit 1 is set. Width and height come from that 18-byte block.
+ */
+BOOLEAN
+VBEReadMonitorPreferredMode(
+   IN PVBE_DEVICE_EXTENSION VBEDeviceExtension,
+   OUT PUSHORT Width,
+   OUT PUSHORT Height)
+{
+   UCHAR Edid[MAX_SIZE_OF_EDID];
+   USHORT PixelClock;
+   const ULONG Timing = 54;
+
+   if (!VBEReadEdid(VBEDeviceExtension, 0, Edid))
+      return FALSE;
+
+   if (Edid[0] != 0x00 || Edid[1] != 0xFF || Edid[6] != 0xFF || Edid[7] != 0x00)
+      return FALSE;
+
+   /* Preferred timing mode flag. */
+   if ((Edid[0x18] & 0x02) == 0)
+      return FALSE;
+
+   PixelClock = Edid[Timing] | ((USHORT)Edid[Timing + 1] << 8);
+   if (PixelClock == 0)
+      return FALSE;
+
+   *Width = Edid[Timing + 2] | ((USHORT)(Edid[Timing + 4] & 0xF0) << 4);
+   *Height = Edid[Timing + 5] | ((USHORT)(Edid[Timing + 7] & 0xF0) << 4);
+   if (*Width < 640 || *Height < 480)
+      return FALSE;
+
+   return TRUE;
+}
+
 VP_STATUS NTAPI
 VBEGetVideoChildDescriptor(
    IN PVOID HwDeviceExtension,

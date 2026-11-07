@@ -1,0 +1,4 @@
+SPDX-License-Identifier: GPL-2.0-or-later
+
+VerOS NG Logo.jpg is the source artwork for the VerOS NG mark used
+by the wallpaper and the live CD bitmaps.
