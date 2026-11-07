@@ -188,8 +188,20 @@ function Apply-SyscallDiff {
     }
 }
 
+function Get-RepoRelativePath {
+    param([string]$Root, [string]$Path)
+    $full = [System.IO.Path]::GetFullPath($Path)
+    $rootFull = [System.IO.Path]::GetFullPath($Root)
+    $sep = [System.IO.Path]::DirectorySeparatorChar
+    if (-not $rootFull.EndsWith($sep)) { $rootFull += $sep }
+    if ($full.StartsWith($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return ($full.Substring($rootFull.Length) -replace '\\', '/')
+    }
+    return ($full -replace '\\', '/')
+}
+
 function Build-SnapshotObject {
-    param($Root, $SpecMap, $Plugin, $SerialText, $Boot, [string]$DiffPath = "")
+    param($Root, $SpecMap, $Plugin, $SerialText, $Boot, [string]$DiffPath = "", [string]$PluginLog = "")
     $ref = Join-Path $Root "compat\reference"
     $cat = Join-Path $Root "compat\catalog"
     $items = @()
@@ -291,10 +303,15 @@ function Build-SnapshotObject {
     }
     $git = "unknown"
     try { $git = (& git -C $Root describe --always --dirty).Trim() } catch { }
+    $pluginRecord = $null
+    if ($PluginLog -and (Test-Path -LiteralPath $PluginLog)) {
+        $pluginRecord = Get-RepoRelativePath -Root $Root -Path $PluginLog
+    }
 
     return [ordered]@{
         build      = [ordered]@{ version = $version; git = $git }
         boot       = $(if ($Boot) { $Boot } else { [ordered]@{ status = "untested"; accelerator = $null } })
+        pluginLog  = $pluginRecord
         weights    = $weights
         weightsUsed = $weightsUsed
         headline   = $headline
@@ -319,6 +336,7 @@ function Invoke-SnapshotSelfTest {
     $snap = Build-SnapshotObject -Root (Join-Path $PSScriptRoot "..\..") -SpecMap $spec -Plugin $plugin -SerialText ""
     $found = @($snap.items | Where-Object { $_.name -eq "IoCallDriver" -and $_.status -eq "works" })
     if ($found.Count -lt 1) { throw "snapshot did not upgrade IoCallDriver" }
+    if ($null -ne $snap.pluginLog) { throw "snapshot recorded a plugin log that was not passed" }
     Write-Host "Snapshot fixture passed."
 }
 
@@ -339,7 +357,7 @@ $serialText = ""
 if ($SerialLog -and (Test-Path $SerialLog)) { $serialText = Get-Content $SerialLog -Raw }
 $boot = Get-BootStatus -CrashPath $CrashJson -BootJson (Join-Path $SourceRoot "output\boot-latest.json")
 $diff = Join-Path $SourceRoot "output\syscall-diff\report.json"
-$snapshot = Build-SnapshotObject -Root $SourceRoot -SpecMap $spec -Plugin $plugin -SerialText $serialText -Boot $boot -DiffPath $diff
+$snapshot = Build-SnapshotObject -Root $SourceRoot -SpecMap $spec -Plugin $plugin -SerialText $serialText -Boot $boot -DiffPath $diff -PluginLog $PluginLog
 
 $outDir = Join-Path $SourceRoot "dashboard\data"
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null

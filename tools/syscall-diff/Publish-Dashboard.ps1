@@ -304,3 +304,4 @@ $json = ConvertTo-PlainJson $snapshot
 $utf8 = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText($OutputPath, $json + [Environment]::NewLine, $utf8)
 Write-Host "Wrote $OutputPath overall=$($snapshot.overall)"
+& (Join-Path $SourceRoot "tools\compat\Merge-DashboardAbi.ps1") -SourceRoot $SourceRoot -WebsitePath $OutputPath

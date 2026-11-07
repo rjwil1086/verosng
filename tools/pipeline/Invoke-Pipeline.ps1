@@ -13,4 +13,5 @@ $bootCode = $LASTEXITCODE
 $latest = Get-Content (Join-Path $SourceRoot "output\boot-latest.json") -Raw | ConvertFrom-Json
 & (Join-Path $PSScriptRoot "Get-CrashReport.ps1") -SerialLog $latest.serialLog -PluginLog $latest.pluginLog -SourceRoot $SourceRoot
 & (Join-Path $SourceRoot "tools\compat\Build-Snapshot.ps1") -SourceRoot $SourceRoot -PluginLog $latest.pluginLog -SerialLog $latest.serialLog
+& (Join-Path $SourceRoot "tools\compat\Merge-DashboardAbi.ps1") -SourceRoot $SourceRoot
 exit $bootCode
