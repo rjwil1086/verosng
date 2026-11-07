@@ -343,6 +343,23 @@ CreateWaitableTimerW(IN LPSECURITY_ATTRIBUTES lpTimerAttributes OPTIONAL,
  */
 HANDLE
 WINAPI
+CreateWaitableTimerExW(IN LPSECURITY_ATTRIBUTES lpTimerAttributes OPTIONAL,
+                       IN LPCWSTR lpTimerName OPTIONAL,
+                       IN DWORD dwFlags,
+                       IN DWORD dwDesiredAccess)
+{
+    /* CREATE_WAITABLE_TIMER_MANUAL_RESET is 0x1. This build hides that name. */
+    CreateNtObjectFromWin32Api(WaitableTimer, Timer, dwDesiredAccess,
+                               lpTimerAttributes,
+                               lpTimerName,
+                               (dwFlags & 0x1) ? NotificationTimer : SynchronizationTimer);
+}
+
+/*
+ * @implemented
+ */
+HANDLE
+WINAPI
 OpenWaitableTimerW(IN DWORD dwDesiredAccess,
                    IN BOOL bInheritHandle,
                    IN LPCWSTR lpTimerName)
@@ -377,6 +394,30 @@ SetWaitableTimer(IN HANDLE hTimer,
     /* If we got here, then we failed */
     BaseSetLastNTError(Status);
     return FALSE;
+}
+
+/*
+ * @implemented
+ */
+BOOL
+WINAPI
+SetWaitableTimerEx(IN HANDLE hTimer,
+                   IN const LARGE_INTEGER *lpDueTime,
+                   IN LONG lPeriod,
+                   IN PTIMERAPCROUTINE pfnCompletionRoutine OPTIONAL,
+                   IN OPTIONAL LPVOID lpArgToCompletionRoutine,
+                   IN PVOID WakeContext,
+                   IN ULONG TolerableDelay)
+{
+    UNREFERENCED_PARAMETER(WakeContext);
+    UNREFERENCED_PARAMETER(TolerableDelay);
+
+    return SetWaitableTimer(hTimer,
+                            lpDueTime,
+                            lPeriod,
+                            pfnCompletionRoutine,
+                            lpArgToCompletionRoutine,
+                            FALSE);
 }
 
 /*

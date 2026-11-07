@@ -1025,8 +1025,9 @@ LdrpApisetVersion(VOID)
             case 0:
                 break;
             case _WIN32_WINNT_VISTA:
-                /* No apisets in vista yet*/
-                CachedApisetVersion = 0;
+                /* The manifest version does not hide the host schema. */
+                CachedApisetVersion = APISET_WIN10;
+                DPRINT1("Activating apisets for Win10\n");
                 break;
             case _WIN32_WINNT_WIN7:
                 CachedApisetVersion = APISET_WIN7;

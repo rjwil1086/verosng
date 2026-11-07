@@ -504,7 +504,7 @@
 @ stdcall SHCreateDirectoryExA(long str ptr) # 2k3:278, Vista:328
 @ stdcall SHCreateDirectoryExW(long wstr ptr) # 2k3:279, Vista:329
 @ stdcall -version=0x600+ SHCreateItemFromIDList(ptr ptr ptr) # Vista:330
-@ stdcall -version=0x600+ SHCreateItemFromParsingName(wstr ptr ptr ptr) # Vista:331
+@ stdcall SHCreateItemFromParsingName(wstr ptr ptr ptr) # Vista:331
 @ stdcall -version=0x600+ SHCreateItemFromRelativeName(ptr wstr ptr ptr ptr) # Vista:332
 @ stdcall -version=0x600+ SHCreateItemInKnownFolder(ptr long wstr ptr ptr) # Vista:333
 @ stdcall -stub -version=0x600+ SHCreateItemWithParent(ptr ptr ptr ptr ptr) # Vista:334

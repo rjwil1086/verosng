@@ -1,6 +1,6 @@
 ; Functions exported by Win 2K3 SP2
 @ stdcall ActivateKeyboardLayout(long long) NtUserActivateKeyboardLayout
-@ stdcall -version=0x600+ AddClipboardFormatListener(ptr)
+@ stdcall AddClipboardFormatListener(ptr)
 @ stdcall AdjustWindowRect(ptr long long)
 @ stdcall AdjustWindowRectEx(ptr long long long)
 @ stdcall AlignRects(ptr long long long)
@@ -39,7 +39,7 @@
 @ stdcall ChangeMenuA(long long ptr long long)
 @ stdcall ChangeMenuW(long long ptr long long)
 @ stdcall -version=0x600+ ChangeWindowMessageFilter(ptr long)
-@ stdcall -version=0x601+ ChangeWindowMessageFilterEx(ptr long long ptr)
+@ stdcall ChangeWindowMessageFilterEx(ptr long long ptr)
 @ stdcall CharLowerA(str)
 @ stdcall CharLowerBuffA(str long)
 @ stdcall CharLowerBuffW(wstr long)
@@ -602,7 +602,7 @@
 @ stdcall RegisterWindowMessageW(wstr)
 @ stdcall ReleaseCapture()
 @ stdcall ReleaseDC(long long)
-@ stdcall -version=0x600+ RemoveClipboardFormatListener(long)
+@ stdcall RemoveClipboardFormatListener(long)
 @ stdcall RemoveMenu(long long long) NtUserRemoveMenu
 @ stdcall RemovePropA(long str)
 @ stdcall RemovePropW(long wstr)

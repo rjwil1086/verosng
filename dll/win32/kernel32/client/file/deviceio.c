@@ -305,4 +305,77 @@ CancelIo(IN HANDLE hFile)
     return TRUE;
 }
 
+/*
+ * @implemented
+ */
+BOOL
+WINAPI
+CancelIoEx(IN HANDLE hFile,
+           IN LPOVERLAPPED lpOverlapped)
+{
+    IO_STATUS_BLOCK IoStatusBlock;
+    NTSTATUS Status;
+
+    /* CancelIoFileEx is not in this build's service table. A NULL overlapped
+     * request cancels every I/O on the handle issued by this thread. */
+    if (lpOverlapped != NULL)
+    {
+        BaseSetLastNTError(STATUS_NOT_IMPLEMENTED);
+        return FALSE;
+    }
+
+    Status = NtCancelIoFile(hFile, &IoStatusBlock);
+    if (!NT_SUCCESS(Status))
+    {
+        BaseSetLastNTError(Status);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/*
+ * @implemented
+ */
+BOOL
+WINAPI
+SetFileInformationByHandle(IN HANDLE hFile,
+                           IN FILE_INFO_BY_HANDLE_CLASS FileInformationClass,
+                           IN LPVOID lpFileInformation,
+                           IN DWORD dwBufferSize)
+{
+    IO_STATUS_BLOCK IoStatusBlock;
+    FILE_INFORMATION_CLASS Class;
+    NTSTATUS Status;
+
+    switch (FileInformationClass)
+    {
+        case FileBasicInfo:
+            Class = FileBasicInformation;
+            break;
+        case FileEndOfFileInfo:
+            Class = FileEndOfFileInformation;
+            break;
+        case FileDispositionInfo:
+            Class = FileDispositionInformation;
+            break;
+        default:
+            SetLastError(ERROR_INVALID_PARAMETER);
+            return FALSE;
+    }
+
+    Status = NtSetInformationFile(hFile,
+                                  &IoStatusBlock,
+                                  lpFileInformation,
+                                  dwBufferSize,
+                                  Class);
+    if (!NT_SUCCESS(Status))
+    {
+        BaseSetLastNTError(Status);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 /* EOF */

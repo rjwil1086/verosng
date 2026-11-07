@@ -1029,6 +1029,98 @@ NtCreateThread(OUT PHANDLE ThreadHandle,
                            NULL);
 }
 
+/* Flag values already defined in sdk/include/wine/winternl.h. */
+#define PSP_THREAD_CREATE_SUSPENDED    0x00000001
+#define PSP_THREAD_HIDE_FROM_DEBUGGER  0x00000004
+
+/*
+ * @implemented
+ */
+NTSTATUS
+NTAPI
+NtCreateThreadEx(OUT PHANDLE ThreadHandle,
+                 IN ACCESS_MASK DesiredAccess,
+                 IN POBJECT_ATTRIBUTES ObjectAttributes OPTIONAL,
+                 IN HANDLE ProcessHandle,
+                 IN PVOID StartRoutine,
+                 IN PVOID Argument OPTIONAL,
+                 IN ULONG CreateFlags,
+                 IN SIZE_T ZeroBits,
+                 IN SIZE_T StackCommit,
+                 IN SIZE_T StackReserve,
+                 IN PVOID AttributeList OPTIONAL)
+{
+    KPROCESSOR_MODE PreviousMode = ExGetPreviousMode();
+    PSECURITY_DESCRIPTOR Security = NULL;
+    HANDLE Handle = NULL;
+    BOOLEAN Hidden;
+    NTSTATUS Status;
+    PAGED_CODE();
+
+    UNREFERENCED_PARAMETER(DesiredAccess);
+    UNREFERENCED_PARAMETER(AttributeList);
+
+    if (!ThreadHandle || !ProcessHandle || !StartRoutine || (ZeroBits > MAXULONG))
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    _SEH2_TRY
+    {
+        if (PreviousMode != KernelMode)
+        {
+            ProbeForWriteHandle(ThreadHandle);
+            if (ObjectAttributes)
+            {
+                ProbeForRead(ObjectAttributes, sizeof(OBJECT_ATTRIBUTES), sizeof(ULONG));
+            }
+        }
+        if (ObjectAttributes) Security = ObjectAttributes->SecurityDescriptor;
+    }
+    _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+    {
+        _SEH2_YIELD(return _SEH2_GetExceptionCode());
+    }
+    _SEH2_END;
+
+    Status = RtlCreateUserThread(ProcessHandle,
+                                 Security,
+                                 (CreateFlags & PSP_THREAD_CREATE_SUSPENDED) ? TRUE : FALSE,
+                                 (ULONG)ZeroBits,
+                                 StackReserve,
+                                 StackCommit,
+                                 (PTHREAD_START_ROUTINE)StartRoutine,
+                                 Argument,
+                                 &Handle,
+                                 NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    if (CreateFlags & PSP_THREAD_HIDE_FROM_DEBUGGER)
+    {
+        Hidden = TRUE;
+        ZwSetInformationThread(Handle,
+                               ThreadHideFromDebugger,
+                               &Hidden,
+                               sizeof(Hidden));
+    }
+
+    _SEH2_TRY
+    {
+        *ThreadHandle = Handle;
+    }
+    _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+    {
+        ZwClose(Handle);
+        _SEH2_YIELD(return _SEH2_GetExceptionCode());
+    }
+    _SEH2_END;
+
+    return STATUS_SUCCESS;
+}
+
 /*
  * @implemented
  */

@@ -1472,6 +1472,202 @@ NtCreateProcess(OUT PHANDLE ProcessHandle,
                              FALSE);
 }
 
+/* Attribute numbers from the enum already in sdk/include/wine/winternl.h. */
+#define PSP_ATTRIBUTE_PARENT_PROCESS    0x00060000
+#define PSP_ATTRIBUTE_DEBUG_PORT        0x00060001
+#define PSP_ATTRIBUTE_IMAGE_NAME        0x00020005
+#define PSP_THREAD_CREATE_SUSPENDED     0x00000001
+#define PSP_THREAD_HIDE_FROM_DEBUGGER   0x00000004
+#define PSP_MAX_CREATE_ATTRIBUTES       12
+
+typedef struct _PSP_CREATE_ATTRIBUTE
+{
+    ULONG_PTR Attribute;
+    SIZE_T Size;
+    ULONG_PTR Value;
+    PSIZE_T ReturnLength;
+} PSP_CREATE_ATTRIBUTE;
+
+typedef struct _PSP_CREATE_ATTRIBUTE_LIST
+{
+    SIZE_T TotalLength;
+    PSP_CREATE_ATTRIBUTE Attributes[1];
+} PSP_CREATE_ATTRIBUTE_LIST, *PPSP_CREATE_ATTRIBUTE_LIST;
+
+/*
+ * @implemented
+ */
+NTSTATUS
+NTAPI
+NtCreateUserProcess(OUT PHANDLE ProcessHandle,
+                    OUT PHANDLE ThreadHandle,
+                    IN ACCESS_MASK ProcessDesiredAccess,
+                    IN ACCESS_MASK ThreadDesiredAccess,
+                    IN POBJECT_ATTRIBUTES ProcessObjectAttributes OPTIONAL,
+                    IN POBJECT_ATTRIBUTES ThreadObjectAttributes OPTIONAL,
+                    IN ULONG ProcessFlags,
+                    IN ULONG ThreadFlags,
+                    IN PRTL_USER_PROCESS_PARAMETERS ProcessParameters,
+                    IN PVOID CreateInfo,
+                    IN PVOID AttributeList)
+{
+    KPROCESSOR_MODE PreviousMode = ExGetPreviousMode();
+    PSP_CREATE_ATTRIBUTE Attributes[PSP_MAX_CREATE_ATTRIBUTES];
+    ULONG Count = 0, Index;
+    SIZE_T TotalLength;
+    UNICODE_STRING ImageName;
+    HANDLE ParentProcess = NULL;
+    HANDLE DebugPort = NULL;
+    PSECURITY_DESCRIPTOR ProcessSecurity = NULL;
+    PSECURITY_DESCRIPTOR ThreadSecurity = NULL;
+    RTL_USER_PROCESS_INFORMATION Info;
+    BOOLEAN Hidden;
+    NTSTATUS Status;
+    PAGED_CODE();
+
+    UNREFERENCED_PARAMETER(ProcessDesiredAccess);
+    UNREFERENCED_PARAMETER(ThreadDesiredAccess);
+
+    if (!ProcessHandle || !ThreadHandle || !ProcessParameters || !AttributeList)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    RtlZeroMemory(&ImageName, sizeof(ImageName));
+    RtlZeroMemory(&Info, sizeof(Info));
+
+    _SEH2_TRY
+    {
+        if (PreviousMode != KernelMode)
+        {
+            ProbeForWriteHandle(ProcessHandle);
+            ProbeForWriteHandle(ThreadHandle);
+            ProbeForRead(ProcessParameters, FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS, Flags), sizeof(ULONG));
+            if (ProcessParameters->Length < FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS, Flags))
+            {
+                _SEH2_YIELD(return STATUS_INVALID_PARAMETER);
+            }
+            if (CreateInfo)
+            {
+                ProbeForRead(CreateInfo, sizeof(SIZE_T), sizeof(ULONG));
+                if (*(PSIZE_T)CreateInfo == 0)
+                {
+                    _SEH2_YIELD(return STATUS_INVALID_PARAMETER);
+                }
+            }
+            if (ProcessObjectAttributes)
+            {
+                ProbeForRead(ProcessObjectAttributes, sizeof(OBJECT_ATTRIBUTES), sizeof(ULONG));
+                ProcessSecurity = ProcessObjectAttributes->SecurityDescriptor;
+            }
+            if (ThreadObjectAttributes)
+            {
+                ProbeForRead(ThreadObjectAttributes, sizeof(OBJECT_ATTRIBUTES), sizeof(ULONG));
+                ThreadSecurity = ThreadObjectAttributes->SecurityDescriptor;
+            }
+        }
+        else
+        {
+            if (ProcessObjectAttributes) ProcessSecurity = ProcessObjectAttributes->SecurityDescriptor;
+            if (ThreadObjectAttributes) ThreadSecurity = ThreadObjectAttributes->SecurityDescriptor;
+        }
+
+        TotalLength = ((PPSP_CREATE_ATTRIBUTE_LIST)AttributeList)->TotalLength;
+        if ((TotalLength < sizeof(SIZE_T)) ||
+            (TotalLength > sizeof(SIZE_T) + (PSP_MAX_CREATE_ATTRIBUTES * sizeof(PSP_CREATE_ATTRIBUTE))))
+        {
+            _SEH2_YIELD(return STATUS_INVALID_PARAMETER);
+        }
+        if (PreviousMode != KernelMode)
+        {
+            ProbeForRead(AttributeList, TotalLength, sizeof(ULONG));
+        }
+        Count = (ULONG)((TotalLength - sizeof(SIZE_T)) / sizeof(PSP_CREATE_ATTRIBUTE));
+        RtlCopyMemory(Attributes,
+                      ((PPSP_CREATE_ATTRIBUTE_LIST)AttributeList)->Attributes,
+                      Count * sizeof(PSP_CREATE_ATTRIBUTE));
+    }
+    _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+    {
+        _SEH2_YIELD(return _SEH2_GetExceptionCode());
+    }
+    _SEH2_END;
+
+    for (Index = 0; Index < Count; Index++)
+    {
+        if (Attributes[Index].Attribute == PSP_ATTRIBUTE_IMAGE_NAME)
+        {
+            if (!Attributes[Index].Value ||
+                !Attributes[Index].Size ||
+                (Attributes[Index].Size & 1) ||
+                (Attributes[Index].Size > MAXUSHORT))
+            {
+                return STATUS_INVALID_PARAMETER;
+            }
+            ImageName.Buffer = (PWCH)Attributes[Index].Value;
+            ImageName.Length = (USHORT)Attributes[Index].Size;
+            ImageName.MaximumLength = ImageName.Length;
+        }
+        else if (Attributes[Index].Attribute == PSP_ATTRIBUTE_PARENT_PROCESS)
+        {
+            ParentProcess = (HANDLE)Attributes[Index].Value;
+        }
+        else if (Attributes[Index].Attribute == PSP_ATTRIBUTE_DEBUG_PORT)
+        {
+            DebugPort = (HANDLE)Attributes[Index].Value;
+        }
+    }
+
+    if (!ImageName.Buffer)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    Status = RtlCreateUserProcess(&ImageName,
+                                  OBJ_CASE_INSENSITIVE,
+                                  ProcessParameters,
+                                  ProcessSecurity,
+                                  ThreadSecurity,
+                                  ParentProcess,
+                                  (ProcessFlags & PROCESS_CREATE_FLAGS_INHERIT_HANDLES) ? TRUE : FALSE,
+                                  DebugPort,
+                                  NULL,
+                                  &Info);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    if (ThreadFlags & PSP_THREAD_HIDE_FROM_DEBUGGER)
+    {
+        Hidden = TRUE;
+        ZwSetInformationThread(Info.ThreadHandle,
+                               ThreadHideFromDebugger,
+                               &Hidden,
+                               sizeof(Hidden));
+    }
+
+    if (!(ThreadFlags & PSP_THREAD_CREATE_SUSPENDED))
+    {
+        ZwResumeThread(Info.ThreadHandle, NULL);
+    }
+
+    _SEH2_TRY
+    {
+        *ProcessHandle = Info.ProcessHandle;
+        *ThreadHandle = Info.ThreadHandle;
+    }
+    _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+    {
+        ZwClose(Info.ProcessHandle);
+        ZwClose(Info.ThreadHandle);
+        _SEH2_YIELD(return _SEH2_GetExceptionCode());
+    }
+    _SEH2_END;
+
+    return STATUS_SUCCESS;
+}
+
 /*
  * @implemented
  */

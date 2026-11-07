@@ -28,5 +28,29 @@
         "status": "untested",
         "evidence": "not in tree",
         "notes": "Third-party application. No run recorded."
+    },
+    {
+        "name": "notepad++",
+        "status": "works",
+        "evidence": "output/ntdll-apps/notepadpp-boot8.log",
+        "notes": "32-bit portable. The main window stayed up with no dialog. The serial log shows the process start and no IconList or missing-export failure."
+    },
+    {
+        "name": "7-Zip",
+        "status": "works",
+        "evidence": "output/ntdll-apps/7zip-boot.log",
+        "notes": "32-bit 7zFM.exe. The file manager window stayed up. The serial log shows the process start and no failure dialog."
+    },
+    {
+        "name": "git",
+        "status": "works",
+        "evidence": "output/ntdll-apps/git-boot2.log",
+        "notes": "32-bit MinGit 2.48.1. C:\\mingw32\\bin\\git.exe --version printed git version 2.48.1.windows.1. The serial log shows the process start and no entry-point dialog."
+    },
+    {
+        "name": "python",
+        "status": "works",
+        "evidence": "output/ntdll-apps/python-boot2.log",
+        "notes": "32-bit Python 3.12.10 embed. C:\\python.exe -c \"print(1)\" printed 1. The serial log shows the process start and no entry-point dialog."
     }
 ]

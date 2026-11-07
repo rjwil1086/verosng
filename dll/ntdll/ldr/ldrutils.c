@@ -1122,6 +1122,7 @@ SkipCheck:
         else
         {
             /* We couldn't resolve the name, is this a static load? */
+            DbgPrint("LDR: missing dll %ws\n", DllName ? DllName : L"");
             if (Static)
             {
                 /*

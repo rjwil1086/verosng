@@ -212,6 +212,33 @@ RegisterApplicationRestart(IN PCWSTR pwzCommandline  OPTIONAL,
 
 
 /*
+ * @unimplemented
+ */
+HRESULT
+WINAPI
+GetApplicationRestartSettings(IN HANDLE hProcess,
+                              OUT PWSTR pwzCommandline,
+                              IN OUT PDWORD pcchSize,
+                              OUT PDWORD pdwFlags)
+{
+    UNIMPLEMENTED;
+    return E_NOTIMPL;
+}
+
+
+/*
+ * @unimplemented
+ */
+HRESULT
+WINAPI
+UnregisterApplicationRestart(VOID)
+{
+    UNIMPLEMENTED;
+    return E_NOTIMPL;
+}
+
+
+/*
  * @implemented
  */
 BOOLEAN

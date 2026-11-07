@@ -126,6 +126,8 @@
 340 stdcall -noname DPA_CreateEx(long long)
 341 stdcall -noname SendNotify(long long long ptr)
 342 stdcall -noname SendNotifyEx(long long long ptr long)
+344 stdcall -ordinal TaskDialog(long long wstr wstr wstr long wstr ptr)
+345 stdcall -ordinal TaskDialogIndirect(ptr ptr ptr ptr)
 350 stdcall -noname -private StrChrA(str long)
 351 stdcall -noname -private StrRChrA(str str long)
 352 stdcall -noname -private StrCmpNA(str str long)
@@ -152,6 +154,8 @@
 375 stdcall -noname -private StrCSpnIW(wstr wstr)
 376 stdcall -noname -private IntlStrEqWorkerA(long str str long)
 377 stdcall -noname -private IntlStrEqWorkerW(long wstr wstr long)
+380 stdcall -ordinal LoadIconMetric(long wstr long ptr)
+381 stdcall -ordinal LoadIconWithScaleDown(long wstr long long ptr)
 382 stdcall -noname SmoothScrollWindow(ptr)
 383 stdcall -noname DoReaderMode(ptr)
 384 stdcall -noname SetPathWordBreakProc(ptr long)
@@ -181,5 +185,3 @@
 
 ; Exported in v6 but not v5
 @ stdcall DrawShadowText(long wstr long ptr long long long long long)
-@ stdcall -version=0x600+ LoadIconWithScaleDown(long wstr long long long)
-@ stdcall -version=0x600+ LoadIconMetric(long wstr long long)

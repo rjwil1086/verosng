@@ -951,7 +951,8 @@ INT WINAPI GetDateFormatA( LCID lcid, DWORD dwFlags, const SYSTEMTIME* lpTime,
                                 lpFormat, lpDateStr, cchOut);
 }
 
-#if _WIN32_WINNT >= 0x600
+LCID WINAPI LocaleNameToLCID(LPCWSTR name, DWORD flags);
+
 /******************************************************************************
  * GetDateFormatEx [KERNEL32.@]
  *
@@ -991,7 +992,6 @@ INT WINAPI GetDateFormatEx(LPCWSTR localename, DWORD flags,
                                 flags | DATE_DATEVARSONLY, date, format,
                                 outbuf, bufsize);
 }
-#endif /* _WIN32_WINNT >= 0x600 */
 
 /******************************************************************************
  * GetDateFormatW	[KERNEL32.@]
@@ -1059,7 +1059,6 @@ INT WINAPI GetTimeFormatA(LCID lcid, DWORD dwFlags, const SYSTEMTIME* lpTime,
                                 lpFormat, lpTimeStr, cchOut);
 }
 
-#if _WIN32_WINNT >= 0x600
 /******************************************************************************
  * GetTimeFormatEx [KERNEL32.@]
  *
@@ -1091,7 +1090,6 @@ INT WINAPI GetTimeFormatEx(LPCWSTR localename, DWORD flags,
                                 flags | TIME_TIMEVARSONLY, time, format,
                                 outbuf, bufsize);
 }
-#endif /* _WIN32_WINNT >= 0x600 */
 
 /******************************************************************************
  *		GetTimeFormatW	[KERNEL32.@]

@@ -427,6 +427,23 @@ NtCreateProcessEx(
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
+NtCreateUserProcess(
+    _Out_ PHANDLE ProcessHandle,
+    _Out_ PHANDLE ThreadHandle,
+    _In_ ACCESS_MASK ProcessDesiredAccess,
+    _In_ ACCESS_MASK ThreadDesiredAccess,
+    _In_opt_ POBJECT_ATTRIBUTES ProcessObjectAttributes,
+    _In_opt_ POBJECT_ATTRIBUTES ThreadObjectAttributes,
+    _In_ ULONG ProcessFlags,
+    _In_ ULONG ThreadFlags,
+    _In_ PRTL_USER_PROCESS_PARAMETERS ProcessParameters,
+    _In_opt_ PVOID CreateInfo,
+    _In_ PVOID AttributeList
+);
+
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
 NtCreateThread(
     _Out_ PHANDLE ThreadHandle,
     _In_ ACCESS_MASK DesiredAccess,
@@ -436,6 +453,23 @@ NtCreateThread(
     _In_ PCONTEXT ThreadContext,
     _In_ PINITIAL_TEB UserStack,
     _In_ BOOLEAN CreateSuspended
+);
+
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtCreateThreadEx(
+    _Out_ PHANDLE ThreadHandle,
+    _In_ ACCESS_MASK DesiredAccess,
+    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ HANDLE ProcessHandle,
+    _In_ PVOID StartRoutine,
+    _In_opt_ PVOID Argument,
+    _In_ ULONG CreateFlags,
+    _In_ SIZE_T ZeroBits,
+    _In_ SIZE_T StackCommit,
+    _In_ SIZE_T StackReserve,
+    _In_opt_ PVOID AttributeList
 );
 
 #define PROCESS_GET_NEXT_FLAGS_PREVIOUS_PROCESS 0x00000001

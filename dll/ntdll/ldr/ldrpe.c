@@ -1036,9 +1036,15 @@ FailurePath:
 
             /* Inform the debug log */
             if (IsOrdinal)
+            {
                 DPRINT1("Failed to snap ordinal %Z!0x%x for %wZ\n", &TempString, OriginalOrdinal, &SnapTarget);
+                DbgPrint("LDR: missing export %wZ!#%lu\n", &SnapTarget, OriginalOrdinal);
+            }
             else
+            {
                 DPRINT1("Failed to snap %Z!%s for %wZ\n", &TempString, ImportName, &SnapTarget);
+                DbgPrint("LDR: missing export %wZ!%s\n", &SnapTarget, ImportName);
+            }
 
             /* These are critical errors. Setup a string for the DLL name */
             RtlAnsiStringToUnicodeString(&HardErrorDllName, &TempString, TRUE);
@@ -1094,9 +1100,15 @@ FailurePath:
         {
             /* Inform the debug log */
             if (IsOrdinal)
+            {
                 DPRINT("Non-fatal: Failed to snap ordinal 0x%x\n", OriginalOrdinal);
+                DbgPrint("LDR: missing export #%lu\n", OriginalOrdinal);
+            }
             else
+            {
                 DPRINT("Non-fatal: Failed to snap %s\n", ImportName);
+                DbgPrint("LDR: missing export %s\n", ImportName);
+            }
         }
 
         /* Set this as a bad DLL */

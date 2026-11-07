@@ -1910,10 +1910,33 @@ CURSORICON_LoadImageW(
     cursorData.cy = cyDesired;
     cursorData.rt = (USHORT)((ULONG_PTR)(bIcon ? RT_ICON : RT_CURSOR));
 
-    /* Get the bitmaps */
+    /* Get the bitmaps. A Vista icon resource may be a PNG image instead of a DIB. */
     bStatus = CURSORICON_GetCursorDataFromBMI(
         &cursorData,
         (BITMAPINFO*)bits);
+    if (!bStatus)
+    {
+        DWORD resSize, bmpIconSize = 0;
+        PBYTE pbBmpIcon;
+
+        resSize = SizeofResource(hinst, hrsrc);
+        pbBmpIcon = CURSORICON_ConvertPngToBmpIcon(bits, resSize, &bmpIconSize);
+        if (pbBmpIcon)
+        {
+            CURSORICONFILEDIR *pngDir = (CURSORICONFILEDIR *)pbBmpIcon;
+            CURSORICONFILEDIRENTRY *entry = &pngDir->idEntries[0];
+
+            ZeroMemory(&cursorData, sizeof(cursorData));
+            cursorData.CURSORF_flags = CURSORF_FROMRESOURCE;
+            cursorData.cx = cxDesired;
+            cursorData.cy = cyDesired;
+            cursorData.rt = (USHORT)((ULONG_PTR)(bIcon ? RT_ICON : RT_CURSOR));
+            bStatus = CURSORICON_GetCursorDataFromBMI(
+                &cursorData,
+                (BITMAPINFO *)(pbBmpIcon + entry->dwDIBOffset));
+            HeapFree(GetProcessHeap(), 0, pbBmpIcon);
+        }
+    }
 
     FreeResource( handle );
 
