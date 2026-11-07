@@ -317,8 +317,14 @@ KeDelayExecutionThread(IN KPROCESSOR_MODE WaitMode,
         /* Make sure the wait isn't alertable or interrupting an APC */
         if (!(Alertable) && !(Thread->ApcState.UserApcPending))
         {
-            /* Yield execution */
-            return NtYieldExecution();
+            /* Yield execution. A completed zero delay is success even
+             * when no other thread was ready to run. */
+            WaitStatus = NtYieldExecution();
+            if (WaitStatus == STATUS_NO_YIELD_PERFORMED)
+            {
+                return STATUS_SUCCESS;
+            }
+            return WaitStatus;
         }
     }
 

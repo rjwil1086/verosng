@@ -1400,6 +1400,12 @@ NtCreateProcessEx(OUT PHANDLE ProcessHandle,
     /* Check if we came from user mode */
     if (PreviousMode != KernelMode)
     {
+        /* A null output pointer is an invalid parameter, not a fault. */
+        if (ProcessHandle == NULL)
+        {
+            return STATUS_INVALID_PARAMETER;
+        }
+
         _SEH2_TRY
         {
             /* Probe process handle */

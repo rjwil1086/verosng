@@ -1,7 +1,7 @@
 {
     "build":  {
                   "version":  "0.4.17-dev",
-                  "git":  "96cacfc9170-dirty"
+                  "git":  "d8d10cb194c-dirty"
               },
     "boot":  {
                  "status":  "untested",
@@ -16,9 +16,10 @@
                     "applications":  5
                 },
     "weightsUsed":  {
-                        "driverAbi":  66.7,
-                        "graphics":  8.3,
-                        "syscalls":  25
+                        "driverAbi":  61.5,
+                        "graphics":  7.7,
+                        "syscalls":  23.1,
+                        "applications":  7.7
                     },
     "headline":  {
                      "id":  "driverAbi",
@@ -34,7 +35,7 @@
                                 }
                  },
     "overall":  {
-                    "percent":  22.1
+                    "percent":  28.8
                 },
     "categories":  [
                        {
@@ -66,13 +67,13 @@
                        {
                            "id":  "syscalls",
                            "title":  "Syscalls",
-                           "percent":  81.7,
+                           "percent":  84.7,
                            "weight":  15,
                            "counts":  {
-                                          "works":  76,
+                                          "works":  79,
                                           "partial":  13,
-                                          "broken":  6,
-                                          "missing":  6,
+                                          "broken":  5,
+                                          "missing":  4,
                                           "untested":  0
                                       }
                        },
@@ -105,10 +106,10 @@
                        {
                            "id":  "applications",
                            "title":  "Applications",
-                           "percent":  null,
+                           "percent":  100,
                            "weight":  5,
                            "counts":  {
-                                          "works":  0,
+                                          "works":  4,
                                           "partial":  0,
                                           "broken":  0,
                                           "missing":  0,
@@ -1419,11 +1420,11 @@
                       "name":  "NtCreateUserProcess",
                       "category":  "syscalls",
                       "group":  "top",
-                      "status":  "missing",
-                      "present":  false,
+                      "status":  "partial",
+                      "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: 0xC0000005; ReactOS: missing",
+                      "notes":  "Windows: 0xC0000005; ReactOS: STATUS_INVALID_PARAMETER",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1431,11 +1432,11 @@
                       "name":  "NtCreateThreadEx",
                       "category":  "syscalls",
                       "group":  "top",
-                      "status":  "missing",
-                      "present":  false,
+                      "status":  "partial",
+                      "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_INVALID_HANDLE; ReactOS: missing",
+                      "notes":  "Windows: STATUS_INVALID_HANDLE; ReactOS: STATUS_INVALID_PARAMETER",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1587,11 +1588,11 @@
                       "name":  "NtCreateProcess",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "partial",
+                      "status":  "works",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_INVALID_PARAMETER; ReactOS: 0xC0000005",
+                      "notes":  "Windows: STATUS_INVALID_PARAMETER; ReactOS: STATUS_INVALID_PARAMETER",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1599,11 +1600,11 @@
                       "name":  "NtCreateProcessEx",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "partial",
+                      "status":  "works",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_INVALID_PARAMETER; ReactOS: 0xC0000005",
+                      "notes":  "Windows: STATUS_INVALID_PARAMETER; ReactOS: STATUS_INVALID_PARAMETER",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1671,11 +1672,11 @@
                       "name":  "NtDelayExecution",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "broken",
+                      "status":  "works",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_SUCCESS; ReactOS: 0x40000024",
+                      "notes":  "Windows: STATUS_SUCCESS; ReactOS: STATUS_SUCCESS",
                       "numberMatch":  "untested"
                   },
                   {
@@ -2804,6 +2805,54 @@
                       "source":  "manual",
                       "evidence":  "not in tree",
                       "notes":  "Third-party application. No run recorded.",
+                      "numberMatch":  "untested"
+                  },
+                  {
+                      "id":  "applications-notepad++",
+                      "name":  "notepad++",
+                      "category":  "applications",
+                      "group":  "apps",
+                      "status":  "works",
+                      "present":  false,
+                      "source":  "manual",
+                      "evidence":  "output/ntdll-apps/notepadpp-boot8.log",
+                      "notes":  "32-bit portable. The main window stayed up with no dialog. The serial log shows the process start and no IconList or missing-export failure.",
+                      "numberMatch":  "untested"
+                  },
+                  {
+                      "id":  "applications-7-Zip",
+                      "name":  "7-Zip",
+                      "category":  "applications",
+                      "group":  "apps",
+                      "status":  "works",
+                      "present":  false,
+                      "source":  "manual",
+                      "evidence":  "output/ntdll-apps/7zip-boot.log",
+                      "notes":  "32-bit 7zFM.exe. The file manager window stayed up. The serial log shows the process start and no failure dialog.",
+                      "numberMatch":  "untested"
+                  },
+                  {
+                      "id":  "applications-git",
+                      "name":  "git",
+                      "category":  "applications",
+                      "group":  "apps",
+                      "status":  "works",
+                      "present":  false,
+                      "source":  "manual",
+                      "evidence":  "output/ntdll-apps/git-boot2.log",
+                      "notes":  "32-bit MinGit 2.48.1. C:\\mingw32\\bin\\git.exe --version printed git version 2.48.1.windows.1. The serial log shows the process start and no entry-point dialog.",
+                      "numberMatch":  "untested"
+                  },
+                  {
+                      "id":  "applications-python",
+                      "name":  "python",
+                      "category":  "applications",
+                      "group":  "apps",
+                      "status":  "works",
+                      "present":  false,
+                      "source":  "manual",
+                      "evidence":  "output/ntdll-apps/python-boot2.log",
+                      "notes":  "32-bit Python 3.12.10 embed. C:\\python.exe -c \"print(1)\" printed 1. The serial log shows the process start and no entry-point dialog.",
                       "numberMatch":  "untested"
                   }
               ]
