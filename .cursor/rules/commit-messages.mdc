@@ -1,0 +1,20 @@
+---
+description: Write commit subjects with a module tag, not [FORK]
+alwaysApply: true
+---
+
+# Commit messages
+
+Follow `.gitmessage`. Do not put `[FORK]` on a subject. The branch is already this fork.
+
+The subject is `[MODULE] Imperative summary` with no period. `MODULE` is the area in caps, such as `NTOS:PS`, `NTDLL`, or `KERNEL32`. Use more than one tag when the change spans areas. Leave the `(#pr-num)` off unless a pull request exists.
+
+The body says why. Wrap it near 72 characters. Put a blank line between the subject and the body.
+
+```text
+Wrong: [FORK] Match the process and delay statuses the probe records
+Right: [NTOS:PS] Reject a null process handle from user mode
+
+A null output pointer is an invalid parameter. Returning the probe
+fault made the zero-argument call disagree with Windows.
+```
