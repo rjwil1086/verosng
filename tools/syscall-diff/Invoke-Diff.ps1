@@ -365,3 +365,4 @@ if (-not $SkipReactOS) {
 }
 
 & (Join-Path $PSScriptRoot "Compare-Syscalls.ps1") -SourceRoot $SourceRoot -WindowsLog $windowsLog -ReactOSLog $reactosLog -OutputDir $out
+& (Join-Path $PSScriptRoot "Publish-Dashboard.ps1") -SourceRoot $SourceRoot -Report (Join-Path $out "report.json") -WindowsLog $windowsLog -ReactOSLog $reactosLog
