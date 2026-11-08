@@ -408,17 +408,8 @@ if ($sections -contains "Syscalls") {
 }
 
 if ($sections -contains "KernelAbi") {
-    $plugin = Get-Amd64PluginLog $SourceRoot
-    if ($plugin) {
-        & (Join-Path $SourceRoot "tools\compat\Build-Snapshot.ps1") -SourceRoot $SourceRoot -PluginLog $plugin -SerialLog $DriverLog
-    }
-    else {
-        Write-Host "Kernel ABI has no amd64 plugin log. The card stays unmeasured."
-    }
-    & (Join-Path $SourceRoot "tools\compat\Merge-DashboardAbi.ps1") -SourceRoot $SourceRoot -WebsitePath $WebsitePath
-    if (-not ($sections -contains "Applications") -and -not ($sections -contains "Drivers") -and -not ($sections -contains "Syscalls")) {
-        Repair-WebsiteAfterKernelMerge -WebsitePath $WebsitePath
-    }
+    & (Join-Path $SourceRoot "tools\kernel-abi\Compare-KernelAbi.ps1") -SourceRoot $SourceRoot -WebsitePath $WebsitePath
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 $refreshApps = ($sections -contains "Applications") -or ($sections -contains "Syscalls")

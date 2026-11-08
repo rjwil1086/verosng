@@ -147,12 +147,22 @@ function New-DashboardSnapshot {
     else {
         $note += ": $works of $scored names. $partial names failed on both sides with different codes, $broken disagreed on success, and $missing were missing on the amd64 side. A different error is a mismatch. $untested names were not reached."
     }
-    $note += " kernelAbi, lastBuild, applications, drivers, subsystems, traceCorpus, task, driverAbi, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied."
+    $kernelAbi = $null
+    $kernelAbiDetail = $null
+    if ($Previous -and $null -ne $Previous.kernelAbiDetail) {
+        $kernelAbi = [double]$Previous.kernelAbi
+        $kernelAbiDetail = $Previous.kernelAbiDetail
+    }
+    $skipped = "lastBuild, applications, drivers, subsystems, traceCorpus, task, driverAbi, and graphics"
+    if ($null -eq $kernelAbi) { $skipped = "kernelAbi, $skipped" }
+    $note += " $skipped were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied."
 
     $previousLabel = "No earlier snapshot"
     if ($null -ne $previousOverall) { $previousLabel = "Previous snapshot" }
     $gaps = @()
-    $gaps += [ordered]@{ section = "kernelAbi"; reason = "The amd64 probe does not call ntoskrnl, HAL, or KMDF exports." }
+    if ($null -eq $kernelAbi) {
+        $gaps += [ordered]@{ section = "kernelAbi"; reason = "The Windows 10 22H2 kernel and the VerOS kernel have not both finished the kernel probe." }
+    }
     $gaps += [ordered]@{ section = "lastBuild"; reason = "The guest banner is a date and commit, not a monotonic build number." }
     if ($null -eq $lastWeek) { $gaps += [ordered]@{ section = "northStar.lastWeek"; reason = "No snapshot in this file is at least seven days old." } }
     if ($null -eq $lastMonth) { $gaps += [ordered]@{ section = "northStar.lastMonth"; reason = "No snapshot in this file is at least thirty days old." } }
@@ -179,7 +189,8 @@ function New-DashboardSnapshot {
         capturedAt           = $CapturedAt
         target               = "Win10 22H2"
         overall              = $percent
-        kernelAbi            = $null
+        kernelAbi            = $kernelAbi
+        kernelAbiDetail      = $kernelAbiDetail
         lastBuild            = $null
         northStar            = [ordered]@{
             label     = "amd64 probe syscalls"

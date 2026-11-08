@@ -43,7 +43,8 @@ $kernelPaths = @(
     "sdk/lib/drivers/wdf/",
     "tools/qemu-harness/",
     "compat/reference/win10-22h2-ntoskrnl.txt",
-    "compat/reference/win10-22h2-hal.txt"
+    "compat/reference/win10-22h2-hal.txt",
+    "tools/kernel-abi/"
 )
 $appPaths = @(
     "base/applications/",

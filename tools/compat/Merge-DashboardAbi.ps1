@@ -157,32 +157,25 @@ function Update-WebsiteAbi {
     $site = Get-Content -LiteralPath $WebsiteFile -Raw | ConvertFrom-Json
     $snap = Get-Content -LiteralPath $SnapshotFile -Raw | ConvertFrom-Json
     $log = [string]$snap.pluginLog
-    $kernelCount = 0
     $driverCount = 0
-    $kernelPercent = $null
     $driverPercent = $null
     if ($log) {
-        $kernelCount = Get-PluginScoreCount -Items $snap.items -Category "kernel"
         $driverCount = Get-PluginScoreCount -Items $snap.items -Category "driverAbi"
-        if ($kernelCount -gt 0) { $kernelPercent = Get-CategoryPercent -Categories $snap.categories -Id "kernel" }
         if ($driverCount -gt 0) { $driverPercent = Get-CategoryPercent -Categories $snap.categories -Id "driverAbi" }
     }
-    $kernelMeasured = $kernelCount -gt 0 -and $null -ne $kernelPercent
+    $kernelMeasured = $null -ne $site.kernelAbi
     $driverMeasured = $driverCount -gt 0 -and $null -ne $driverPercent
 
     $notes = Update-ProbeNote -Notes ([string]$site.notes) -KernelMeasured $kernelMeasured -DriverMeasured $driverMeasured
-    if ($kernelMeasured) {
-        $notes = Add-MeasurementSentence -Notes $notes -Field "kernelAbi" -CategoryLabel "kernel-exports category" -Percent $kernelPercent -Count $kernelCount -Log $log
-    }
     if ($driverMeasured) {
         $notes = Add-MeasurementSentence -Notes $notes -Field "driverAbi" -CategoryLabel "driver ABI category" -Percent $driverPercent -Count $driverCount -Log $log
     }
 
     $gaps = $site.unmeasured
-    $gaps = Sync-Gap -Gaps $gaps -Section "kernelAbi" -Reason "The snapshot has no ntoskrnl or HAL export that returned or bugchecked in the plugin log." -Measured $kernelMeasured
+    $gaps = Sync-Gap -Gaps $gaps -Section "kernelAbi" -Reason "The Windows 10 22H2 kernel and the VerOS kernel have not both finished the kernel probe." -Measured $kernelMeasured
     $gaps = Sync-Gap -Gaps $gaps -Section "driverAbi" -Reason "The snapshot has no driver ABI export that returned or bugchecked in the plugin log." -Measured $driverMeasured
 
-    $unchanged = (Test-SameScore $site.kernelAbi $kernelPercent) -and (Test-SameScore $site.driverAbi $driverPercent) -and ([string]$site.notes -eq $notes)
+    $unchanged = (Test-SameScore $site.driverAbi $driverPercent) -and ([string]$site.notes -eq $notes)
     if ($unchanged) {
         $before = @($site.unmeasured | ForEach-Object { [string]$_.section + "|" + [string]$_.reason }) -join "`n"
         $after = @($gaps | ForEach-Object { [string]$_.section + "|" + [string]$_.reason }) -join "`n"
@@ -192,7 +185,6 @@ function Update-WebsiteAbi {
         }
     }
 
-    $site.kernelAbi = $(if ($kernelMeasured) { [double]$kernelPercent } else { $null })
     $site.driverAbi = $(if ($driverMeasured) { [double]$driverPercent } else { $null })
     $site.notes = $notes
     $site.unmeasured = @($gaps)
@@ -266,12 +258,12 @@ function Invoke-MergeSelfTest {
         if (-not (Update-WebsiteAbi -WebsiteFile $website -SnapshotFile $snapshot)) { throw "a plugin score did not update the website file" }
         $filled = Get-Content -LiteralPath $website -Raw | ConvertFrom-Json
         if ($filled.overall -ne 78.2 -or $filled.syscallOverall -ne 78.2) { throw "syscall scores changed" }
-        if ($filled.kernelAbi -ne 100 -or $filled.driverAbi -ne 50) { throw "ABI percents were not copied" }
-        if ($filled.notes -notmatch "kernelAbi is 100 from the kernel-exports category \(1 export returned or bugchecked; log output/plugin\.jsonl\)") { throw "kernel note missing" }
+        if ($null -ne $filled.kernelAbi -or $filled.driverAbi -ne 50) { throw "kernel ABI was copied from the plugin, or driver ABI was not" }
+        if ($filled.notes -match "from the kernel-exports category") { throw "plugin kernel note was copied" }
         if ($filled.notes -notmatch "driverAbi is 50 from the driver ABI category \(1 export returned or bugchecked; log output/plugin\.jsonl\)") { throw "driver note missing" }
-        if ($filled.notes -match "kernelAbi, lastBuild") { throw "measured kernelAbi stayed in the unmeasured sentence" }
+        if ($filled.notes -notmatch "kernelAbi, lastBuild") { throw "unmeasured kernelAbi left the sentence" }
         $gapNames = @($filled.unmeasured | ForEach-Object { [string]$_.section })
-        if ($gapNames -contains "kernelAbi" -or $gapNames -contains "driverAbi") { throw "measured sections stayed in unmeasured" }
+        if (-not ($gapNames -contains "kernelAbi") -or $gapNames -contains "driverAbi") { throw "kernel gap missing or driver gap remained" }
         if (-not ($gapNames -contains "lastBuild" -and $gapNames -contains "graphics")) { throw "other unmeasured sections were dropped" }
         $once = [System.IO.File]::ReadAllText($website)
         if (Update-WebsiteAbi -WebsiteFile $website -SnapshotFile $snapshot) { throw "a second merge rewrote a matching website file" }

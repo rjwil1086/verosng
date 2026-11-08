@@ -1,0 +1,30 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What share of the public ntoskrnl and HAL names return the same status from the Windows 10 22H2 kernel and the VerOS kernel?",
+  "allowedInputs": [
+    "The tree, including compat/reference/win10-22h2-ntoskrnl.txt, compat/reference/win10-22h2-hal.txt, and the syscall probe's DIFF comparison",
+    "Public contracts for the probed exports already declared in this tree"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "Windows 10 22H2 and ReactOS amd64",
+    "name": "kernel-abi",
+    "traceOrReplayId": "output/kernel-abi/windows.log"
+  },
+  "cursor": {
+    "prompt": "Let's build this but without interrupting the agent working on milestone 7",
+    "model": "Grok 4.7",
+    "date": "2026-11-07"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "kernel ABI percent from exact status agreement on the paired kernel probe",
+    "before": 100,
+    "after": 24.2,
+    "note": "100 was 10 plugin returns divided by those 10 calls. 24.2 is 15 exact matches out of 62 reference names. ZwCreateFile disagreed, and 46 names were not called."
+  }
+}

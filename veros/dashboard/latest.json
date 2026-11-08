@@ -5,7 +5,7 @@
   "capturedAt": "2026-11-08T00:21:28Z",
   "target": "Win10 22H2",
   "overall": 80.2,
-  "kernelAbi": null,
+  "kernelAbi": 24.2,
   "lastBuild": null,
   "northStar": {
     "label": "amd64 probe syscalls",
@@ -1162,43 +1162,7 @@
     "body": "NtPowerInformation returned STATUS_INVALID_PARAMETER on Windows 10 22H2 and STATUS_NOT_IMPLEMENTED on this boot."
   },
   "driverAbi": 50,
-  "graphics": [
-    {
-      "label": "Software framebuffer",
-      "value": "Partial",
-      "tone": "warn"
-    },
-    {
-      "label": "DRM",
-      "value": "Missing",
-      "tone": "bad"
-    },
-    {
-      "label": "Compositor",
-      "value": "Missing",
-      "tone": "bad"
-    },
-    {
-      "label": "DXVK",
-      "value": "Missing",
-      "tone": "bad"
-    },
-    {
-      "label": "D3D11",
-      "value": "Untested",
-      "tone": "warn"
-    },
-    {
-      "label": "D3D12",
-      "value": "Untested",
-      "tone": "warn"
-    },
-    {
-      "label": "WDDM",
-      "value": "Partial",
-      "tone": "warn"
-    }
-  ],
+  "graphics": null,
   "formula": [
     {
       "label": "Syscall compatibility",
@@ -1227,12 +1191,8 @@
     "bootResult": "Windows probe DIFF END OK; ReactOS probe DIFF END OK",
     "crashCount": 0
   },
-  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 81 of 101 names. 10 names failed on both sides with different codes, 6 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. kernelAbi, lastBuild, subsystems, traceCorpus, task, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied. driverAbi is 50 from the driver ABI category (1 export returned or bugchecked; log output/abi-boot/abi.jsonl). Untested rows stay out of that percent. applicationsSummary counts 4 recorded runs in compat/catalog/apps.json (working 4, partial 0, failing 0). Untested catalog rows stay out of the count. These runs are the recorded 32-bit results, not a new amd64 launch. driversSummary counts 52 in-box DriverEntry results in output/driver/load.log (working 50, partial 0, failing 2). A zero status is working. winnull is the separately loaded Windows null.sys and is not in this count. Tab probes: Filled regression, subsystems, task, graphics from the amd64 probe, the plugin log, the Windows trace counts, and the tree.",
+  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 81 of 101 names. 10 names failed on both sides with different codes, 6 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. lastBuild, subsystems, traceCorpus, task, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied. driverAbi is 50 from the driver ABI category (1 export returned or bugchecked; log output/abi-boot/abi.jsonl). Untested rows stay out of that percent. kernelAbi is 24.2 from exact status agreement on the kernel probe (matched 15 of 62). applicationsSummary counts 4 recorded runs in compat/catalog/apps.json (working 4, partial 0, failing 0). Untested catalog rows stay out of the count. These runs are the recorded 32-bit results, not a new amd64 launch. driversSummary counts 52 in-box DriverEntry results in output/driver/load.log (working 50, partial 0, failing 2). A zero status is working. winnull is the separately loaded Windows null.sys and is not in this count. Tab probes: Filled regression, subsystems, task from the amd64 probe, the plugin log, the Windows trace counts, and the tree.",
   "unmeasured": [
-    {
-      "section": "kernelAbi",
-      "reason": "The Windows 10 22H2 kernel and the VerOS kernel have not both finished the kernel probe."
-    },
     {
       "section": "lastBuild",
       "reason": "The guest banner is a date and commit, not a monotonic build number."
@@ -1270,5 +1230,387 @@
       "reason": "The amd64 probe does not exercise the display stack."
     }
   ],
-  "kernelAbiDetail": null
+  "kernelAbiDetail": {
+    "reference": 62,
+    "matched": 15,
+    "partial": 1,
+    "broken": 0,
+    "missing": 0,
+    "untested": 46,
+    "rule": "Exact token agreement between the Windows 10 22H2 kernel and the VerOS kernel. Untested names count as zero.",
+    "names": [
+      {
+        "name": "IoCallDriver",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoCompleteRequest",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoAllocateIrp",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoFreeIrp",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoBuildDeviceIoControlRequest",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoBuildSynchronousFsdRequest",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IofCallDriver",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IofCompleteRequest",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoCreateDevice",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoDeleteDevice",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoCreateSymbolicLink",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoDeleteSymbolicLink",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoAttachDeviceToDeviceStack",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoDetachDevice",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoAllocateMdl",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoFreeMdl",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoBuildPartialMdl",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "MmProbeAndLockPages",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "MmUnlockPages",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "MmMapLockedPagesSpecifyCache",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "MmGetSystemRoutineAddress",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "KeWaitForSingleObject",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "KeSetEvent",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "KeInitializeEvent",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "ExAllocatePoolWithTag",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "ExFreePoolWithTag",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "ObReferenceObjectByHandle",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "ObfDereferenceObject",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "PsCreateSystemThread",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "PsTerminateSystemThread",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "ZwCreateFile",
+        "status": "partial",
+        "windows": "0xC0000034",
+        "veros": "0xC000003A"
+      },
+      {
+        "name": "ZwReadFile",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "ZwWriteFile",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "ZwClose",
+        "status": "works",
+        "windows": "0xC0000008",
+        "veros": "0xC0000008"
+      },
+      {
+        "name": "ZwDeviceIoControlFile",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "RtlInitUnicodeString",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "DbgPrint",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "KeBugCheckEx",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "PoCallDriver",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "PoStartNextPowerIrp",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "PoRequestPowerIrp",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoGetDeviceProperty",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoRegisterDeviceInterface",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoSetDeviceInterfaceState",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoReportDetectedDevice",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoInvalidateDeviceRelations",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoInvalidateDeviceState",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoAllocateWorkItem",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoQueueWorkItem",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoFreeWorkItem",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "MmAllocateContiguousMemory",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "MmFreeContiguousMemory",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoMapTransfer",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoAllocateAdapterChannel",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoConnectInterrupt",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "IoDisconnectInterrupt",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "KeFlushIoBuffers",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "HalAllocateAdapterChannel",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "HalGetAdapter",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "HalTranslateBusAddress",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "HalGetInterruptVector",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      },
+      {
+        "name": "HalReturnToFirmware",
+        "status": "untested",
+        "windows": "untested",
+        "veros": "untested"
+      }
+    ]
+  }
 }
