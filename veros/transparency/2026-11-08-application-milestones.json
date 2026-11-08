@@ -1,0 +1,32 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the roadmap follow installing and running applications instead of the three earlier goals?",
+  "allowedInputs": [
+    "The user statement that the goal is to install and run any application Windows 10 22H2 can run, and that the other Windows 10 features are not the goal",
+    "The user request to update the milestone list",
+    "docs/MILESTONES.md already in this tree",
+    "The website parser in the VerOS NG site that stops at the first heading that is not a milestone"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Let's update the milestone list then",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "highest milestone number in docs/MILESTONES.md",
+    "before": 17,
+    "after": 21,
+    "note": "Milestones 18 through 21 are new. Milestones 9, 10, 12, and 17 stay numbered and wait. No probe was run."
+  }
+}

@@ -1,15 +1,13 @@
 ---
-description: Three VerOS NG goals and the milestone order
+description: VerOS NG application goal and the milestone order
 alwaysApply: true
 ---
 
-# Three goals
+# Application goal
 
 The order is `docs/MILESTONES.md`. A task stays only when the amd64 live CD still reaches the desktop.
 
-1. Windows 10 22H2 application ABI. An x64 application runs as it does on that Windows.
-2. Windows drivers for hardware other than graphics. A driver built with the Windows 10 22H2 WDK loads, and its calls into `ntoskrnl`, the HAL, and KMDF return instead of bugchecking.
-3. A graphics HAL. `user32`, `gdi32`, `dxgi`, and `d3d11` stay Windows-shaped while the backend changes from a software or virtual renderer, to DRM, to WDDM 2.0.
+An application that Windows 10 22H2 x64 can run installs and runs here. That set is x64 programs and 32-bit programs on the amd64 boot. A driver or a graphics backend waits until the application under test fails without it.
 
 - Judge a driver change by whether that driver still calls the same exports.
 - Do not fix a failure by changing the calling convention, structure layout, or IRQL behavior a WDK driver already uses.
