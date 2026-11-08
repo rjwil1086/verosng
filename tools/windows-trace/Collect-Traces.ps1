@@ -125,7 +125,7 @@ foreach ($name in $apps.Keys) {
     if ($exe -match ' ') { $exe = '"' + $exe + '"' }
     $launch = $exe
     foreach ($item in $extra[$name]) { $launch += " " + $item }
-    $arg = "-accel tcg -snapshot -machine q35 -cpu max -m 4096 -smp 2 -display none -vga std " +
+    $arg = "-accel tcg -snapshot -machine q35 -cpu max -m 8192 -smp 4 -display none -vga std " +
         "-monitor tcp:127.0.0.1:${MonitorPort},server,nowait " +
         "-drive if=pflash,format=raw,readonly=on,file=`"$codeFd`" " +
         "-drive if=pflash,format=raw,file=`"$varsFd`" " +

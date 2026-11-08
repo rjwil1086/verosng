@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Windows 10 capture
 
-The guest is the powered-off VMware disk `D:\VMware\Windows 10 x64\Windows 10 x64.vmdk`. QEMU opens it with `format=vmdk` and `-snapshot`. `vmrun list` must show no running VMs first. Do not write the VMDK. Boot with TCG. Do not pass `-accel whpx` to `qemu-system-i386`.
+The guest is the powered-off VMware disk `D:\VMware\Windows 10 x64\Windows 10 x64.vmdk`. QEMU opens it with `format=vmdk` and `-snapshot`. `vmrun list` must show no running VMs first. Do not write the VMDK. Boot with TCG, `-m 8192`, and `-smp 4`. Do not pass `-accel whpx` to `qemu-system-i386`. The VerOS NG boot uses the same memory and CPU count.
 
 Two captures exist. Both stay under `output/`, which is gitignored.
 

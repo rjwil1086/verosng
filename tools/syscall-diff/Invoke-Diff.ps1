@@ -312,7 +312,7 @@ if (-not $SkipWindows) {
     Copy-Item "C:\Program Files\qemu\share\edk2-i386-vars.fd" $varsFd -Force
     $script:MonitorPort = 4446
     $serial = ($windowsLog -replace '\\', '/')
-    $arg = "-accel tcg -snapshot -machine q35 -cpu max -m 4096 -smp 2 -display none -vga std " +
+    $arg = "-accel tcg -snapshot -machine q35 -cpu max -m 8192 -smp 4 -display none -vga std " +
         "-serial file:$serial " +
         "-monitor tcp:127.0.0.1:$($script:MonitorPort),server,nowait " +
         "-drive if=pflash,format=raw,readonly=on,file=`"$codeFd`" " +
@@ -340,7 +340,7 @@ if (-not $SkipReactOS) {
     $script:MonitorPort = 4447
     $bootSerial = ($bootLog -replace '\\', '/')
     $probeSerial = ($reactosLog -replace '\\', '/')
-    $arg = "-accel tcg -L `"$bios`" -m 2048 -cdrom `"$bootcd`" -boot d -display none -no-reboot " +
+    $arg = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -cdrom `"$bootcd`" -boot d -display none -no-reboot " +
         "-serial file:$bootSerial -serial file:$probeSerial " +
         "-monitor tcp:127.0.0.1:$($script:MonitorPort),server,nowait " +
         "-drive file=`"$iso`",media=cdrom,if=ide,index=1 " +

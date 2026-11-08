@@ -41,7 +41,7 @@ $jsonl = Join-Path $OutputDir "abi-$stamp.jsonl"
 $qemuLog = Join-Path $OutputDir "qemu-$stamp.log"
 
 $bios = "C:\Program Files\qemu\share"
-$argLine = "-accel tcg -L `"$bios`" -m 2048 -cdrom `"$Iso`" -boot d -no-reboot -serial `"file:$serial`""
+$argLine = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -cdrom `"$Iso`" -boot d -no-reboot -serial `"file:$serial`""
 if (-not $ShowWindow) {
     $argLine += " -display none"
 }

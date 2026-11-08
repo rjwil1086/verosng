@@ -1,0 +1,31 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why do Windows 10 22H2 and VerOS NG boots request 4 cores and 8 GB?",
+  "allowedInputs": [
+    "The user request to boot Windows 10 22H2 and this build with 4 CPU cores and 8 GB because 1 core and 2 GB was too slow",
+    "The user statement that a multicore boot failure is fixed in this tree",
+    "The QEMU launch lines in tools/syscall-diff/Invoke-Diff.ps1, tools/windows-trace/Collect-Traces.ps1, tools/windows-trace/Install-Windows.ps1, and tools/pipeline/Test-Boot.ps1"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "qemu-system-i386 and qemu-system-x86_64 argument check",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Going forward can we boot Windows 10 22H2 and our build with 4 cpu cores and 8gb ram? It runs like a turd on 1 cpu core and 2gb ram.",
+    "model": "Grok 4.7",
+    "date": "2026-11-07"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "QEMU guest RAM in MB on the VerOS NG boot line",
+    "before": 2048,
+    "after": 8192,
+    "note": "The same lines now pass -smp 4. Windows boots were already -m 4096 -smp 2. Both qemu-system-i386 and qemu-system-x86_64 stayed up with -m 8192 -smp 4 and empty stderr. No guest probe was run."
+  }
+}

@@ -5,7 +5,7 @@ This fork is built and booted on Windows. The first configuration is GCC, i386, 
 ## Tools
 
 - ReactOS Build Environment 2.2.1. The silent installer returned exit code 2, so the same files were extracted to `D:\RosBE`. The scripts also look for `C:\RosBE`. `rosbe-gcc-env.cmd` is the toolchain entry point.
-- QEMU 11.1.0 at `C:\Program Files\qemu\qemu-system-i386.exe`. It is not on `PATH`. `qemu-system-i386 -accel help` lists only `tcg`, so boot tests pass `-accel tcg` and record `accelerator=tcg`. Do not pass `-accel whpx` to this binary.
+- QEMU 11.1.0 at `C:\Program Files\qemu\qemu-system-i386.exe`. It is not on `PATH`. `qemu-system-i386 -accel help` lists only `tcg`, so boot tests pass `-accel tcg` and record `accelerator=tcg`. Do not pass `-accel whpx` to this binary. Windows 10 22H2 and VerOS NG boots pass `-m 8192 -smp 4`.
 
 If a real boot never prints the ReactOS version banner within 20 minutes, switch to a QEMU build that includes WHPX. `WinHvPlatform.dll` is already on this machine.
 

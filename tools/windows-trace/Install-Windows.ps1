@@ -224,7 +224,7 @@ if ($Force -or -not (Test-Path $disk)) {
 
 $serial = Join-Path $out "install-serial.log"
 $err = Join-Path $out "install.err"
-$arg = "-accel tcg -machine pc -cpu qemu64 -m 4096 -smp 2 -display none -vga std " +
+$arg = "-accel tcg -machine pc -cpu qemu64 -m 8192 -smp 4 -display none -vga std " +
     "-boot order=c,once=d -monitor tcp:127.0.0.1:4445,server,nowait " +
     "-drive `"file=$disk,format=qcow2,if=ide,index=0,media=disk`" " +
     "-drive `"file=$Iso,format=raw,if=ide,index=1,media=cdrom`" " +
