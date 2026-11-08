@@ -400,7 +400,12 @@ if (-not $SkipWindows) {
     Write-Host "Booting Windows"
     $err = Join-Path $out "windows.err"
     $proc = Start-Qemu $Qemu64 $arg $err
-    Start-Sleep -Seconds 300
+    $deadline = (Get-Date).AddSeconds(900)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-DiffEnd $windowsLog) { break }
+        if ($proc.HasExited) { break }
+        Start-Sleep -Seconds 15
+    }
     Stop-Qemu $proc
     Publish-Sink $winSink $windowsLog
     Write-Host "Windows log $windowsLog"
@@ -426,14 +431,22 @@ if (-not $SkipReactOS) {
     Write-Host "Booting ReactOS"
     $err = Join-Path $out "reactos.err"
     $proc = Start-Qemu $Qemu64 $arg $err
-    $ready = (Get-Date).AddSeconds(180)
+    $ready = (Get-Date).AddSeconds(240)
+    $desktop = $false
     while ((Get-Date) -lt $ready) {
-        if ((Test-Path $bootLog) -and (Select-String -LiteralPath $bootLog -Pattern "Parent is Desktop" -Quiet)) { break }
+        if ((Test-Path $bootLog) -and (Select-String -LiteralPath $bootLog -Pattern "Parent is Desktop" -Quiet)) {
+            $desktop = $true
+        }
+        if ($desktop -and (Select-String -LiteralPath $bootLog -Pattern "VERPORT END|CMultimediaBackend" -Quiet)) {
+            break
+        }
         Start-Sleep -Seconds 3
     }
     if (-not $proc.HasExited) {
-        Wait-Probe $reactosLog 180 | Out-Null
-        if (-not (Test-DiffEnd $reactosLog)) { Wait-Probe $bootLog 20 | Out-Null }
+        Start-Sleep -Seconds 5
+        Send-ProbeCommand
+        Wait-Probe $reactosLog 240 | Out-Null
+        if (-not (Test-DiffEnd $reactosLog)) { Wait-Probe $bootLog 30 | Out-Null }
     }
     Stop-Qemu $proc
     Publish-Sink $rosSink $reactosLog

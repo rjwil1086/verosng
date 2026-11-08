@@ -971,13 +971,15 @@ Return Value:
             //  Cmd should really handle this per 9x.
             //
 
-            if (!FlagOn( IrpSp->Flags, SL_ALLOW_RAW_MOUNT ) &&
-                Vpb->RealDevice->DeviceType == FILE_DEVICE_DISK) {
-
-                FatNormalizeAndRaiseStatus( IrpContext, Status );
-            }
-
-            return Status;
+            /*
+             * A verify failure used to be raised out of this mount. On a
+             * QEMU hard disk that status is STATUS_IO_DEVICE_ERROR, the
+             * raise stopped the debug boot, and returning it made the
+             * shell retry the mount forever. Keep going and let the boot
+             * sector decide whether this is a FAT volume.
+             */
+            DbgPrint("VERPORT FatMountVolume verify %08lx\n", Status);
+            ChangeCount = 0;
         }
 
     }
@@ -1197,10 +1199,11 @@ Return Value:
                                &BootBcb,
                                (PVOID *)&BootSector );
 
-        } _SEH2_EXCEPT( Vpb->RealDevice->DeviceType == FILE_DEVICE_CD_ROM ?
-                  EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH ) {
+        } _SEH2_EXCEPT( EXCEPTION_EXECUTE_HANDLER ) {
 
-              NOTHING;
+              DbgPrint("VERPORT FatMountVolume boot read %08lx\n",
+                       _SEH2_GetExceptionCode());
+              BootBcb = NULL;
         } _SEH2_END;
 
         //

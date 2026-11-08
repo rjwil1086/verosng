@@ -8,6 +8,7 @@ param(
     [string]$Plugin = "",
     [string]$Map = "",
     [string]$OutputDir = "",
+    [string]$AppsDir = "",
     [switch]$ShowWindow
 )
 
@@ -42,8 +43,17 @@ $qemuLog = Join-Path $OutputDir "qemu-$stamp.log"
 
 $bios = "C:\Program Files\qemu\share"
 $argLine = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -cdrom `"$Iso`" -boot d -no-reboot -serial `"file:$serial`""
-if (-not $ShowWindow) {
+if ($ShowWindow) {
+    $argLine += " -display gtk -name `"VerOS NG`""
+} else {
     $argLine += " -display none"
+}
+if ($AppsDir) {
+    if (-not (Test-Path $AppsDir)) {
+        Write-Error "Apps directory was not found at $AppsDir"
+    }
+    $appsFwd = ($AppsDir -replace '\\', '/')
+    $argLine += " -drive file=fat:rw:${appsFwd},format=raw,if=ide,index=0,media=disk"
 }
 if ($Plugin) {
     $pluginFwd = ($Plugin -replace '\\', '/')
@@ -57,7 +67,16 @@ if ($Plugin) {
 
 Write-Host "QEMU: $Qemu"
 Write-Host "accelerator=tcg"
-$proc = Start-Process -FilePath $Qemu -ArgumentList $argLine -PassThru -RedirectStandardError $qemuLog -WindowStyle Hidden
+$start = @{
+    FilePath = $Qemu
+    ArgumentList = $argLine
+    PassThru = $true
+    RedirectStandardError = $qemuLog
+}
+if (-not $ShowWindow) {
+    $start.WindowStyle = "Hidden"
+}
+$proc = Start-Process @start
 $finished = $proc.WaitForExit($TimeoutSec * 1000)
 if (-not $finished) {
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue

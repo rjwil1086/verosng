@@ -9,6 +9,7 @@
 /* INCLUDES *******************************************************************/
 
 #include "ntoskrnl.h"
+#include <reactos/runtimever.h>
 #define NDEBUG
 #include "debug.h"
 
@@ -2319,6 +2320,32 @@ CmpSetVersionData(VOID)
                   REG_SZ,
                   ValueData.Buffer,
                   ValueData.Length + sizeof(WCHAR));
+
+    /* Windows 10 keeps these beside the 6.3 CurrentVersion string. */
+    {
+        ULONG MajorVersion = RUNTIME_NT_MAJOR_VERSION;
+        ULONG MinorVersion = RUNTIME_NT_MINOR_VERSION;
+
+        RtlInitUnicodeString(&ValueName, L"CurrentMajorVersionNumber");
+        NtSetValueKey(CurrentVersionKeyHandle,
+                      &ValueName,
+                      0,
+                      REG_DWORD,
+                      &MajorVersion,
+                      sizeof(MajorVersion));
+
+        RtlInitUnicodeString(&ValueName, L"CurrentMinorVersionNumber");
+        NtSetValueKey(CurrentVersionKeyHandle,
+                      &ValueName,
+                      0,
+                      REG_DWORD,
+                      &MinorVersion,
+                      sizeof(MinorVersion));
+
+        DPRINT1("VERPORT currentversion %wZ\n", &CmVersionString);
+        DPRINT1("VERPORT build %wZ\n", &ValueData);
+        DPRINT1("VERPORT major %lu\n", MajorVersion);
+    }
 
     /* Set the 'BuildLab' value */
     RtlInitUnicodeString(&ValueName, L"BuildLab");

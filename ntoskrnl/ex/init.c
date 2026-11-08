@@ -11,6 +11,7 @@
 
 #include <ntoskrnl.h>
 #include <reactos/buildno.h>
+#include <reactos/runtimever.h>
 #include "inbv/logo.h"
 
 #define NDEBUG
@@ -45,14 +46,16 @@ typedef struct _INIT_BUFFER
 
 /* DATA **********************************************************************/
 
-/* NT Version Info */
-ULONG NtMajorVersion = VER_PRODUCTMAJORVERSION;
-ULONG NtMinorVersion = VER_PRODUCTMINORVERSION;
+/* NT Version Info. The PE stamp stays VER_PRODUCT*. */
+ULONG NtMajorVersion = RUNTIME_NT_MAJOR_VERSION;
+ULONG NtMinorVersion = RUNTIME_NT_MINOR_VERSION;
 #if DBG /* Checked Build */
-ULONG NtBuildNumber = VER_PRODUCTBUILD | 0xC0000000;
+ULONG NtBuildNumber = RUNTIME_NT_BUILD_NUMBER | 0xC0000000;
 #else   /* Free Build */
-ULONG NtBuildNumber = VER_PRODUCTBUILD;
+ULONG NtBuildNumber = RUNTIME_NT_BUILD_NUMBER;
 #endif
+C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, Reserved2) + (6 * sizeof(ULONG)) ==
+         RUNTIME_NT_SHARED_BUILD_OFFSET);
 
 /* NT System Info */
 ULONG NtGlobalFlag = 0;
@@ -1261,12 +1264,11 @@ ExpInitializeExecutive(IN ULONG Cpu,
         KeBugCheckEx(PHASE0_INITIALIZATION_FAILED, Status, 0, 0, 0);
     }
 
-    /* Add our version */
+    /* Registry CurrentVersion stays 6.3. The runtime NT version is 10.0. */
     Status = RtlStringCbPrintfA(VersionBuffer,
                                 sizeof(VersionBuffer),
-                                "%u.%u",
-                                VER_PRODUCTMAJORVERSION,
-                                VER_PRODUCTMINORVERSION);
+                                "%s",
+                                RUNTIME_NT_CURRENT_VERSION_STRING);
     if (!NT_SUCCESS(Status))
     {
         /* Fail */
@@ -1336,6 +1338,7 @@ ExpInitializeExecutive(IN ULONG Cpu,
     /* Set the OS Version */
     SharedUserData->NtMajorVersion = NtMajorVersion;
     SharedUserData->NtMinorVersion = NtMinorVersion;
+    *(PULONG)((PUCHAR)SharedUserData + RUNTIME_NT_SHARED_BUILD_OFFSET) = RUNTIME_NT_BUILD_NUMBER;
 
     /* Set the machine type */
     SharedUserData->ImageNumberLow = IMAGE_FILE_MACHINE_NATIVE;
@@ -1479,8 +1482,8 @@ Phase1InitializationDiscard(IN PVOID Context)
     Status = RtlStringCbPrintfA(StringBuffer,
                                 sizeof(InitBuffer->VersionNumber),
                                 "%u.%u",
-                                VER_PRODUCTMAJORVERSION,
-                                VER_PRODUCTMINORVERSION);
+                                NtMajorVersion,
+                                NtMinorVersion);
     if (!NT_SUCCESS(Status))
     {
         /* Bugcheck */
@@ -1519,6 +1522,21 @@ Phase1InitializationDiscard(IN PVOID Context)
 
     /* Display the version string on-screen */
     InbvDisplayString(EndBuffer);
+
+    /* PsGetVersion reads the same globals this banner reports. */
+    {
+        ULONG MajorVersion = 0, MinorVersion = 0, BuildNumber = 0;
+
+        PsGetVersion(&MajorVersion, &MinorVersion, &BuildNumber, NULL);
+        DPRINT1("VERPORT PsGetVersion %lu.%lu.%lu\n",
+                MajorVersion,
+                MinorVersion,
+                BuildNumber);
+        DPRINT1("VERPORT SharedUserData %lu.%lu.%lu\n",
+                SharedUserData->NtMajorVersion,
+                SharedUserData->NtMinorVersion,
+                *(PULONG)((PUCHAR)SharedUserData + RUNTIME_NT_SHARED_BUILD_OFFSET));
+    }
 
     /* Initialize Power Subsystem in Phase 0 */
     if (!PoInitSystem(0)) KeBugCheck(INTERNAL_POWER_ERROR);

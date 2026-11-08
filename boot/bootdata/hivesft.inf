@@ -564,6 +564,7 @@ HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\BackupPath",
 
 HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\Run",,0x00000012
 HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",,0x00000012
+HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce","verreport",0x00020002,"%SystemRoot%\system32\verreport.exe"
 HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx",,0x00000012
 HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\Setup",,0x00000012
 HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\Setup","DriverCachePath",0x00020002,"%SystemRoot%\Driver Cache"

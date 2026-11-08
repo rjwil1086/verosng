@@ -273,7 +273,7 @@ What landed:
 
 Goal: The amd64 boot reports Windows 10 22H2 to an application.
 
-This milestone is in progress. It follows milestone 8 and milestone 9. It does not wait for more processors or for the 6 TB ceiling. This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The root definitions move in milestone 27. The product version stays 0.4.x. In-tree images keep their existing PE version stamp. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 8 and milestone 9. It does not wait for more processors or for the 6 TB ceiling. This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The root definitions move in milestone 27. The product version stays 0.4.x. In-tree images keep their existing PE version stamp. A task stays only when the amd64 live CD still reaches the desktop.
 
 Requirements:
 
@@ -302,7 +302,8 @@ What landed:
 - The runtime NT version is 10.0.19045 with no service pack. The live CD log reports `PsGetVersion 10.0.19045`, `SharedUserData 10.0.19045`, and `RtlGetVersion 10.0.19045`. An image with no Windows 10 manifest gets `GetVersion` 6.2.9200. `CurrentVersion` is `6.3`, `CurrentMajorVersionNumber` is 10, and `CurrentBuildNumber` is `19045`. `CSDVersion` is 0, so the desktop line and `RtlGetVersion` carry an empty service-pack string.
 - The product banner stays VerOS NG 0.4.x. The PE stamp stays 5.2.3790. The tree still compiles as `_WIN32_WINNT=0x502`.
 - `KmWin2k3VersionLie` still overwrites the real version with 5.2.3790.
-- The desktop still appears. `verreport.exe` on the boot CD prints the same user-mode and registry values. The boot log recorded that split from `ntdll` and from the registry writer.
+- The desktop still appears. `verreport.exe` on the boot CD prints the same user-mode and registry values. The boot log recorded that split from `ntdll` and from the registry writer. Git, Python, 7-Zip, and Notepad++ still start from the apps disk.
+- The milestone 8 probe was rerun after that version change. Both guests printed `DIFF END OK`. `NtCreateFile`, `NtWriteFile`, `NtReadFile`, both `NtClose` calls, and `NtCreateThreadEx` return `STATUS_SUCCESS` on both. `NtDeviceIoControlFile` and `NtCreateUserProcess` return `STATUS_INVALID_PARAMETER` on both. Every previously matched top-100 name still matches. 88 of 101 scored names match, and the dashboard score stays 87.1.
 
 ## Milestone 11: Install one x64 application
 

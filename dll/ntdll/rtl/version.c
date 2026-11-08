@@ -11,13 +11,23 @@
 /* INCLUDES *******************************************************************/
 
 #include <ntdll.h>
+#include <reactos/runtimever.h>
 
 #define NDEBUG
 #include <debug.h>
 
+C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, Reserved2) + (6 * sizeof(ULONG)) ==
+         RUNTIME_NT_SHARED_BUILD_OFFSET);
+
 /* FUNCTIONS ******************************************************************/
 
 static signed char g_ReportProductType = 0;
+
+static ULONG
+RtlpSharedBuildNumber(VOID)
+{
+    return *(PULONG)((PUCHAR)SharedUserData + RUNTIME_NT_SHARED_BUILD_OFFSET);
+}
 
 /* HACK: ReactOS specific changes, see bug-reports CORE-6611 and CORE-4620 (aka. #5003) */
 static VOID NTAPI
@@ -151,26 +161,27 @@ RtlGetNtVersionNumbers(OUT PULONG pMajorVersion,
                        OUT PULONG pMinorVersion,
                        OUT PULONG pBuildNumber)
 {
-    PPEB pPeb = NtCurrentPeb();
+    ULONG MajorVersion = SharedUserData->NtMajorVersion;
+    ULONG MinorVersion = SharedUserData->NtMinorVersion;
 
     if (pMajorVersion)
     {
-        *pMajorVersion = pPeb->OSMajorVersion < 5 ? 5 : pPeb->OSMajorVersion;
+        *pMajorVersion = MajorVersion < 5 ? 5 : MajorVersion;
     }
 
     if (pMinorVersion)
     {
-        if ( (pPeb->OSMajorVersion  < 5) ||
-            ((pPeb->OSMajorVersion == 5) && (pPeb->OSMinorVersion < 1)) )
+        if ((MajorVersion < 5) ||
+            ((MajorVersion == 5) && (MinorVersion < 1)))
             *pMinorVersion = 1;
         else
-            *pMinorVersion = pPeb->OSMinorVersion;
+            *pMinorVersion = MinorVersion;
     }
 
     if (pBuildNumber)
     {
         /* Windows really does this! */
-        *pBuildNumber = (0xF0000000 | pPeb->OSBuildNumber);
+        *pBuildNumber = (0xF0000000 | RtlpSharedBuildNumber());
     }
 }
 
@@ -190,10 +201,11 @@ RtlGetVersion(IN OUT PRTL_OSVERSIONINFOW lpVersionInformation)
         return STATUS_INVALID_PARAMETER;
     }
 
-    lpVersionInformation->dwMajorVersion = Peb->OSMajorVersion;
-    lpVersionInformation->dwMinorVersion = Peb->OSMinorVersion;
-    lpVersionInformation->dwBuildNumber = Peb->OSBuildNumber;
-    lpVersionInformation->dwPlatformId = Peb->OSPlatformId;
+    /* The real version. GetVersion reads the PEB, which may be the 6.2 lie. */
+    lpVersionInformation->dwMajorVersion = SharedUserData->NtMajorVersion;
+    lpVersionInformation->dwMinorVersion = SharedUserData->NtMinorVersion;
+    lpVersionInformation->dwBuildNumber = RtlpSharedBuildNumber();
+    lpVersionInformation->dwPlatformId = VER_PLATFORM_WIN32_NT;
     RtlZeroMemory(lpVersionInformation->szCSDVersion, sizeof(lpVersionInformation->szCSDVersion));
 
     /* If we have a CSD version string, initialized by Application Compatibility... */

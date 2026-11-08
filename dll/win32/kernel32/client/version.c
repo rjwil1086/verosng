@@ -49,6 +49,14 @@ GetVersionExW(IN LPOSVERSIONINFOW lpVersionInformation)
     Status = RtlGetVersion((PRTL_OSVERSIONINFOW)lpVersionInformation);
     if (Status == STATUS_SUCCESS)
     {
+        PPEB Peb = NtCurrentPeb();
+
+        /* Same lied version GetVersion returns. RtlGetVersion stays real. */
+        lpVersionInformation->dwMajorVersion = Peb->OSMajorVersion;
+        lpVersionInformation->dwMinorVersion = Peb->OSMinorVersion;
+        lpVersionInformation->dwBuildNumber = Peb->OSBuildNumber;
+        lpVersionInformation->dwPlatformId = Peb->OSPlatformId;
+
         if (lpVersionInformation->dwOSVersionInfoSize == sizeof(OSVERSIONINFOEXW))
         {
             lpVersionInformationEx = (PVOID)lpVersionInformation;

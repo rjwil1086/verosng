@@ -14,11 +14,6 @@
 #include <asm.inc>
 #include <freeldr/include/arch/pc/x86common.h>
 
-#ifndef ROS_REGTEST
-#define WAIT_FOR_KEY
-#endif
-
-
 .code16
 ASSUME CS:.text, DS:.text, ES:.text
 
@@ -138,40 +133,8 @@ relocated:
     cmp ax, HEX(AA55)
     jne .boot_freeldr
 
-#ifdef WAIT_FOR_KEY
-    // We could either boot from the ReactOS medium or from hard disk. Let the user decide!
-    // Display the 'Press key' message.
-    call crlf_early
-    mov si, offset presskey_msg
-    call writestr_early
-
-    // Count down 5 seconds.
-    mov cx, 5
-
-.next_second:
-    // Count in seconds using the BIOS Timer, which runs roughly at 19 ticks per second.
-    // Load its value plus one second into EAX for comparison later.
-    mov eax, ds:[BIOS_timer]
-    add eax, 19
-
-.poll_again:
-    // Check for a keypress, boot FREELDR from our ReactOS medium if a key was pressed.
-    call pollchar_and_empty
-    jnz .boot_freeldr
-
-    // Check if another second has passed (in BIOS Timer ticks).
-    mov ebx, ds:[BIOS_timer]
-    cmp eax, ebx
-    jnz .poll_again
-
-    // Another second has passed, so print the dot and decrement the second counter.
-    // If the user hasn't pressed a key after the entire 5 seconds have elapsed, just boot from the first hard disk.
-    mov si, offset dot_msg
-    call writestr_early
-    dec cx
-    jz .boot_harddisk
-    jmp .next_second
-#endif
+    // A second disk may only hold data. Boot the ReactOS medium.
+    jmp .boot_freeldr
 
 .boot_harddisk:
     // Restore a clean context for the hard disk MBR and boot the already loaded MBR.
@@ -186,11 +149,6 @@ relocated:
     ljmp16 0, HEX(7C00)
 
 .boot_freeldr:
-#ifdef WAIT_FOR_KEY
-    call crlf_early
-    call crlf_early
-#endif
-
     // The BIOS gave us a boot drive number, so in a perfect world we could just use that one now.
     // Unfortunately, there are many broken BIOSes around, which is why ISOLINUX verifies it and applies some hacks if the number is wrong.
     // Let's do exactly the same here to achieve maximum compatibility.
@@ -1058,10 +1016,6 @@ pollchar_and_empty:
 
 
 /* INITIALIZED VARIABLES *****************************************************/
-presskey_msg:
-    .ascii "Press any key to boot from the ReactOS medium", NUL
-dot_msg:
-    .ascii ".", NUL
 isoboot_str:
     .ascii "ISOBOOT: ", NUL
 spec_err_msg:

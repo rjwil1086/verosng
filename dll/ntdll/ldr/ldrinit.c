@@ -12,6 +12,7 @@
 #include <ntdll.h>
 #include <compat_undoc.h>
 #include <compatguid_undoc.h>
+#include <reactos/runtimever.h>
 
 #define NDEBUG
 #include <debug.h>
@@ -1596,6 +1597,78 @@ LdrpDisableProcessCompatGuidDetection(VOID)
 }
 
 
+static ULONG
+LdrpSharedBuildNumber(VOID)
+{
+    return *(PULONG)((PUCHAR)SharedUserData + RUNTIME_NT_SHARED_BUILD_OFFSET);
+}
+
+static BOOLEAN
+LdrpPebMatchesRealVersion(VOID)
+{
+    PPEB Peb = NtCurrentPeb();
+
+    return (Peb->OSMajorVersion == SharedUserData->NtMajorVersion) &&
+           (Peb->OSMinorVersion == SharedUserData->NtMinorVersion) &&
+           (Peb->OSBuildNumber == (USHORT)LdrpSharedBuildNumber());
+}
+
+static VOID
+LdrpSetPebVersion(ULONG MajorVersion, ULONG MinorVersion, USHORT BuildNumber)
+{
+    PPEB Peb = NtCurrentPeb();
+
+    Peb->OSMajorVersion = MajorVersion;
+    Peb->OSMinorVersion = MinorVersion;
+    Peb->OSBuildNumber = BuildNumber;
+}
+
+static VOID
+LdrpApplyCompatVersionToPeb(DWORD CompatVersion)
+{
+    switch (CompatVersion)
+    {
+        case _WIN32_WINNT_VISTA:
+            LdrpSetPebVersion(6, 0, 6000);
+            break;
+        case _WIN32_WINNT_WIN7:
+            LdrpSetPebVersion(6, 1, 7600);
+            break;
+        case _WIN32_WINNT_WIN8:
+            LdrpSetPebVersion(RUNTIME_NT_LIE_MAJOR_VERSION,
+                              RUNTIME_NT_LIE_MINOR_VERSION,
+                              RUNTIME_NT_LIE_BUILD_NUMBER);
+            break;
+        case _WIN32_WINNT_WINBLUE:
+            LdrpSetPebVersion(6, 3, 9600);
+            break;
+        case _WIN32_WINNT_WIN10:
+            LdrpSetPebVersion(SharedUserData->NtMajorVersion,
+                              SharedUserData->NtMinorVersion,
+                              (USHORT)LdrpSharedBuildNumber());
+            break;
+        default:
+            break;
+    }
+}
+
+/* An image with no supportedOS GUID keeps the Windows 8 version. */
+static VOID
+LdrpApplyUnmanifestedVersion(VOID)
+{
+    if (!LdrpPebMatchesRealVersion())
+        return;
+
+    if ((SharedUserData->NtMajorVersion > RUNTIME_NT_LIE_MAJOR_VERSION) ||
+        ((SharedUserData->NtMajorVersion == RUNTIME_NT_LIE_MAJOR_VERSION) &&
+         (SharedUserData->NtMinorVersion >= RUNTIME_NT_LIE_MINOR_VERSION)))
+    {
+        LdrpSetPebVersion(RUNTIME_NT_LIE_MAJOR_VERSION,
+                          RUNTIME_NT_LIE_MINOR_VERSION,
+                          RUNTIME_NT_LIE_BUILD_NUMBER);
+    }
+}
+
 VOID
 NTAPI
 LdrpInitializeProcessCompat(PVOID pProcessActctx, PVOID* pOldShimData)
@@ -1639,6 +1712,7 @@ LdrpInitializeProcessCompat(PVOID pProcessActctx, PVOID* pOldShimData)
             else
             {
                 DPRINT1("LdrpInitializeProcessCompat: ProcessCompatVersion already set to 0x%x\n", pShimData->dwRosProcessCompatVersion);
+                LdrpApplyCompatVersionToPeb(pShimData->dwRosProcessCompatVersion);
             }
             return;
         }
@@ -1656,21 +1730,20 @@ LdrpInitializeProcessCompat(PVOID pProcessActctx, PVOID* pOldShimData)
     if (!NT_SUCCESS(Status))
     {
         DPRINT1("LdrpInitializeProcessCompat: Unable to query process actctx with status %x\n", Status);
+        LdrpApplyUnmanifestedVersion();
         return;
     }
 
     ContextCompatInfo = (ACTIVATION_CONTEXT_COMPATIBILITY_INFORMATION*)Buffer;
-    /* No Compatibility elements present, bail out */
+    /* No Compatibility elements present, so GetVersion stays at 6.2. */
     if (ContextCompatInfo->ElementCount == 0)
+    {
+        LdrpApplyUnmanifestedVersion();
         return;
+    }
 
-    /* Search for known GUIDs, starting from oldest to newest.
-       Note that on Windows it is somewhat reversed, starting from the latest known
-       version, going down. But we are not Windows, trying to allow a lower version,
-       we are ReactOS trying to fake a higher version. So we interpret what Windows
-       does as "try the closest version to the actual version", so we start with the
-       lowest version, which is closest to Windows 2003, which we mostly are. */
-    for (cur = RTL_NUMBER_OF(KnownCompatGuids) - 1; cur != -1; --cur)
+    /* Newest declared GUID that this OS is. The host reports 10.0. */
+    for (cur = 0; cur < RTL_NUMBER_OF(KnownCompatGuids); ++cur)
     {
         for (n = 0; n < ContextCompatInfo->ElementCount; ++n)
         {
@@ -1680,8 +1753,12 @@ LdrpInitializeProcessCompat(PVOID pProcessActctx, PVOID* pOldShimData)
                 if (LdrpDisableProcessCompatGuidDetection())
                 {
                     DPRINT1("LdrpInitializeProcessCompat: Not applying automatic fix for winver 0x%x due to policy\n", KnownCompatGuids[cur].Version);
+                    LdrpApplyUnmanifestedVersion();
                     return;
                 }
+
+                /* GetVersion follows this GUID even if the shim block cannot be stored. */
+                LdrpApplyCompatVersionToPeb(KnownCompatGuids[cur].Version);
 
                 /* If this process did not need shim data before, allocate and store it */
                 if (pShimData == NULL)
@@ -1708,7 +1785,7 @@ LdrpInitializeProcessCompat(PVOID pProcessActctx, PVOID* pOldShimData)
                     *pOldShimData = pShimData;
                 }
 
-                /* Store the lowest found version, and bail out. */
+                /* The 6.2 lie is not stored here. */
                 pShimData->dwRosProcessCompatVersion = KnownCompatGuids[cur].Version;
                 DPRINT1("LdrpInitializeProcessCompat: Found guid for winver 0x%x in manifest from %wZ\n",
                         KnownCompatGuids[cur].Version,
@@ -1717,6 +1794,8 @@ LdrpInitializeProcessCompat(PVOID pProcessActctx, PVOID* pOldShimData)
             }
         }
     }
+
+    LdrpApplyUnmanifestedVersion();
 }
 
 VOID
