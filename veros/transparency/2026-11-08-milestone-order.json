@@ -1,0 +1,31 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How should the unfinished milestones be numbered so the numbers follow the order the work is done?",
+  "allowedInputs": [
+    "docs/MILESTONES.md",
+    "The user request to order every unfinished milestone, then renumber those milestones in that order",
+    "sdk/include/psdk/sdkddkver.h NTDDI_WIN10_CO for build 1904x"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Please review these milestones and the existing milestones we haven't started. Update the milestone list so that all milestones are done in the best order. Can you renumber the milestones that we haven't started on so they are in the order we should perform them in?",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "milestone sections in docs/MILESTONES.md",
+    "before": 22,
+    "after": 27,
+    "note": "Finished milestones 0 through 8 kept their numbers. Open milestones are 9 through 26 in execution order. No boot was run."
+  }
+}

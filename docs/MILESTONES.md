@@ -6,17 +6,26 @@ An application that Windows 10 22H2 x64 can run installs and runs here. That set
 
 Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. Milestone 8 is complete. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
 
-The open work follows this order. Milestone numbers stay fixed.
+The open work follows this order. Finished milestones keep their numbers. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone.
 
-1. Milestone 18. Native i386 is unsupported.
-2. Milestone 11. The boot reports Windows 10 22H2.
-3. Milestone 21. One x64 application's installer completes and the program runs.
-4. Milestone 20. The next application, one at a time.
-5. Milestone 19. WoW64, after milestone 21.
-6. Milestones 13 and 14, when the application needs `opengl32` or `d3d11`.
-7. Milestones 15 and 16, when that application still fails on the software renderer.
+1. Milestone 9. Native i386 is unsupported.
+2. Milestone 10. The boot reports Windows 10 22H2. The tree still compiles as `_WIN32_WINNT=0x502`.
+3. Milestone 11. One x64 application's installer completes and the program runs.
+4. Milestone 12. One module compiles as Windows 10 22H2 when that installer's log names a prototype `0x502` hides. The installer then runs again.
+5. Milestone 13. Service numbers, when a program issues a direct call and the number disagrees with the name list. This can happen during milestone 11 or 14.
+6. Milestone 14. The next application, one at a time. Milestone 12 is the same interruption.
+7. Milestone 15. WoW64, after the first installed x64 program. Milestone 14 then includes 32-bit programs.
+8. Milestone 16. A retail driver, when the application needs that device.
+9. Milestone 17. One shared structure layout, when milestone 16, 11, or 14 names a wrong size or offset. The caller then runs again.
+10. Milestone 18. The remaining non-graphics drivers, after milestone 16, when the application needs that device. Milestones 19 through 22 do not wait for it.
+11. Milestones 19 and 20, when the application needs `opengl32` or `d3d11`.
+12. Milestones 21 and 22, when that application still fails on the software renderer.
+13. Milestone 23. Physical memory above 8 GiB, when an application fails for lack of RAM. This finishes before milestone 24 when both are underway.
+14. Milestone 24. Logical processors, when an application needs them.
+15. Milestone 25. The Vista page-table software bits, after milestone 23, when a caller fails on the current write and dirty positions.
+16. Milestone 26. The root compile becomes Windows 10 22H2, after milestones 23, 12, and 17.
 
-Milestones 9, 10, 12, and 17 stay written down and wait. The desktop that already appears is enough when an application can be started from it. Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
+Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
 
 ## Milestone 0: Project Infrastructure
 
@@ -158,7 +167,7 @@ What landed:
 - IRP, PnP, power, and DMA paths that `storahci` uses
 - The QEMU AHCI disk identified as `QEMU HARDDISK` through in-tree `storahci`
 
-Retail Windows drivers are milestone 12.
+Retail Windows drivers are milestone 16.
 
 ## Milestone 6: amd64 boot
 
@@ -179,7 +188,7 @@ Success criteria:
 - The daily boot is the amd64 guest
 - The top-100 probe is recaptured on that native path and is the headline score
 
-A Windows driver returning from `DriverEntry` is milestone 12, and it waits until an application needs that device. The kernel still reports NT 5.2 until milestone 11. Milestone 18 is the later decision that an i386 CPU is not a supported boot.
+A Windows driver returning from `DriverEntry` is milestone 16, and it waits until an application needs that device. The kernel still reports NT 5.2 until milestone 10. Milestone 9 is the later decision that an i386 CPU is not a supported boot.
 
 ## Milestone 7: x64 application surface
 
@@ -200,13 +209,13 @@ Tasks:
 Success criteria:
 
 - Each target starts on the amd64 live CD and performs one ordinary action.
-- A 32-bit build is scored only for a program that has no x64 build. A 32-bit program that has to run is milestone 19.
+- A 32-bit build is scored only for a program that has no x64 build. A 32-bit program that has to run is milestone 15.
 
 ## Milestone 8: Application syscalls
 
 Goal: The syscalls those programs make agree with Windows 10 22H2 when called with the arguments the programs pass.
 
-This is the gate. Milestone 18 can land beside it. A task stays only when the amd64 live CD still reaches the desktop. For each name, record the Windows 10 22H2 status and the live CD status for the probe's real-argument call, then change the kernel until those statuses match. Rerun the full probe before the next name. Each distinct fault inside one name is its own pass.
+This is the gate. Milestone 9 can land beside it. A task stays only when the amd64 live CD still reaches the desktop. For each name, record the Windows 10 22H2 status and the live CD status for the probe's real-argument call, then change the kernel until those statuses match. Rerun the full probe before the next name. Each distinct fault inside one name is its own pass.
 
 Tasks:
 
@@ -230,9 +239,9 @@ What landed:
 - `NtDeviceIoControlFile` and `NtCreateUserProcess` return `STATUS_INVALID_PARAMETER` on both.
 - The other top-100 names that already matched stayed matched.
 
-This milestone stays on the current boot. Physical memory above 8 GiB is milestone 9. Logical processors, Hyper-Threading, and AMD SMT are milestone 10. Both wait until an application requires them.
+This milestone stays on the current boot. Physical memory above 8 GiB is milestone 23. Logical processors, Hyper-Threading, and AMD SMT are milestone 24. Both wait until an application requires them. The root compile stays `_WIN32_WINNT=0x502` until milestone 26. Service numbers move in milestone 13. The page-table write and dirty bits move in milestone 25.
 
-## Milestone 18: Native i386 unsupported
+## Milestone 9: Native i386 unsupported
 
 Goal: An i386 CPU is not a boot this project supports. Applications run on the amd64 boot.
 
@@ -251,11 +260,11 @@ Success criteria:
 - An i386 build failure does not block a commit whose amd64 live CD still reaches the desktop.
 - The milestone 8 probe still runs on that amd64 guest.
 
-## Milestone 11: Application version report
+## Milestone 10: Application version report
 
 Goal: The amd64 boot reports Windows 10 22H2 to an application.
 
-This follows milestone 8. It does not wait for more processors or for the 6 TB ceiling. This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The product version stays 0.4.x. In-tree images keep their existing PE version stamp. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 8 and milestone 9. It does not wait for more processors or for the 6 TB ceiling. This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The root definitions move in milestone 26. The product version stays 0.4.x. In-tree images keep their existing PE version stamp. A task stays only when the amd64 live CD still reaches the desktop.
 
 Requirements:
 
@@ -278,16 +287,17 @@ Outcome:
 - The milestone 8 statuses do not regress.
 - A driver covered by the 5.2 shim still observes 5.2.3790.
 
-## Milestone 21: Install one x64 application
+## Milestone 11: Install one x64 application
 
 Goal: One x64 application's installer completes, and the program it installed runs.
 
-This follows milestone 11. The live CD's existing installer is the setup step. The result that matters is the application. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 10. The live CD's existing installer is the setup step. The result that matters is the application. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
 - Install onto a second disk and boot that disk to the desktop.
 - Run one x64 application's installer. Record the first missing import, crash, or syscall status. Change nothing in that first run.
+- A prototype that `_WIN32_WINNT=0x502` hides is milestone 12 for that module. A wrong structure size or offset is milestone 17. A direct service number that disagrees with the name list is milestone 13. Then run the installer again.
 - Add the one export or status fix the log names. Reach the desktop and run the installer again.
 - Repeat until the installer completes and the installed program starts.
 - Reboot from that disk. The program and the files it wrote are still there.
@@ -299,15 +309,53 @@ Success criteria:
 - The milestone 8 statuses do not regress.
 - The desktop still appears.
 
-## Milestone 20: The next application
+## Milestone 12: One module compiles as Windows 10
+
+Goal: One module builds with the Windows 10 22H2 header level. `ntoskrnl`, the HAL, and `win32k` stay at `_WIN32_WINNT=0x502`.
+
+This follows milestones 9 and 10. Milestone 11 or 14 enters it when a log names a prototype that `0x502` hides, and then returns to that installer. The header level is `_WIN32_WINNT=0x0A00` and `NTDDI_VERSION=0x0A00000B` (`NTDDI_WIN10_CO`), which matches build 19045. `NTDDI_WIN10_NI` is build 22621 and stays unused. A task stays only when the amd64 live CD still reaches the desktop.
+
+Tasks:
+
+- Name the prototype the log is missing.
+- Build that one module with `_WIN32_WINNT=0x0A00` and `NTDDI_VERSION=0x0A00000B`. Leave the root definitions at `0x502`.
+- Boot to the desktop and rerun the milestone 8 probe. Return to the installer or program that named the prototype.
+
+Success criteria:
+
+- That module builds at the 22H2 header level and the desktop still appears.
+- The milestone 8 statuses stay matched.
+- `ntoskrnl`, the HAL, and `win32k` still compile as `0x502`.
+- `KmWin2k3VersionLie` still reports 5.2.3790. The product version stays 0.4.x.
+
+## Milestone 13: Windows 10 22H2 service numbers
+
+Goal: A direct service call uses the number in `compat/reference/win10-22h2-syscalls.txt`.
+
+This follows milestone 8. Milestone 11 or 14 enters it when a program issues a direct call and the number disagrees with that list. The `NTDDI_VERSION` entries in `sysfuncs64.h` insert names in the middle of the table and renumber every later service, so those entries are not how a number is assigned. Milestone 26 freezes this table. A task stays only when the amd64 live CD still reaches the desktop.
+
+Tasks:
+
+- Record the number the program used and the number in the name list.
+- Give that one service the number from the name list. Boot to the desktop and rerun the milestone 8 probe.
+- Repeat until that program's numbers match the list. Return to the program that issued the call.
+
+Success criteria:
+
+- That program's service numbers match the name list.
+- The milestone 8 statuses stay matched.
+- The desktop still appears.
+
+## Milestone 14: The next application
 
 Goal: Each following application installs and runs the same way.
 
-This follows milestone 21. One application at a time. A browser is one application in this loop. The network stack is the fix that program needs, when the log names it. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 11. One application at a time. A browser is one application in this loop. The network stack is the fix that program needs, when the log names it. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
 - Record the first missing import, crash, or syscall status. Change nothing in that first run.
+- A prototype that `_WIN32_WINNT=0x502` hides is milestone 12. A wrong structure size or offset is milestone 17. A direct service number that disagrees with the name list is milestone 13.
 - Fix the one thing the log names. Reach the desktop and run the program again.
 - Repeat until its installer completes and the program performs one ordinary action.
 - Each distinct fault inside that application is its own pass. Rerun the milestone 8 probe before the next application.
@@ -318,13 +366,13 @@ Success criteria:
 - The milestone 8 statuses do not regress.
 - The desktop still appears.
 
-After milestone 19, this loop includes 32-bit applications.
+After milestone 15, this loop includes 32-bit applications.
 
-## Milestone 19: WoW64
+## Milestone 15: WoW64
 
 Goal: A 32-bit program with no x64 build installs and completes one action on the amd64 system.
 
-This follows milestone 21. It is a subsystem of the amd64 boot. An i386 CPU and NTVDM stay out. A program that refuses to run below version 10 uses the milestone 11 report. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 11. It is a subsystem of the amd64 boot. An i386 CPU and NTVDM stay out. A program that refuses to run below version 10 uses the milestone 10 report. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -338,7 +386,72 @@ Success criteria:
 - The milestone 8 statuses do not regress.
 - The desktop still appears.
 
-## Milestone 13: Graphics HAL
+## Milestone 16: Windows storage, network, and USB drivers
+
+Goal: A retail Windows 10 22H2 driver for non-graphics hardware loads on the amd64 boot when the application under test needs that device.
+
+This follows milestone 10. A structure whose size or offset is wrong is milestone 17, then the driver loads again. A prototype hidden by `_WIN32_WINNT=0x502` is milestone 12. Run the task loop for one driver at a time. A disk driver attaches to a second disk. The live CD keeps booting from the in-tree driver until the boot task for that driver.
+
+Order:
+
+- Intel NIC
+- Realtek NIC
+- USB controller
+- SATA/AHCI
+- NVMe
+
+Tasks:
+
+- Load the Windows driver without replacing the boot device. Record the first bugcheck, or the status `DriverEntry` returns.
+- Make the one export named in that log return. Boot to the desktop and load the driver again.
+- Repeat that export task until `DriverEntry` returns.
+- Complete one ordinary operation: a packet, a USB enumeration, or a read from the second disk.
+- For SATA/AHCI or NVMe only, boot from that driver after the ordinary operation has already succeeded on the second disk.
+
+Success criteria:
+
+- The driver's `DriverEntry` returns.
+- The exports it calls into `ntoskrnl`, the HAL, and KMDF return.
+- The device it owns performs its ordinary operation.
+- A driver that rejects a version above 5 still runs under `KmWin2k3VersionLie`.
+- A driver that requires version 10 waits until milestone 10, then passes that check and still returns.
+
+## Milestone 17: One shared layout
+
+Goal: One structure that `ntoskrnl` shares with a caller has the Windows 10 22H2 size and offsets.
+
+This follows milestone 12. Milestone 16, 11, or 14 enters it when a log names one wrong size or offset, and then returns to that caller. One structure is one pass. The page-table write and dirty bits stay for milestone 25. The service-table order stays for milestone 13. A task stays only when the amd64 live CD still reaches the desktop.
+
+Tasks:
+
+- Name the structure from that log. Change nothing in that first run.
+- Take the Windows 10 size and offsets from a public document or from that log. Boot to the desktop and rerun the milestone 8 probe.
+- Return to the caller. The next structure it names is the next pass.
+
+Success criteria:
+
+- The caller gets past the structure named in its log.
+- The desktop still appears, and the milestone 8 statuses stay matched.
+- The root compile stays `0x502`.
+
+## Milestone 18: Remaining non-graphics drivers
+
+Goal: Extend the same bar past boot and network hardware when the application under test needs that device.
+
+Run the milestone 16 task loop for each device below. The device stays off the boot path. Milestones 19 through 22 do not wait for this milestone.
+
+Tasks:
+
+- One audio driver
+- One Bluetooth driver
+- One printer driver
+- One storage filter
+
+Success criteria:
+
+- Each chosen driver returns from `DriverEntry`, its kernel calls return, and the device performs its ordinary operation.
+
+## Milestone 19: Graphics HAL
 
 Goal: One boundary owns pixel and GPU work so a 3D application can change backends.
 
@@ -376,11 +489,11 @@ Success criteria:
 - The GDI desktop still shows a milestone 7 window through the software backend.
 - A second backend can be selected without an application change.
 
-## Milestone 14: First 3D backend
+## Milestone 20: First 3D backend
 
-Goal: The application from milestone 13 renders through the Windows-facing DLLs on the software or virtual backend.
+Goal: The application from milestone 19 renders through the Windows-facing DLLs on the software or virtual backend.
 
-This follows milestone 13. The first renderer is llvmpipe or virtio-gpu. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 19. The first renderer is llvmpipe or virtio-gpu. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -394,7 +507,7 @@ Success criteria:
 - One 3D program draws a frame on the amd64 boot.
 - The milestone 7 window still appears.
 
-## Milestone 15: DRM backend
+## Milestone 21: DRM backend
 
 Goal: The same HAL gains a DRM backend, using a GPL Linux GPU driver as the hardware source, when the application still fails on the software renderer.
 
@@ -406,22 +519,22 @@ DRM backend
 One Linux GPU driver
 ```
 
-Start this when the milestone 14 application still fails on llvmpipe or virtio-gpu. A task stays only when the amd64 live CD still reaches the desktop. The software backend stays selected until the real GPU has already drawn a frame.
+Start this when the milestone 20 application still fails on llvmpipe or virtio-gpu. A task stays only when the amd64 live CD still reaches the desktop. The software backend stays selected until the real GPU has already drawn a frame.
 
 Tasks:
 
 - Add the DRM backend and fall back to software when it cannot start. Boot to the desktop.
 - Modeset one simple QEMU display device through that backend and show the desktop.
-- Draw the milestone 14 frame on that device.
+- Draw the milestone 20 frame on that device.
 - Bring up one real Linux GPU driver on one machine, with the software backend still selected by default.
-- Draw the milestone 14 frame on that GPU, then make that backend the selected one.
+- Draw the milestone 20 frame on that GPU, then make that backend the selected one.
 
 Success criteria:
 
-- The milestone 14 program draws a frame on that GPU.
+- The milestone 20 program draws a frame on that GPU.
 - Selecting the DRM backend does not change the application or the DLL exports.
 
-## Milestone 16: WDDM 2.0 backend
+## Milestone 22: WDDM 2.0 backend
 
 Goal: The same HAL gains a WDDM 2.0 backend for an application that still fails on the DRM backend.
 
@@ -431,22 +544,22 @@ dxgmms2
 D3DKMT entry points
 ```
 
-mapped internally to the HAL. This follows milestone 15. A task stays only when the amd64 live CD still reaches the desktop. The previous backend stays the boot display until this backend has already presented a frame.
+mapped internally to the HAL. This follows milestone 21. A task stays only when the amd64 live CD still reaches the desktop. The previous backend stays the boot display until this backend has already presented a frame.
 
 Tasks:
 
 - Add the WDDM backend and fall back to the current backend when it cannot start. Boot to the desktop.
 - Make one `D3DKMT` query return the Windows status for the probe's arguments.
-- Present the milestone 14 frame through this backend inside QEMU.
+- Present the milestone 20 frame through this backend inside QEMU.
 - Load one unmodified Windows GPU driver while the previous backend is still the boot display.
 - Present a frame with that driver, then make the WDDM backend the selected display.
 
 Success criteria:
 
-- The milestone 14 program draws a frame through this backend.
+- The milestone 20 program draws a frame through this backend.
 - An unmodified Windows GPU driver is the last step, after the backend's own entry points return.
 
-## Milestone 9: amd64 physical memory
+## Milestone 23: amd64 physical memory
 
 Goal: The amd64 boot keeps physical RAM up to the Windows 10 22H2 maximum of 6 TB.
 
@@ -454,7 +567,7 @@ Windows 10 22H2 documents 128 GB for Home, 2 TB for Pro and Education, and 6 TB 
 
 FreeLoader keeps its own 1 GiB map. The kernel receives every firmware range up to 6 TB. The PFN database is followed immediately by nonpaged pool, and that pool ends before the HAL. A 4 KB page frame holds 36 bits, so a page above 1 TB can be named. The write and dirty bits stay where they are. The nonpaged pool ceiling stays 128 GB.
 
-Milestones 9, 10, 12, and 17 stay off the main list until the application under test fails for lack of that resource or device. A task stays only when the amd64 live CD still reaches the desktop. This lands before more processors start, when both this milestone and milestone 10 are underway, so the page tables are settled on one processor.
+This follows the application milestones. Start it when an application fails for lack of RAM. It finishes before milestone 24 when both are underway, so the page tables are settled on one processor. The write and dirty bits stay where they are until milestone 25. Milestone 26 follows this milestone. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -470,11 +583,11 @@ Success criteria:
 - A guest larger than 6 TB boots with the first 6 TB.
 - The milestone 8 statuses do not regress.
 
-## Milestone 10: amd64 logical processors
+## Milestone 24: amd64 logical processors
 
 Goal: The amd64 boot starts every logical processor, and Hyper-Threading and AMD SMT behave as they do on Windows 10 22H2 for a machine that fits in one processor group.
 
-This does not wait for the 6 TB ceiling. If milestone 9 has already widened the page frames, the TLB shootdown uses that layout.
+This follows milestone 23 when both are underway. It does not wait for the 6 TB ceiling on its own. If milestone 23 has already widened the page frames, the TLB shootdown uses that layout. Milestone 25 does not land in the middle of this work.
 
 One group holds at most 64 logical processors. The KTHREAD and KPRCB layouts stay. Processor groups, multi-node NUMA, hybrid efficiency classes, and core parking stay out. A machine with more than 64 logical processors keeps the first 64.
 
@@ -498,52 +611,45 @@ Success criteria:
 - The desktop still appears, and the milestone 8 statuses do not regress.
 - `ONECPU` still boots on the boot processor.
 
-## Milestone 12: Windows storage, network, and USB drivers
+## Milestone 25: Vista page-table software bits
 
-Goal: A retail Windows 10 22H2 driver for non-graphics hardware loads on the amd64 boot when the application under test needs that device.
+Goal: The amd64 page-table entry uses `Dirty1` at bit 1 and `Write` at bit 11.
 
-Run the task loop for one driver at a time. A disk driver attaches to a second disk. The live CD keeps booting from the in-tree driver until the boot task for that driver.
-
-Order:
-
-- Intel NIC
-- Realtek NIC
-- USB controller
-- SATA/AHCI
-- NVMe
+This follows milestone 23, so a frame above 1 TB already fits. Start it when a caller fails because those bits are still in the Server 2003 positions. Milestone 26 does not move them. Milestone 24 is finished before this starts when both are underway. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
-- Load the Windows driver without replacing the boot device. Record the first bugcheck, or the status `DriverEntry` returns.
-- Make the one export named in that log return. Boot to the desktop and load the driver again.
-- Repeat that export task until `DriverEntry` returns.
-- Complete one ordinary operation: a packet, a USB enumeration, or a read from the second disk.
-- For SATA/AHCI or NVMe only, boot from that driver after the ordinary operation has already succeeded on the second disk.
+- Record the bit the caller read and the bit it expected.
+- Move that one bit. Boot to the desktop and rerun the milestone 8 probe.
+- Repeat for the other bit when a later log names it.
 
 Success criteria:
 
-- The driver's `DriverEntry` returns.
-- The exports it calls into `ntoskrnl`, the HAL, and KMDF return.
-- The device it owns performs its ordinary operation.
-- A driver that rejects a version above 5 still runs under `KmWin2k3VersionLie`.
-- A driver that requires version 10 waits until milestone 11, then passes that check and still returns.
+- The caller's read matches those positions.
+- A frame above 1 TB still round-trips.
+- The desktop still appears, and the milestone 8 statuses stay matched.
 
-## Milestone 17: Remaining non-graphics drivers
+## Milestone 26: The tree compiles as Windows 10 22H2
 
-Goal: Extend the same bar past boot and network hardware when the application under test needs that device.
+Goal: The root build uses `_WIN32_WINNT=0x0A00` and `NTDDI_VERSION=0x0A00000B`.
 
-Run the milestone 12 task loop for each device below. The device stays off the boot path. Milestones 13 through 16 do not wait for this milestone.
+This follows milestones 23, 10, 9, 12, and 17. Milestone 23 has already widened the page frame. Every shared layout a caller has already required is in the tree. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
-- One audio driver
-- One Bluetooth driver
-- One printer driver
-- One storage filter
+- Freeze the amd64 write and dirty bits, and freeze `sysfuncs64.h`, so the new macro cannot select those branches. Milestones 25 and 13 own those changes.
+- In `ntoskrnl`, the HAL, and `win32k`, pin any other `NTDDI_VERSION` branch this macro would turn on and that milestone 17 has not adopted. The pin keeps that branch compiled as `0x502`.
+- Change the root definitions to `0x0A00` and `0x0A00000B`.
+- Boot the amd64 live CD to the desktop. Rerun the milestone 7 actions and the milestone 8 probe.
+- Confirm `KmWin2k3VersionLie` still reports 5.2.3790.
 
 Success criteria:
 
-- Each chosen driver returns from `DriverEntry`, its kernel calls return, and the device performs its ordinary operation.
+- The amd64 tree builds at that header level and reaches the desktop.
+- The milestone 7 programs still start, and the milestone 8 statuses stay matched.
+- A page-table entry still has the write and dirty bits where milestone 23 left them.
+- Service numbers are the same as they were before the root change.
+- The product version stays 0.4.x, and in-tree PE stamps stay as they are.
 
 ## What should the compatibility dashboard look like?
 
