@@ -1,0 +1,34 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which commit line does the VerOS NG site treat as a finished application-syscall milestone?",
+  "allowedInputs": [
+    "The user request to mark milestone 8 complete on the website",
+    "D:\\Projects\\VerOS NG Website\\src\\lib\\milestoneStatus.ts, which finishes a milestone when one line names its id and also contains complete, done, or closes",
+    "docs/MILESTONES.md milestone 8",
+    "output/syscall-diff/windows.log and output/syscall-diff/reactos.log, both containing DIFF END OK",
+    "Those logs agree on NtCreateFile, NtWriteFile, NtReadFile, NtClose, NtCreateThreadEx as STATUS_SUCCESS and on NtDeviceIoControlFile and NtCreateUserProcess as STATUS_INVALID_PARAMETER",
+    "veros/dashboard/history.json snapshots at 80.2, 85.1, and 87.1, with no new mismatch outside those seven names"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "amd64 live CD compared with the Windows 10 22H2 guest",
+    "name": "syscall-diff",
+    "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
+  },
+  "cursor": {
+    "prompt": "The website still shows milestone 8 in progress. can you make an update to it is marked complete",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "milestone 8 classified complete by the site matcher",
+    "before": null,
+    "after": null,
+    "note": "The seven real-argument calls already match. Milestone 8 is complete once this commit says so. No probe was run for this record."
+  }
+}

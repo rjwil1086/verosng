@@ -4,18 +4,17 @@
 
 An application that Windows 10 22H2 x64 can run installs and runs here. That set is x64 programs and 32-bit programs on the amd64 boot. A driver, a graphics backend, more RAM, or more processors becomes the next pass when the application under test fails without it.
 
-Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
+Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. Milestone 8 is complete. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
 
 The open work follows this order. Milestone numbers stay fixed.
 
-1. Milestone 8. The application syscalls.
-2. Milestone 18, beside milestone 8. Native i386 is unsupported.
-3. Milestone 11. The boot reports Windows 10 22H2.
-4. Milestone 21. One x64 application's installer completes and the program runs.
-5. Milestone 20. The next application, one at a time.
-6. Milestone 19. WoW64, after milestone 21.
-7. Milestones 13 and 14, when the application needs `opengl32` or `d3d11`.
-8. Milestones 15 and 16, when that application still fails on the software renderer.
+1. Milestone 18. Native i386 is unsupported.
+2. Milestone 11. The boot reports Windows 10 22H2.
+3. Milestone 21. One x64 application's installer completes and the program runs.
+4. Milestone 20. The next application, one at a time.
+5. Milestone 19. WoW64, after milestone 21.
+6. Milestones 13 and 14, when the application needs `opengl32` or `d3d11`.
+7. Milestones 15 and 16, when that application still fails on the software renderer.
 
 Milestones 9, 10, 12, and 17 stay written down and wait. The desktop that already appears is enough when an application can be started from it. Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
 
@@ -224,13 +223,20 @@ Success criteria:
 - Each of those names matches the Windows 10 22H2 guest on the probe's real-argument call.
 - The rest of the top-100 probe does not regress.
 
+What landed:
+
+- `NtCreateFile`, `NtWriteFile`, `NtReadFile`, and both `NtClose` calls return `STATUS_SUCCESS` on the Windows 10 22H2 guest and on the amd64 live CD.
+- `NtCreateThreadEx` returns `STATUS_SUCCESS` on both.
+- `NtDeviceIoControlFile` and `NtCreateUserProcess` return `STATUS_INVALID_PARAMETER` on both.
+- The other top-100 names that already matched stayed matched.
+
 This milestone stays on the current boot. Physical memory above 8 GiB is milestone 9. Logical processors, Hyper-Threading, and AMD SMT are milestone 10. Both wait until an application requires them.
 
 ## Milestone 18: Native i386 unsupported
 
 Goal: An i386 CPU is not a boot this project supports. Applications run on the amd64 boot.
 
-This can land while milestone 8 is open.
+This can land on the current amd64 boot.
 
 What lands:
 
