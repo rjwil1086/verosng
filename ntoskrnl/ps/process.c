@@ -1482,6 +1482,9 @@ NtCreateProcess(OUT PHANDLE ProcessHandle,
 #define PSP_ATTRIBUTE_PARENT_PROCESS    0x00060000
 #define PSP_ATTRIBUTE_DEBUG_PORT        0x00060001
 #define PSP_ATTRIBUTE_IMAGE_NAME        0x00020005
+#define PSP_ATTRIBUTE_IMAGE_INFO        0x00000006
+
+C_ASSERT(sizeof(SECTION_IMAGE_INFORMATION) == 0x40);
 #define PSP_THREAD_CREATE_SUSPENDED     0x00000001
 #define PSP_THREAD_HIDE_FROM_DEBUGGER   0x00000004
 #define PSP_MAX_CREATE_ATTRIBUTES       12
@@ -1533,6 +1536,22 @@ NtCreateUserProcess(OUT PHANDLE ProcessHandle,
 
     UNREFERENCED_PARAMETER(ProcessDesiredAccess);
     UNREFERENCED_PARAMETER(ThreadDesiredAccess);
+
+    /* A user-mode null output pointer faults. The all-zero guest call
+     * returns STATUS_ACCESS_VIOLATION, so probe before the other checks. */
+    if (PreviousMode != KernelMode)
+    {
+        _SEH2_TRY
+        {
+            ProbeForWriteHandle(ProcessHandle);
+            ProbeForWriteHandle(ThreadHandle);
+        }
+        _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+        {
+            _SEH2_YIELD(return _SEH2_GetExceptionCode());
+        }
+        _SEH2_END;
+    }
 
     if (!ProcessHandle || !ThreadHandle || !ProcessParameters || !AttributeList)
     {
@@ -1613,6 +1632,15 @@ NtCreateUserProcess(OUT PHANDLE ProcessHandle,
             ImageName.Buffer = (PWCH)Attributes[Index].Value;
             ImageName.Length = (USHORT)Attributes[Index].Size;
             ImageName.MaximumLength = ImageName.Length;
+        }
+        else if (Attributes[Index].Attribute == PSP_ATTRIBUTE_IMAGE_INFO)
+        {
+            /* The guest's real call passes a longer buffer and Windows
+             * returns STATUS_INVALID_PARAMETER. */
+            if (Attributes[Index].Size != sizeof(SECTION_IMAGE_INFORMATION))
+            {
+                return STATUS_INVALID_PARAMETER;
+            }
         }
         else if (Attributes[Index].Attribute == PSP_ATTRIBUTE_PARENT_PROCESS)
         {

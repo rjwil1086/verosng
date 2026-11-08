@@ -40,85 +40,129 @@ function New-ProbeIso {
     return $iso
 }
 
+function Get-Fat12 {
+    param($Bytes, [int]$Fat, [int]$Cluster)
+    $offset = $Fat + $Cluster + [Math]::Floor($Cluster / 2)
+    $value = [BitConverter]::ToUInt16($Bytes, $offset)
+    if (($Cluster % 2) -eq 0) { return ($value -band 0x0FFF) }
+    return (($value -shr 4) -band 0x0FFF)
+}
+
+function Set-Fat12 {
+    param($Bytes, [int]$Fat, [int]$Cluster, [int]$Value)
+    $offset = $Fat + $Cluster + [Math]::Floor($Cluster / 2)
+    $old = [BitConverter]::ToUInt16($Bytes, $offset)
+    if (($Cluster % 2) -eq 0) {
+        $new = ($old -band 0xF000) -bor ($Value -band 0x0FFF)
+    }
+    else {
+        $new = ($old -band 0x000F) -bor (($Value -band 0x0FFF) -shl 4)
+    }
+    [BitConverter]::GetBytes([uint16]$new).CopyTo($Bytes, $offset)
+}
+
 function New-SinkImage {
     param([string]$Path)
+    # 1.44MB FAT12. The floppy driver only mounts that size.
     $sector = 512
-    $volumeSectors = 32768
-    $start = 64
-    $bytes = New-Object byte[] (($start + $volumeSectors) * $sector)
-    $bytes[446] = 0x80
-    $bytes[450] = 0x06
-    [BitConverter]::GetBytes([uint32]$start).CopyTo($bytes, 454)
-    [BitConverter]::GetBytes([uint32]$volumeSectors).CopyTo($bytes, 458)
-    $bytes[440] = 0x53
-    $bytes[441] = 0x59
-    $bytes[442] = 0x4E
-    $bytes[443] = 0x4B
+    $total = 2880
+    $bytes = New-Object byte[] ($total * $sector)
+    $bytes[0] = 0xEB
+    $bytes[1] = 0x3C
+    $bytes[2] = 0x90
+    [Text.Encoding]::ASCII.GetBytes("MSDOS5.0").CopyTo($bytes, 3)
+    $bytes[11] = 0x00
+    $bytes[12] = 0x02
+    $bytes[13] = 1
+    $bytes[14] = 1
+    $bytes[16] = 2
+    $bytes[17] = 0xE0
+    $bytes[18] = 0x00
+    [BitConverter]::GetBytes([uint16]$total).CopyTo($bytes, 19)
+    $bytes[21] = 0xF0
+    $bytes[22] = 9
+    $bytes[24] = 18
+    $bytes[26] = 2
+    $bytes[38] = 0x29
+    [Text.Encoding]::ASCII.GetBytes("SYSCALLDIFF").CopyTo($bytes, 43)
+    [Text.Encoding]::ASCII.GetBytes("FAT12   ").CopyTo($bytes, 54)
     $bytes[510] = 0x55
     $bytes[511] = 0xAA
 
-    $boot = $start * $sector
-    $bytes[$boot] = 0xEB
-    $bytes[$boot + 1] = 0x3C
-    $bytes[$boot + 2] = 0x90
-    [Text.Encoding]::ASCII.GetBytes("MSDOS5.0").CopyTo($bytes, $boot + 3)
-    $bytes[$boot + 11] = 0x00
-    $bytes[$boot + 12] = 0x02
-    $bytes[$boot + 13] = 1
-    $bytes[$boot + 14] = 1
-    $bytes[$boot + 16] = 2
-    $bytes[$boot + 17] = 0x00
-    $bytes[$boot + 18] = 0x02
-    $bytes[$boot + 21] = 0xF8
-    $bytes[$boot + 22] = 128
-    $bytes[$boot + 24] = 32
-    $bytes[$boot + 26] = 16
-    [BitConverter]::GetBytes([uint32]$volumeSectors).CopyTo($bytes, $boot + 32)
-    $bytes[$boot + 38] = 0x29
-    [Text.Encoding]::ASCII.GetBytes("SYSCALLDIFF").CopyTo($bytes, $boot + 43)
-    [Text.Encoding]::ASCII.GetBytes("FAT16   ").CopyTo($bytes, $boot + 54)
-    $bytes[$boot + 510] = 0x55
-    $bytes[$boot + 511] = 0xAA
-
-    $reserved = 1
-    $spf = 128
-    $fat = ($start + $reserved) * $sector
-    $bytes[$fat] = 0xF8
+    $fat = $sector
+    $bytes[$fat] = 0xF0
     $bytes[$fat + 1] = 0xFF
     $bytes[$fat + 2] = 0xFF
-    $bytes[$fat + 3] = 0xFF
-    $bytes[$fat + 4] = 0xFF
-    $bytes[$fat + 5] = 0xFF
-    [Array]::Copy($bytes, $fat, $bytes, $fat + ($spf * $sector), $spf * $sector)
+    Set-Fat12 $bytes $fat 2 0xFFF
+    [Array]::Copy($bytes, $fat, $bytes, $fat + (9 * $sector), 9 * $sector)
 
-    $root = ($start + $reserved + (2 * $spf)) * $sector
+    $root = (1 + (2 * 9)) * $sector
     [Text.Encoding]::ASCII.GetBytes("SINK    TXT").CopyTo($bytes, $root)
     $bytes[$root + 11] = 0x20
     $bytes[$root + 26] = 2
     $bytes[$root + 28] = 4
-    $data = $root + (512 * 32)
+    $data = $root + (224 * 32)
     [Text.Encoding]::ASCII.GetBytes("SINK").CopyTo($bytes, $data)
     [IO.File]::WriteAllBytes($Path, $bytes)
+}
+
+function Add-SinkFile {
+    param([string]$Image, [string]$Source, [string]$FatName)
+    if ($FatName.Length -ne 11) { throw "FAT name must be 11 characters" }
+    $bytes = [IO.File]::ReadAllBytes($Image)
+    $payload = [IO.File]::ReadAllBytes($Source)
+    $sector = 512
+    $reserved = [BitConverter]::ToUInt16($bytes, 14)
+    $spf = [BitConverter]::ToUInt16($bytes, 22)
+    $rootEntries = [BitConverter]::ToUInt16($bytes, 17)
+    $spc = $bytes[13]
+    $fat = $reserved * $sector
+    $root = ($reserved + (2 * $spf)) * $sector
+    $data = $root + ($rootEntries * 32)
+    $cluster = 2
+    while ($cluster -lt 0xFF0) {
+        if ((Get-Fat12 $bytes $fat $cluster) -eq 0) { break }
+        $cluster++
+    }
+    $first = $cluster
+    $offset = 0
+    while ($offset -lt $payload.Length) {
+        $at = $data + (($cluster - 2) * $spc * $sector)
+        $take = [Math]::Min($spc * $sector, $payload.Length - $offset)
+        [Array]::Copy($payload, $offset, $bytes, $at, $take)
+        $offset += $take
+        $next = $cluster + 1
+        $mark = $(if ($offset -ge $payload.Length) { 0xFFF } else { $next })
+        Set-Fat12 $bytes $fat $cluster $mark
+        Set-Fat12 $bytes ($fat + ($spf * $sector)) $cluster $mark
+        $cluster = $next
+    }
+    $slot = -1
+    for ($i = 0; $i -lt $rootEntries; $i++) {
+        $off = $root + ($i * 32)
+        if ($bytes[$off] -eq 0 -or $bytes[$off] -eq 0xE5) { $slot = $off; break }
+    }
+    if ($slot -lt 0) { throw "The sink root directory is full" }
+    [Text.Encoding]::ASCII.GetBytes($FatName).CopyTo($bytes, $slot)
+    $bytes[$slot + 11] = 0x20
+    [BitConverter]::GetBytes([uint16]$first).CopyTo($bytes, $slot + 26)
+    [BitConverter]::GetBytes([uint32]$payload.Length).CopyTo($bytes, $slot + 28)
+    [IO.File]::WriteAllBytes($Image, $bytes)
 }
 
 function Read-SinkText {
     param([string]$Image)
     if (-not (Test-Path $Image)) { return "" }
     $bytes = [IO.File]::ReadAllBytes($Image)
-    $start = 0
-    if ($bytes.Length -gt 512 -and $bytes[510] -eq 0x55 -and $bytes[511] -eq 0xAA -and $bytes[450] -ne 0) {
-        $start = [BitConverter]::ToUInt32($bytes, 454)
-    }
-    $boot = $start * 512
-    if ($boot + 512 -gt $bytes.Length) { return "" }
-    $sector = [BitConverter]::ToUInt16($bytes, $boot + 11)
+    $sector = [BitConverter]::ToUInt16($bytes, 11)
     if ($sector -eq 0) { return "" }
-    $reserved = [BitConverter]::ToUInt16($bytes, $boot + 14)
-    $spf = [BitConverter]::ToUInt16($bytes, $boot + 22)
-    $rootEntries = [BitConverter]::ToUInt16($bytes, $boot + 17)
-    $spc = $bytes[$boot + 13]
-    $root = ($start + $reserved + (2 * $spf)) * $sector
+    $reserved = [BitConverter]::ToUInt16($bytes, 14)
+    $spf = [BitConverter]::ToUInt16($bytes, 22)
+    $rootEntries = [BitConverter]::ToUInt16($bytes, 17)
+    $spc = $bytes[13]
+    $root = ($reserved + (2 * $spf)) * $sector
     $data = $root + ($rootEntries * 32)
+    $fat = $reserved * $sector
     for ($i = 0; $i -lt $rootEntries; $i++) {
         $off = $root + ($i * 32)
         if ($off + 32 -gt $bytes.Length) { break }
@@ -128,17 +172,16 @@ function Read-SinkText {
         if ($raw -ne "RESULT  LOG") { continue }
         $cluster = [BitConverter]::ToUInt16($bytes, $off + 26)
         $size = [int][BitConverter]::ToUInt32($bytes, $off + 28)
-        $fat = ($start + $reserved) * $sector
         $chunks = New-Object System.Collections.Generic.List[byte]
         $guard = 0
-        while ($cluster -ge 2 -and $cluster -lt 0xFFF8 -and $guard -lt 4000 -and $chunks.Count -lt $size) {
+        while ($cluster -ge 2 -and $cluster -lt 0xFF8 -and $guard -lt 4000 -and $chunks.Count -lt $size) {
             $at = $data + (($cluster - 2) * $spc * $sector)
             $take = [Math]::Min($spc * $sector, $size - $chunks.Count)
             for ($b = 0; $b -lt $take; $b++) {
                 if ($at + $b -ge $bytes.Length) { break }
                 $chunks.Add($bytes[$at + $b])
             }
-            $cluster = [BitConverter]::ToUInt16($bytes, $fat + ($cluster * 2))
+            $cluster = Get-Fat12 $bytes $fat $cluster
             $guard++
         }
         return [Text.Encoding]::ASCII.GetString($chunks.ToArray())
@@ -205,13 +248,25 @@ function Test-DiffEnd {
     finally { if ($stream) { $stream.Close() } }
 }
 
+function Wait-BootText {
+    param([string]$Log, [string]$Pattern, [int]$Seconds)
+    $deadline = (Get-Date).AddSeconds($Seconds)
+    while ((Get-Date) -lt $deadline) {
+        if ((Test-Path $Log) -and (Select-String -LiteralPath $Log -Pattern $Pattern -Quiet)) {
+            return $true
+        }
+        Start-Sleep -Seconds 3
+    }
+    return $false
+}
+
 function Send-ProbeCommand {
     Send-Monitor "sendkey ctrl-esc"
     Start-Sleep -Seconds 2
     Send-GuestText "cmd"
     Send-Monitor "sendkey ret"
     Start-Sleep -Seconds 2
-    foreach ($drive in @("D", "E", "F", "G")) {
+    foreach ($drive in @("A", "B", "C", "D", "E", "F", "G")) {
         Send-GuestText ($drive + ":\probe.exe")
         Send-Monitor "sendkey ret"
         Start-Sleep -Milliseconds 400
@@ -228,6 +283,26 @@ function Wait-Probe {
     return $false
 }
 
+function Start-Qemu {
+    param([string]$Exe, [string]$Arguments, [string]$ErrorLog)
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $Exe
+    $psi.Arguments = $Arguments
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+    $proc = New-Object System.Diagnostics.Process
+    $proc.StartInfo = $psi
+    [void]$proc.Start()
+    $script:QemuErrStream = New-Object System.IO.FileStream(
+        $ErrorLog,
+        [System.IO.FileMode]::Create,
+        [System.IO.FileAccess]::Write,
+        [System.IO.FileShare]::ReadWrite)
+    $proc.StandardError.BaseStream.CopyToAsync($script:QemuErrStream) | Out-Null
+    return $proc
+}
+
 function Stop-Qemu {
     param($Proc)
     try { Send-Monitor "quit" } catch {}
@@ -235,6 +310,10 @@ function Stop-Qemu {
         if (-not $Proc.WaitForExit(20000)) {
             Stop-Process -Id $Proc.Id -Force -ErrorAction SilentlyContinue
         }
+    }
+    if ($script:QemuErrStream) {
+        $script:QemuErrStream.Dispose()
+        $script:QemuErrStream = $null
     }
 }
 
@@ -321,7 +400,7 @@ if (-not $SkipWindows) {
         "-drive `"file=$winSink,format=raw,if=none,id=sink`" -device ich9-ahci,id=ahci -device ide-hd,bus=ahci.0,drive=sink"
     Write-Host "Booting Windows"
     $err = Join-Path $out "windows.err"
-    $proc = Start-Process -FilePath $Qemu64 -ArgumentList $arg -PassThru -RedirectStandardError $err -WindowStyle Hidden
+    $proc = Start-Qemu $Qemu64 $arg $err
     Start-Sleep -Seconds 300
     Stop-Qemu $proc
     Publish-Sink $winSink $windowsLog
@@ -340,21 +419,22 @@ if (-not $SkipReactOS) {
     $script:MonitorPort = 4447
     $bootSerial = ($bootLog -replace '\\', '/')
     $probeSerial = ($reactosLog -replace '\\', '/')
+    Add-SinkFile $rosSink $exe "PROBE   EXE"
     $arg = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -cdrom `"$bootcd`" -boot d -display none -no-reboot " +
         "-serial file:$bootSerial -serial file:$probeSerial " +
         "-monitor tcp:127.0.0.1:$($script:MonitorPort),server,nowait " +
-        "-drive file=`"$iso`",media=cdrom,if=ide,index=1 " +
-        "-drive file=`"$rosSink`",format=raw,if=ide,index=0"
+        "-drive file=`"$rosSink`",format=raw,if=floppy,index=0"
     Write-Host "Booting ReactOS"
     $err = Join-Path $out "reactos.err"
-    $proc = Start-Process -FilePath $Qemu64 -ArgumentList $arg -PassThru -RedirectStandardError $err -WindowStyle Hidden
-    Start-Sleep -Seconds 300
+    $proc = Start-Qemu $Qemu64 $arg $err
+    $ready = (Get-Date).AddSeconds(180)
+    while ((Get-Date) -lt $ready) {
+        if ((Test-Path $bootLog) -and (Select-String -LiteralPath $bootLog -Pattern "Parent is Desktop" -Quiet)) { break }
+        Start-Sleep -Seconds 3
+    }
     if (-not $proc.HasExited) {
-        Send-ProbeCommand
-        if (-not (Wait-Probe $reactosLog 75) -and -not (Wait-Probe $bootLog 1)) {
-            if (-not $proc.HasExited) { Send-ProbeCommand }
-            Wait-Probe $reactosLog 75 | Out-Null
-        }
+        Wait-Probe $reactosLog 180 | Out-Null
+        if (-not (Test-DiffEnd $reactosLog)) { Wait-Probe $bootLog 20 | Out-Null }
     }
     Stop-Qemu $proc
     Publish-Sink $rosSink $reactosLog
@@ -364,5 +444,10 @@ if (-not $SkipReactOS) {
     Write-Host "ReactOS log $reactosLog"
 }
 
-& (Join-Path $PSScriptRoot "Compare-Syscalls.ps1") -SourceRoot $SourceRoot -WindowsLog $windowsLog -ReactOSLog $reactosLog -OutputDir $out
-& (Join-Path $PSScriptRoot "Publish-Dashboard.ps1") -SourceRoot $SourceRoot -Report (Join-Path $out "report.json") -WindowsLog $windowsLog -ReactOSLog $reactosLog
+if ((Test-DiffEnd $windowsLog) -and (Test-DiffEnd $reactosLog)) {
+    & (Join-Path $PSScriptRoot "Compare-Syscalls.ps1") -SourceRoot $SourceRoot -WindowsLog $windowsLog -ReactOSLog $reactosLog -OutputDir $out
+    & (Join-Path $PSScriptRoot "Publish-Dashboard.ps1") -SourceRoot $SourceRoot -Report (Join-Path $out "report.json") -WindowsLog $windowsLog -ReactOSLog $reactosLog
+}
+else {
+    Write-Host "Probe log is incomplete; dashboard was not published"
+}

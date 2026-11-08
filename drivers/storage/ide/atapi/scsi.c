@@ -684,8 +684,36 @@ AtaReqSendRequest(
     /* DMA transfer, get the S/G list for the MDL */
     if (Request->Flags & REQUEST_FLAG_PROGRAM_DMA)
     {
-        if (AtaReqGetScatterGatherList(Device->PortData, Request))
-            return;
+        BOOLEAN Above4Gb = FALSE;
+
+        /*
+         * The PATA PRD table is 32-bit. A page above 4GB cannot be programmed
+         * there, so this transfer uses PIO instead of breaking into the debugger.
+         */
+        if (Request->Mdl)
+        {
+            PPFN_NUMBER Pages;
+            ULONG PageCount;
+            ULONG Index;
+
+            Pages = MmGetMdlPfnArray(Request->Mdl);
+            PageCount = ADDRESS_AND_SIZE_TO_SPAN_PAGES(MmGetMdlVirtualAddress(Request->Mdl),
+                                                       MmGetMdlByteCount(Request->Mdl));
+            for (Index = 0; Index < PageCount; Index++)
+            {
+                if (Pages[Index] >= 0x100000)
+                {
+                    Above4Gb = TRUE;
+                    break;
+                }
+            }
+        }
+
+        if (!Above4Gb || (Device->DeviceFlags & DEVICE_PIO_VIA_DMA))
+        {
+            if (AtaReqGetScatterGatherList(Device->PortData, Request))
+                return;
+        }
 
         /* This channel can only perform DMA I/O and PIO is not supported */
         if (Device->DeviceFlags & DEVICE_PIO_VIA_DMA)

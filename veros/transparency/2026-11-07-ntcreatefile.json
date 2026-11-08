@@ -1,0 +1,34 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the probe's NtCreateFile return STATUS_ACCESS_DENIED on the amd64 boot and STATUS_SUCCESS on Windows 10 22H2?",
+  "allowedInputs": [
+    "docs/MILESTONES.md milestone 8 and the NtCreateFile pass plan",
+    "tools/syscall-diff/probe.c run_real arguments already in this tree",
+    "output/syscall-diff/windows.log and output/syscall-diff/reactos-before.log, both containing DIFF END OK",
+    "veros/dashboard/latest.json headline 80.2 before this pass",
+    "boot/bootdata/hivedef.inf TEMP and drivers/filesystems/cdfs/create.c FILE_OPEN_IF denial already in this tree",
+    "The guest log from the amd64 boot that contains DIFF END OK after the create ran on the harness FAT12 sink"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG, with the harness 1.44MB FAT12 sink",
+    "name": "NtCreateFile",
+    "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
+  },
+  "cursor": {
+    "prompt": "Milestone 8: NtCreateFile. Implement the plan as specified.",
+    "model": "Grok 4.7",
+    "date": "2026-11-07"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "amd64 probe exact status match percent",
+    "before": 80.2,
+    "after": 85.1,
+    "note": "Both numbers are 101 names under the same exact-status rule: 81 matches before, 86 after. NtCreateFile moved from STATUS_ACCESS_DENIED to STATUS_SUCCESS. NtReadFile, NtWriteFile, NtClose, and NtDeviceIoControlFile also matched because that create returned a handle. No other top-100 status changed. CDFS was left unchanged. No kernel or fastfat change was required."
+  }
+}

@@ -728,7 +728,7 @@
 @ stdcall -stub -version=0x600+ RtlCreateMemoryBlockLookaside(ptr long long long long)
 @ stdcall -stub -version=0x600+ RtlCreateMemoryZone(ptr long long)
 @ stdcall RtlCreateProcessParameters(ptr ptr ptr ptr ptr ptr ptr ptr ptr ptr)
-@ stdcall -stub -version=0x600+ RtlCreateProcessParametersEx(ptr wstr ptr wstr wstr ptr wstr wstr ptr ptr long)
+@ stdcall RtlCreateProcessParametersEx(ptr ptr ptr ptr ptr ptr ptr ptr ptr ptr long)
 @ stdcall RtlCreateQueryDebugBuffer(long long)
 @ stdcall RtlCreateRegistryKey(long wstr)
 @ stdcall RtlCreateSecurityDescriptor(ptr long)

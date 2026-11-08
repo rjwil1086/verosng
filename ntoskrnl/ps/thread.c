@@ -1060,7 +1060,26 @@ NtCreateThreadEx(OUT PHANDLE ThreadHandle,
     UNREFERENCED_PARAMETER(DesiredAccess);
     UNREFERENCED_PARAMETER(AttributeList);
 
-    if (!ThreadHandle || !ProcessHandle || !StartRoutine || (ZeroBits > MAXULONG))
+    /* A user-mode null output pointer faults. The all-zero guest call
+     * returns STATUS_ACCESS_VIOLATION, so probe before the other checks. */
+    if (PreviousMode != KernelMode)
+    {
+        _SEH2_TRY
+        {
+            ProbeForWriteHandle(ThreadHandle);
+        }
+        _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+        {
+            _SEH2_YIELD(return _SEH2_GetExceptionCode());
+        }
+        _SEH2_END;
+    }
+    else if (!ThreadHandle)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    if (!ProcessHandle || !StartRoutine || (ZeroBits > MAXULONG))
     {
         return STATUS_INVALID_PARAMETER;
     }
@@ -1069,7 +1088,6 @@ NtCreateThreadEx(OUT PHANDLE ThreadHandle,
     {
         if (PreviousMode != KernelMode)
         {
-            ProbeForWriteHandle(ThreadHandle);
             if (ObjectAttributes)
             {
                 ProbeForRead(ObjectAttributes, sizeof(OBJECT_ATTRIBUTES), sizeof(ULONG));

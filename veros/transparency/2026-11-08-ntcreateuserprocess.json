@@ -1,0 +1,34 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the all-zero NtCreateUserProcess call return STATUS_INVALID_PARAMETER on the amd64 boot and 0xC0000005 on Windows 10 22H2?",
+  "allowedInputs": [
+    "docs/MILESTONES.md milestone 8",
+    "tools/syscall-diff/probe.c zero-argument call already in this tree",
+    "output/syscall-diff/windows.log DIFF NtCreateUserProcess 0xC0000005 with DIFF END OK",
+    "output/syscall-diff/reactos.log before this pass, DIFF NtCreateUserProcess 0xC000000D with DIFF END OK",
+    "ntoskrnl/ps/process.c NtCreateUserProcess and sdk/include/reactos/probe.h ProbeForWriteHandle already in this tree",
+    "veros/dashboard/latest.json headline 86.1 before this pass"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG",
+    "name": "NtCreateUserProcess",
+    "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
+  },
+  "cursor": {
+    "prompt": "Per the milestone, we need to get all of these to return a matching status too: NtWriteFile, NtReadFile, NtClose, NtDeviceIoControlFile, NtCreateThreadEx, NtCreateUserProcess",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "amd64 probe exact status match percent",
+    "before": 86.1,
+    "after": 87.1,
+    "note": "Both numbers are 101 names under the same exact-status rule: 87 matches before, 88 after. Only NtCreateUserProcess changed, from STATUS_INVALID_PARAMETER to 0xC0000005."
+  }
+}

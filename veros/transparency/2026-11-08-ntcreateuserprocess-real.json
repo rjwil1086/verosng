@@ -1,0 +1,36 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the probe's real NtCreateUserProcess call return STATUS_INVALID_PARAMETER on Windows 10 22H2 and 0xC0000005 on the amd64 boot?",
+  "allowedInputs": [
+    "docs/MILESTONES.md milestone 8",
+    "tools/syscall-diff/probe.c real_process already in this tree",
+    "output/syscall-diff/windows-real.log DIFF NtCreateUserProcess 0xC000000D with DIFF END OK",
+    "output/syscall-diff/reactos.log before this pass, DIFF NtCreateUserProcess 0xC0000005 with DIFF END OK",
+    "ntoskrnl/ps/process.c NtCreateUserProcess and sdk/include/ndk/mmtypes.h SECTION_IMAGE_INFORMATION already in this tree",
+    "sdk/lib/rtl/ppb.c RtlCreateProcessParameters already in this tree",
+    "dll/ntdll/def/ntdll.spec and sdk/cmake/config.cmake DLL_EXPORT_VERSION 0x502 already in this tree",
+    "veros/dashboard/latest.json headline 87.1 before this pass"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG",
+    "name": "NtCreateUserProcess",
+    "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows-real.log DIFF END OK"
+  },
+  "cursor": {
+    "prompt": "Let's do it. I want you to run all this testing without any interaction from me.",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "amd64 probe exact status match percent",
+    "before": 87.1,
+    "after": 87.1,
+    "note": "Both numbers are 101 names under the same exact-status rule, 88 matches. The previous 87.1 counted the all-zero NtCreateUserProcess call. This pass scores the real-argument call, which moved from 0xC0000005 to STATUS_INVALID_PARAMETER. The other scored names did not change."
+  }
+}

@@ -417,6 +417,9 @@ fill_nt_path(wchar_t *path, size_t cap)
     }
 }
 
+static void real_thread(void);
+static void real_process(void);
+
 static void
 run_real(void)
 {
@@ -551,6 +554,161 @@ run_real(void)
     memset(arg, 0, sizeof(arg));
     arg[0] = file;
     invoke("NtClose", spec->Argc, spec->Timeout, arg);
+
+    real_thread();
+    real_process();
+}
+
+static DWORD WINAPI
+thread_start(void *parameter)
+{
+    (void)parameter;
+    return 0;
+}
+
+static void
+real_thread(void)
+{
+    SLOT thread = 0;
+    SLOT arg[11];
+    const CALL *spec;
+
+    spec = find_call("NtCreateThreadEx");
+    memset(arg, 0, sizeof(arg));
+    arg[0] = (SLOT)&thread;
+    arg[1] = THREAD_ALL_ACCESS;
+    arg[3] = CURRENT_PROCESS;
+    arg[4] = (SLOT)thread_start;
+    arg[6] = 1;
+    arg[8] = 0x1000;
+    arg[9] = 0x100000;
+    invoke("NtCreateThreadEx", spec->Argc, spec->Timeout, arg);
+    if (thread)
+    {
+        CloseHandle((HANDLE)thread);
+    }
+}
+
+static void
+real_process(void)
+{
+    typedef long (__stdcall *CREATE_PARAMS)(void **, USTR *, USTR *, USTR *, USTR *, void *, USTR *, USTR *, USTR *, USTR *, unsigned long);
+    typedef unsigned char (__stdcall *DOS_TO_NT)(const wchar_t *, USTR *, wchar_t **, void *);
+    typedef void (__stdcall *FREE_USTR)(USTR *);
+    typedef void (__stdcall *DESTROY_PARAMS)(void *);
+    typedef void (__stdcall *INIT_USTR)(USTR *, const wchar_t *);
+    typedef struct
+    {
+        unsigned long long attribute;
+        unsigned long long size;
+        unsigned long long value;
+        unsigned long long return_length;
+    } ATTR;
+    typedef struct
+    {
+        unsigned long long total;
+        ATTR attr[3];
+    } ATTRLIST;
+    wchar_t image[520];
+    USTR image_name;
+    USTR nt_name;
+    void *params = NULL;
+    void *ntdll;
+    CREATE_PARAMS create_params;
+    DOS_TO_NT dos_to_nt;
+    FREE_USTR free_ustr;
+    DESTROY_PARAMS destroy_params;
+    INIT_USTR init_ustr;
+    ATTRLIST list;
+    OBJATTR process_attr;
+    OBJATTR thread_attr;
+    unsigned char client[16];
+    unsigned char image_info[72];
+    unsigned char create_info[0x58];
+    SLOT process = 0;
+    SLOT thread = 0;
+    SLOT arg[11];
+    const CALL *spec;
+    DWORD length;
+
+    length = GetModuleFileNameW(NULL, image, (DWORD)(sizeof(image) / sizeof(image[0])));
+    if (length == 0 || length >= (sizeof(image) / sizeof(image[0])))
+    {
+        return;
+    }
+    ntdll = GetModuleHandleA("ntdll.dll");
+    if (ntdll == NULL)
+    {
+        return;
+    }
+    create_params = (CREATE_PARAMS)GetProcAddress(ntdll, "RtlCreateProcessParametersEx");
+    dos_to_nt = (DOS_TO_NT)GetProcAddress(ntdll, "RtlDosPathNameToNtPathName_U");
+    free_ustr = (FREE_USTR)GetProcAddress(ntdll, "RtlFreeUnicodeString");
+    destroy_params = (DESTROY_PARAMS)GetProcAddress(ntdll, "RtlDestroyProcessParameters");
+    init_ustr = (INIT_USTR)GetProcAddress(ntdll, "RtlInitUnicodeString");
+    if (!create_params || !dos_to_nt || !free_ustr || !init_ustr)
+    {
+        return;
+    }
+    init_ustr(&image_name, image);
+    if (create_params(&params, &image_name, NULL, NULL, &image_name, NULL, &image_name, NULL, NULL, NULL, 1) != 0)
+    {
+        return;
+    }
+    memset(&nt_name, 0, sizeof(nt_name));
+    if (!dos_to_nt(image, &nt_name, NULL, NULL) || nt_name.Buffer == NULL)
+    {
+        if (destroy_params && params)
+        {
+            destroy_params(params);
+        }
+        return;
+    }
+    memset(&list, 0, sizeof(list));
+    memset(client, 0, sizeof(client));
+    memset(image_info, 0, sizeof(image_info));
+    memset(create_info, 0, sizeof(create_info));
+    create_info[0] = 0x58;
+    list.total = sizeof(list.total) + (3 * sizeof(ATTR));
+    list.attr[0].attribute = 0x00020005ULL;
+    list.attr[0].size = nt_name.Length;
+    list.attr[0].value = (unsigned long long)(SLOT)nt_name.Buffer;
+    list.attr[1].attribute = 0x00010003ULL;
+    list.attr[1].size = sizeof(client);
+    list.attr[1].value = (unsigned long long)(SLOT)client;
+    list.attr[2].attribute = 0x00000006ULL;
+    list.attr[2].size = sizeof(image_info);
+    list.attr[2].value = (unsigned long long)(SLOT)image_info;
+    memset(&process_attr, 0, sizeof(process_attr));
+    memset(&thread_attr, 0, sizeof(thread_attr));
+    process_attr.Length = sizeof(process_attr);
+    thread_attr.Length = sizeof(thread_attr);
+    spec = find_call("NtCreateUserProcess");
+    memset(arg, 0, sizeof(arg));
+    arg[0] = (SLOT)&process;
+    arg[1] = (SLOT)&thread;
+    arg[2] = PROCESS_ALL_ACCESS;
+    arg[3] = THREAD_ALL_ACCESS;
+    arg[4] = (SLOT)&process_attr;
+    arg[5] = (SLOT)&thread_attr;
+    arg[7] = 1;
+    arg[8] = (SLOT)params;
+    arg[9] = (SLOT)create_info;
+    arg[10] = (SLOT)&list;
+    invoke("NtCreateUserProcess", spec->Argc, spec->Timeout, arg);
+    if (process)
+    {
+        CloseHandle((HANDLE)process);
+    }
+    if (thread)
+    {
+        CloseHandle((HANDLE)thread);
+    }
+    free_ustr(&nt_name);
+    if (destroy_params && params)
+    {
+        destroy_params(params);
+    }
 }
 
 static int
@@ -578,6 +736,30 @@ run_zeros(int late)
             continue;
         }
         invoke(g_calls[i].Name, g_calls[i].Argc, g_calls[i].Timeout, NULL);
+    }
+}
+
+static void
+use_sink_temp(void)
+{
+    char marker[16];
+    wchar_t temp[4];
+    int letter;
+
+    for (letter = 'A'; letter <= 'Z'; letter++)
+    {
+        _snprintf(marker, sizeof(marker), "%c:\\SINK.TXT", letter);
+        if (GetFileAttributesA(marker) == INVALID_FILE_ATTRIBUTES)
+        {
+            continue;
+        }
+        temp[0] = (wchar_t)letter;
+        temp[1] = L':';
+        temp[2] = L'\\';
+        temp[3] = 0;
+        SetEnvironmentVariableW(L"TMP", temp);
+        SetEnvironmentVariableW(L"TEMP", temp);
+        return;
     }
 }
 
@@ -634,6 +816,7 @@ main(void)
     g_com = open_com("\\\\.\\COM1");
     g_com2 = open_com("\\\\.\\COM2");
     open_sink();
+    use_sink_temp();
     run_real();
     run_zeros(0);
     run_zeros(1);

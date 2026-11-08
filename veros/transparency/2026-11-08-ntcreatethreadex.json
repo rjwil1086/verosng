@@ -1,0 +1,34 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the all-zero NtCreateThreadEx call return STATUS_INVALID_PARAMETER on the amd64 boot and 0xC0000005 on Windows 10 22H2?",
+  "allowedInputs": [
+    "docs/MILESTONES.md milestone 8",
+    "tools/syscall-diff/probe.c zero-argument call already in this tree",
+    "output/syscall-diff/windows.log DIFF NtCreateThreadEx 0xC0000005 with DIFF END OK",
+    "output/syscall-diff/reactos.log before this pass, DIFF NtCreateThreadEx 0xC000000D with DIFF END OK",
+    "ntoskrnl/ps/thread.c NtCreateThreadEx and sdk/include/reactos/probe.h ProbeForWriteHandle already in this tree",
+    "veros/dashboard/latest.json headline 85.1 before this pass"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG",
+    "name": "NtCreateThreadEx",
+    "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
+  },
+  "cursor": {
+    "prompt": "Per the milestone, we need to get all of these to return a matching status too: NtWriteFile, NtReadFile, NtClose, NtDeviceIoControlFile, NtCreateThreadEx, NtCreateUserProcess",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "amd64 probe exact status match percent",
+    "before": 85.1,
+    "after": 86.1,
+    "note": "Both numbers are 101 names under the same exact-status rule: 86 matches before, 87 after. Only NtCreateThreadEx changed, from STATUS_INVALID_PARAMETER to 0xC0000005. The four file calls stayed matched."
+  }
+}

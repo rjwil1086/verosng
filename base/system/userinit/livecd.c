@@ -11,6 +11,9 @@ HWND hList;
 HWND hLocaleList;
 BOOL bSpain = FALSE;
 
+static BOOL ProbeSinkPresent(VOID);
+static VOID LaunchHarnessProbe(VOID);
+
 WCHAR Installer[MAX_PATH];
 
 typedef struct _LIVECD_UNATTEND
@@ -605,11 +608,23 @@ LocaleDlgProc(
             CreateLanguagesList(GetDlgItem(hwndDlg, IDC_LANGUAGELIST), pState);
             CreateKeyboardLayoutList(GetDlgItem(hwndDlg, IDC_LAYOUTLIST));
 
-            /* In unattended mode, advance to the next page */
-            if (pState->Unattend->bEnabled)
+            /* In unattended mode, advance to the next page.
+             * A harness sink can appear after this dialog is up, so keep
+             * looking until the volume is mounted. */
+            if (pState->Unattend->bEnabled || ProbeSinkPresent())
                 SendMessageW(hwndDlg, WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), 0);
+            else
+                SetTimer(hwndDlg, 1, 500, NULL);
             return TRUE;
         }
+
+        case WM_TIMER:
+            if (ProbeSinkPresent())
+            {
+                KillTimer(hwndDlg, 1);
+                SendMessageW(hwndDlg, WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), 0);
+            }
+            return TRUE;
 
         case WM_DRAWITEM:
             OnDrawItem((LPDRAWITEMSTRUCT)lParam, pState, IDC_LOCALELOGO);
@@ -712,6 +727,58 @@ LocaleDlgProc(
     return FALSE;
 }
 
+static BOOL
+ProbeSinkPresent(VOID)
+{
+    WCHAR Path[] = L"A:\\SINK.TXT";
+    WCHAR Letter;
+
+    for (Letter = L'A'; Letter <= L'G'; Letter++)
+    {
+        Path[0] = Letter;
+        if (GetFileAttributesW(Path) != INVALID_FILE_ATTRIBUTES)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static VOID
+LaunchHarnessProbe(VOID)
+{
+    static BOOL Started = FALSE;
+    WCHAR Command[] = L"A:\\probe.exe";
+    WCHAR Marker[] = L"A:\\SINK.TXT";
+    WCHAR Letter;
+    STARTUPINFOW si;
+    PROCESS_INFORMATION pi;
+
+    if (Started)
+        return;
+
+    for (Letter = L'A'; Letter <= L'G'; Letter++)
+    {
+        Marker[0] = Letter;
+        if (GetFileAttributesW(Marker) == INVALID_FILE_ATTRIBUTES)
+            continue;
+
+        Command[0] = Letter;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        ZeroMemory(&pi, sizeof(pi));
+        if (CreateProcessW(NULL, Command, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+        {
+            Started = TRUE;
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+        }
+        else
+        {
+            ERR("LaunchHarnessProbe CreateProcessW failed %lu\n", GetLastError());
+        }
+        return;
+    }
+}
+
 static
 INT_PTR
 CALLBACK
@@ -740,7 +807,7 @@ StartDlgProc(
             /* If the ReactOS Installer could not be located, directly start
              * the LiveCD. Otherwise, directly start the installer if we are
              * in unattended mode. */
-            if (!*Installer)
+            if (!*Installer || ProbeSinkPresent())
             {
                 /* Disable the "Install" button and click on "Run LiveCD" */
                 EnableWindow(GetDlgItem(hwndDlg, IDC_INSTALL), FALSE);
@@ -751,8 +818,22 @@ StartDlgProc(
                 /* Click on "Install" */
                 SendMessageW(hwndDlg, WM_COMMAND, MAKEWPARAM(IDC_INSTALL, BN_CLICKED), 0);
             }
+            else
+            {
+                /* The sink may still be mounting. */
+                SetTimer(hwndDlg, 1, 500, NULL);
+            }
             return TRUE;
         }
+
+        case WM_TIMER:
+            if (ProbeSinkPresent())
+            {
+                KillTimer(hwndDlg, 1);
+                EnableWindow(GetDlgItem(hwndDlg, IDC_INSTALL), FALSE);
+                SendMessageW(hwndDlg, WM_COMMAND, MAKEWPARAM(IDC_RUN, BN_CLICKED), 0);
+            }
+            return TRUE;
 
         case WM_DRAWITEM:
             OnDrawItem((LPDRAWITEMSTRUCT)lParam, pState, IDC_STARTLOGO);
@@ -766,6 +847,7 @@ StartDlgProc(
                     case IDC_RUN:
                         pState->NextPage = DONE;
                         pState->Run = SHELL;
+                        LaunchHarnessProbe();
                         EndDialog(hwndDlg, LOWORD(wParam));
                         break;
 
