@@ -8,11 +8,11 @@ Three goals share the amd64 kernel.
 2. Windows drivers for hardware other than graphics.
 3. A graphics HAL. `user32`, `gdi32`, `dxgi`, and `d3d11` stay Windows-shaped while the backend changes from a software or virtual renderer, to DRM, to WDDM 2.0.
 
-Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
+Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
 
 Goal 2 continues from milestone 5. It waits for milestone 9 only when a driver refuses to load until it sees version 10. Goal 3 starts at milestone 12. It does not wait for every network and USB driver.
 
-The open work starts at milestone 7. Milestone 10 can proceed beside it for a driver that does not require version 10. A new shell, DPI scaling, and antivirus filters wait until a program under test requires them.
+The open work starts at milestone 8. Milestone 10 can proceed beside it for a driver that does not require version 10. A new shell, DPI scaling, and antivirus filters wait until a program under test requires them.
 
 ## Milestone 0: Project Infrastructure
 
