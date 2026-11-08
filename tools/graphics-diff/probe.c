@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * Application-side graphics probe for the milestone 13 DLLs.
+ * Application-side graphics probe for the milestone 20 DLLs.
  * The same calls run on Windows and VerOS. Tokens are the status or the
  * pixels the caller can read back. No adapter identity and no D3DKMT.
  */

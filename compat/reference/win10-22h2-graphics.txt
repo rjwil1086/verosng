@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Milestone 19 application contract. The second column is how a Windows
+# Milestone 20 application contract. The second column is how a Windows
 # success is recognized. Draw tokens are pixel hashes. Device tokens are
 # HRESULT and the feature level written back to the caller.
 Module.User32 module

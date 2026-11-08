@@ -1,0 +1,31 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Where does an NTFS milestone belong while milestone 10 is still in progress?",
+  "allowedInputs": [
+    "docs/MILESTONES.md",
+    "drivers/filesystems/ntfs and boot/bootdata/hivesys.inf in this tree",
+    "The user request to add an NTFS milestone, renumber the open milestones, and record that milestone 10 is in progress while milestone 11 has not started"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Can you write a new milestone to address this and add it to the milestone list where it makes the most sense? Can you renumber the milestones so they are in the correct order? milestone 10 is in progress and milestone 11 hasn't even been started.",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "milestone sections in docs/MILESTONES.md",
+    "before": 27,
+    "after": 28,
+    "note": "Finished milestones 0 through 9 kept their numbers. Milestone 10 stays in progress. Milestone 11 has not started. NTFS is milestone 12 and waits for that install. Later milestones moved up by one. No boot was run."
+  }
+}
