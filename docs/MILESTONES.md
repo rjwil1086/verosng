@@ -2,7 +2,17 @@
 
 # Milestones
 
-Milestones 0–5 are done. The daily boot is amd64. Milestone 7 makes that boot report Windows 10. Milestone 8 moves the applications and the in-tree drivers onto it.
+Three goals share the amd64 kernel.
+
+1. Windows 10 22H2 ABI. An x64 application runs as it does on that Windows.
+2. Windows drivers for hardware other than graphics.
+3. A graphics HAL. `user32`, `gdi32`, `dxgi`, and `d3d11` stay Windows-shaped while the backend changes from a software or virtual renderer, to DRM, to WDDM 2.0.
+
+Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
+
+Goal 2 continues from milestone 5. It waits for milestone 9 only when a driver refuses to load until it sees version 10. Goal 3 starts at milestone 12. It does not wait for every network and USB driver.
+
+The open work starts at milestone 7. Milestone 10 can proceed beside it for a driver that does not require version 10. A new shell, DPI scaling, and antivirus filters wait until a program under test requires them.
 
 ## Milestone 0: Project Infrastructure
 
@@ -118,7 +128,7 @@ should launch reliably.
 
 ## Milestone 4: Core NT Compatibility
 
-Goal: Stabilize kernel behavior.
+Goal: The kernel managers an application and a driver both enter are present on the amd64 boot.
 
 Focus:
 
@@ -130,40 +140,25 @@ Focus:
 
 Success criteria:
 
-Top 100 syscalls pass compatibility testing at 80-90%.
+- Those managers run on the daily amd64 boot.
+- The syscall probe remains the regression check.
 
-## Milestone 5: Driver Compatibility Foundation
+Calls an application makes with real arguments are milestone 8. The headline percent on the zero-argument probe does not close that work.
 
-Goal: Load modern Windows drivers.
+## Milestone 5: Driver foundation
 
-Focus:
+Goal: Boot the live CD from the in-tree storport stack.
 
-- IRP handling
-- PnP manager
-- Power manager
-- DMA support
+What landed:
 
-Target drivers:
+- IRP, PnP, power, and DMA paths that `storahci` uses
+- The QEMU AHCI disk identified as `QEMU HARDDISK` through in-tree `storahci`
 
-```text
-Intel NIC
-Realtek NIC
-USB controllers
-SATA/AHCI
-NVMe
-```
-
-Success criteria:
-
-Common hardware works using Windows 10 drivers.
+Retail Windows drivers are milestone 10.
 
 ## Milestone 6: amd64 boot
 
 Goal: Make the amd64 boot the daily boot and the headline score.
-
-This starts when a WDK driver returns from `DriverEntry` on the i386 boot and the next failures are pointer width, structure size, or the x64 calling convention. An x64-only driver, such as NVMe or most NICs on the milestone 5 list, is the other trigger.
-
-The kernel still reports NT 5.2 through this milestone. Milestone 7 changes that report.
 
 Deliverables:
 
@@ -178,246 +173,231 @@ Export names stay the same.
 Success criteria:
 
 - The daily boot is the amd64 guest
-- A Windows 10 22H2 WDK amd64 driver loads and `DriverEntry` returns while the kernel still reports 5.2.3790
 - The top-100 probe is recaptured on that native path and is the headline score
 
-## Milestone 7: Windows 10 version report
+A Windows driver returning from `DriverEntry` is milestone 10. The kernel still reports NT 5.2 until milestone 9.
 
-Goal: The default amd64 boot reports Windows 10 22H2.
+## Milestone 7: x64 application surface
 
-This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The ReactOS product version stays 0.4.x. In-tree images keep their existing PE version stamp.
+Goal: Goal 1. A Windows 10 22H2 x64 application loads and a window appears.
+
+A task stays only when the amd64 live CD still reaches the desktop. Wine updates for the libraries these programs call stay part of this milestone.
+
+Tasks:
+
+- Boot the daily amd64 live CD and record the first missing import or crash for x64 `git --version`. Change nothing.
+- Add the one export or API-set forwarder that the log names. Rebuild, reach the desktop, and run that command again.
+- Repeat that export task until `git --version` prints its version.
+- Do the same loop for `python -c "print(1)"`.
+- Do the same loop for 7-Zip opening one archive.
+- Do the same loop for Notepad++ opening one file.
+- Update the Wine library that supplied the last missing piece, then boot again and rerun all four actions.
+
+Success criteria:
+
+- Each target starts on the amd64 live CD and performs one ordinary action.
+- A 32-bit build is scored only for a program that has no x64 build.
+
+## Milestone 8: Application syscalls
+
+Goal: Goal 1. The syscalls those programs make agree with Windows 10 22H2 when called with the arguments the programs pass.
+
+A task stays only when the amd64 live CD still reaches the desktop. For each name, record the Windows 10 22H2 status and the live CD status for the probe's real-argument call, then change the kernel until those statuses match. Rerun the full probe before the next name. Each distinct fault inside one name is its own pass.
+
+Tasks:
+
+- `NtCreateFile`
+- `NtWriteFile`
+- `NtReadFile`
+- `NtClose`
+- `NtDeviceIoControlFile`
+- `NtCreateThreadEx`
+- `NtCreateUserProcess`
+
+Success criteria:
+
+- Each of those names matches the Windows 10 22H2 guest on the probe's real-argument call.
+- The rest of the top-100 probe does not regress.
+
+## Milestone 9: Application version report
+
+Goal: Goal 1. The amd64 boot reports Windows 10 22H2 to an application.
+
+This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The product version stays 0.4.x. In-tree images keep their existing PE version stamp. A task stays only when the amd64 live CD still reaches the desktop.
 
 Requirements:
 
-- Milestone 6 is done. The same WDK driver has returned from `DriverEntry` while the kernel still reports 5.2.3790. That boot is the before measurement.
-- The exports that driver calls after it accepts version 10 already return.
+- Milestones 7 and 8 are done for the programs under test. The paths an application takes after it sees version 10 already return.
 - `GetVersion` and `GetVersionEx` for an image without a Windows 10 manifest still return 6.2. `RtlGetVersion` and `SharedUserData` report the real version.
 - `KmWin2k3VersionLie` still forces 5.2.3790 for a driver that fails when the major version is above 5.
+
+Tasks:
+
+- Record the current `SharedUserData`, `RtlGetVersion`, `PsGetVersion`, and unmanifested `GetVersion` values from the live CD.
+- Make `SharedUserData`, `RtlGetVersion`, and `PsGetVersion` report 10.0.19045. Boot to the desktop and rerun the four milestone 7 actions.
+- Confirm an unmanifested `GetVersion` and `GetVersionEx` still return 6.2. Leave `CurrentVersion` at 6.3, `CurrentMajorVersionNumber` at 10, and `CurrentBuildNumber` at 19045.
+- Confirm `KmWin2k3VersionLie` still reports 5.2.3790.
+- Rerun the milestone 8 probe.
 
 Outcome:
 
 - `SharedUserData`, `RtlGetVersion`, and `PsGetVersion` agree on 10.0.19045.
-- `CurrentVersion` stays `6.3`. `CurrentMajorVersionNumber` is 10 and `CurrentBuildNumber` is 19045.
-- That WDK driver passes its version check and `DriverEntry` still returns.
+- The milestone 7 programs still start.
+- The milestone 8 statuses do not regress.
 - A driver covered by the 5.2 shim still observes 5.2.3790.
-- The top-100 probe does not regress.
 
-## Milestone 8: 64-bit migration
+## Milestone 10: Windows storage, network, and USB drivers
 
-Goal: Make the Windows 10 22H2 x64 ABI the project default beyond the boot.
+Goal: Goal 2. A retail Windows 10 22H2 driver for non-graphics hardware loads on the amd64 boot.
 
-Milestone 6 makes the amd64 boot the daily boot. Milestone 7 makes that boot report Windows 10. This milestone moves the rest of the work onto it: the build, the applications, and the drivers already proven on i386.
+A task stays only when the amd64 live CD still reaches the desktop. Run the task loop for one driver at a time. A disk driver attaches to a second disk. The live CD keeps booting from the in-tree driver until the boot task for that driver.
 
-Deliverables:
+Order:
 
-- CI and the compatibility snapshot use the amd64 boot
-- The milestone 3 applications run as 64-bit binaries
-- In-tree drivers that loaded on the i386 live CD load on the amd64 boot
-- i386 still builds, and it is not the headline score
+- Intel NIC
+- Realtek NIC
+- USB controller
+- SATA/AHCI
+- NVMe
 
-Success criteria:
+Tasks:
 
-- The apps and those in-tree drivers are no longer scored on i386
-
-## Milestone 9: Graphics HAL (GKAL)
-
-Goal: Future-proof graphics.
-
-Create:
-
-```text
-Win32
-DXGI
-DirectX
-GDI
-
-↓
-
-GKAL
-
-↓
-
-Backend
-```
-
-No backend-specific code allowed above GKAL.
+- Load the Windows driver without replacing the boot device. Record the first bugcheck, or the status `DriverEntry` returns.
+- Make the one export named in that log return. Boot to the desktop and load the driver again.
+- Repeat that export task until `DriverEntry` returns.
+- Complete one ordinary operation: a packet, a USB enumeration, or a read from the second disk.
+- For SATA/AHCI or NVMe only, boot from that driver after the ordinary operation has already succeeded on the second disk.
 
 Success criteria:
 
-Window manager renders through GKAL.
+- The driver's `DriverEntry` returns.
+- The exports it calls into `ntoskrnl`, the HAL, and KMDF return.
+- The device it owns performs its ordinary operation.
+- A driver that rejects a version above 5 still runs under `KmWin2k3VersionLie`.
+- A driver that requires version 10 waits until milestone 9, then passes that check and still returns.
 
-## Milestone 10: Software Renderer
+## Milestone 11: Remaining non-graphics drivers
 
-Goal: Reliable graphics platform.
+Goal: Goal 2. Extend the same bar past boot and network hardware.
 
-Implement:
+A task stays only when the amd64 live CD still reaches the desktop. Run the milestone 10 task loop for each device below. The device stays off the boot path.
 
-```text
-CPU Rendering
-Framebuffers
-Compositor
-Desktop
-```
+Tasks:
 
-Benefits:
-
-- Easy debugging
-- Deterministic tests
-- Runs everywhere
-
-## Milestone 11: Mesa / DRM Backend
-
-Goal: Hardware acceleration quickly.
-
-Implement:
-
-```text
-GKAL
-↓
-Vulkan
-↓
-Mesa
-↓
-Linux GPU Drivers
-```
+- One audio driver
+- One Bluetooth driver
+- One printer driver
+- One storage filter
 
 Success criteria:
 
-Desktop composition accelerated.
+- Each chosen driver returns from `DriverEntry`, its kernel calls return, and the device performs its ordinary operation.
 
-## Milestone 12: Modern Desktop
+## Milestone 12: Graphics HAL
 
-Goal: Make daily usage possible.
+Goal: Goal 3. One boundary owns pixel and GPU work so the backend can change.
 
-Features:
+```text
+user32
+gdi32
+dxgi
+d3d11
+opengl32
 
-- DWM-style compositor
-- Modern explorer shell
-- Multi-monitor support
-- DPI scaling
-- Hardware accelerated rendering
+↓
+
+Graphics HAL
+
+↓
+
+Software or virtual renderer
+DRM
+WDDM 2.0
+```
+
+Applications keep calling the Windows DLLs. Backend-specific code stays below the HAL. A task stays only when the amd64 live CD still reaches the desktop.
+
+Tasks:
+
+- Add the HAL interface and a software backend that calls the existing GDI path. The desktop pixels stay the same.
+- Select that backend from one place. Boot to the desktop.
+- Add a second backend id that fails and falls back to the software backend. Boot to the desktop.
+- Open a milestone 7 window through the software backend.
 
 Success criteria:
 
-Can use the OS daily.
+- The GDI desktop still shows a milestone 7 window through the software backend.
+- A second backend can be selected without an application change.
 
-## Milestone 13: Wine Synchronization Layer
+## Milestone 13: First 3D backend
 
-Goal: Continuously ingest Wine improvements.
+Goal: Goal 3. A 3D application renders through the Windows-facing DLLs on the software or virtual backend.
 
-Build tooling:
+The first renderer is llvmpipe or virtio-gpu. A task stays only when the amd64 live CD still reaches the desktop.
 
-```text
-Wine
-↓
-Analysis
-↓
-Suggested merge
-↓
-AI review
-```
+Tasks:
 
-Cursor can continuously evaluate Wine commits.
-
-## Milestone 14: DirectX Compatibility
-
-Leverage:
-
-```text
-DXVK
-vkd3d-proton
-WineD3D
-```
-
-Path:
-
-```text
-D3D9
-D3D10
-D3D11
-```
-
-Target:
-
-Steam games start rendering correctly.
-
-## Milestone 15: Driver Compatibility Expansion
-
-Focus on:
-
-- Audio
-- Bluetooth
-- Printers
-- Storage filters
-- Antivirus filters
+- Clear one surface to a solid color through the software backend and show it in a window.
+- Draw one triangle through `opengl32` on llvmpipe or virtio-gpu.
+- Draw one triangle through `d3d11` using DXVK, vkd3d-proton, or WineD3D.
+- Run one 3D program and keep one frame on screen. Confirm the milestone 7 window still opens.
 
 Success criteria:
 
-Large numbers of retail Windows 10 drivers load successfully.
+- One 3D program draws a frame on the amd64 boot.
+- The milestone 7 window still appears.
 
-## Milestone 16: WDDM Compatibility Layer
+## Milestone 14: DRM backend
 
-Only start this after everything above is stable.
+Goal: Goal 3. The same HAL gains a DRM backend, using a GPL Linux GPU driver as the hardware source.
 
-Implement:
+```text
+Graphics HAL
+↓
+DRM backend
+↓
+One Linux GPU driver
+```
+
+A task stays only when the amd64 live CD still reaches the desktop. The software backend stays selected until the real GPU has already drawn a frame.
+
+Tasks:
+
+- Add the DRM backend and fall back to software when it cannot start. Boot to the desktop.
+- Modeset one simple QEMU display device through that backend and show the desktop.
+- Draw the milestone 13 frame on that device.
+- Bring up one real Linux GPU driver on one machine, with the software backend still selected by default.
+- Draw the milestone 13 frame on that GPU, then make that backend the selected one.
+
+Success criteria:
+
+- The milestone 13 program draws a frame on that GPU.
+- Selecting the DRM backend does not change the application or the DLL exports.
+
+## Milestone 15: WDDM 2.0 backend
+
+Goal: Goal 3. The same HAL gains a WDDM 2.0 backend.
 
 ```text
 dxgkrnl
-dxgmms
+dxgmms2
 D3DKMT entry points
 ```
 
-mapped internally to GKAL.
+mapped internally to the HAL. A task stays only when the amd64 live CD still reaches the desktop. The previous backend stays the boot display until this backend has already presented a frame.
 
-This lets applications think they're talking to WDDM.
+Tasks:
 
-## Milestone 17: Native WDDM Drivers (Optional)
+- Add the WDDM backend and fall back to the current backend when it cannot start. Boot to the desktop.
+- Make one `D3DKMT` query return the Windows status for the probe's arguments.
+- Present the milestone 13 frame through this backend inside QEMU.
+- Load one unmodified Windows GPU driver while the previous backend is still the boot display.
+- Present a frame with that driver, then make the WDDM backend the selected display.
 
-This is the moonshot.
+Success criteria:
 
-Goal:
-
-```text
-Windows NVIDIA Driver
-Windows AMD Driver
-Windows Intel Driver
-```
-
-load without modification.
-
-This is likely the most difficult milestone in the entire project.
-
-## What I'd Focus On First Year
-
-If it were my project, Year 1 would end with:
-
-- Trace harness
-- Differential testing
-- Compatibility dashboard
-- Modernized NTDLL
-- Improved kernel ABI compatibility
-- Driver compatibility foundations
-- GKAL architecture
-
-I would not spend Year 1 touching WDDM.
-
-Milestone 6 makes the amd64 boot the daily boot and the default build. Milestone 7 reports Windows 10 from that boot. Milestone 8 moves the applications and the in-tree drivers onto it before graphics work. None of these is a reason to start WDDM in Year 1.
-
-The biggest force multiplier is getting to this workflow:
-
-```text
-Windows Trace
-↓
-Diff Engine
-↓
-Cursor Fix
-↓
-Regression Test
-↓
-Compatibility Score Increase
-```
-
-Once that exists, every future milestone becomes dramatically easier because you're improving compatibility with data instead of intuition.
+- The milestone 13 program draws a frame through this backend.
+- An unmodified Windows GPU driver is the last step, after the backend's own entry points return.
 
 ## What should the compatibility dashboard look like?
 
@@ -425,7 +405,7 @@ I'd make the dashboard the center of the whole project. The goal is not to be pr
 
 "What compatibility improved today, what broke, and where should Cursor work next?"
 
-The percentages in this section are a design specimen. They are not a measured score. The measured score stays the snapshot from the i386 probe until milestone 6 makes the amd64 boot the daily boot.
+The percentages in this section are a design specimen. They are not a measured score. The measured score is the amd64 probe snapshot.
 
 ### Top-Level Overview
 

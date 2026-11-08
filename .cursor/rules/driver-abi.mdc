@@ -1,12 +1,15 @@
 ---
-description: Windows 10 22H2 driver ABI is the project goal
+description: Three VerOS NG goals and the milestone order
 alwaysApply: true
 ---
 
-# Driver ABI goal
+# Three goals
 
-The goal is that a driver built with the Windows 10 22H2 WDK loads and its calls into `ntoskrnl`, the HAL, and KMDF return instead of bugchecking.
+The order is `docs/MILESTONES.md`. A task stays only when the amd64 live CD still reaches the desktop.
 
-- Judge a change by whether that driver still calls the same exports.
-- Do not "fix" a failure by changing the calling convention, structure layout, or IRQL behavior a WDK driver already uses.
-- User-mode syscall compatibility is part of the ABI. Applications and graphics stay visible, and they are not the headline score.
+1. Windows 10 22H2 application ABI. An x64 application runs as it does on that Windows.
+2. Windows drivers for hardware other than graphics. A driver built with the Windows 10 22H2 WDK loads, and its calls into `ntoskrnl`, the HAL, and KMDF return instead of bugchecking.
+3. A graphics HAL. `user32`, `gdi32`, `dxgi`, and `d3d11` stay Windows-shaped while the backend changes from a software or virtual renderer, to DRM, to WDDM 2.0.
+
+- Judge a driver change by whether that driver still calls the same exports.
+- Do not fix a failure by changing the calling convention, structure layout, or IRQL behavior a WDK driver already uses.
