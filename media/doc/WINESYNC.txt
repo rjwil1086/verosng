@@ -280,6 +280,7 @@ dll/win32/xolehlp             # Synced to Wine-10.0
 comctl32 -
   dll/win32/comctl32/button.c              # Forked at Wine-3.3
   dll/win32/comctl32/datetime.c            # Synced to Wine-6.0
+  dll/win32/comctl32/commctrl.c            # GetWindowSubclass synced to Wine-10.0
   dll/win32/comctl32/*                     # Synced to Wine-5.0
 
 dll/cpl/bthprops              # Synced to Wine-10.0

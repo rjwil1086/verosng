@@ -2352,6 +2352,12 @@ LdrpGetProcedureAddress(
                                ExportDirSize,
                                FALSE,
                                NULL);
+        if (!NT_SUCCESS(Status) && Name)
+        {
+            DbgPrint("LDR: missing export %wZ!%Z\n",
+                     &LdrEntry->BaseDllName,
+                     Name);
+        }
 
         /* Finally, see if we're supposed to run the init routines */
         if ((NT_SUCCESS(Status)) && (ExecuteInit))

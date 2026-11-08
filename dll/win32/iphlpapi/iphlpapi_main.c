@@ -1524,6 +1524,54 @@ static int IfTableSorter(const void *a, const void *b)
 
 
 /******************************************************************
+ *    if_nametoindex (IPHLPAPI.@)
+ *
+ * Maps an interface name to its local index. An unknown name has no index.
+ */
+NET_IFINDEX WINAPI if_nametoindex(PCSTR InterfaceName)
+{
+    ULONG size = 0;
+    PMIB_IFTABLE table;
+    WCHAR name[MAX_INTERFACE_NAME_LEN];
+    DWORD i, error;
+
+    if (!InterfaceName || !InterfaceName[0])
+        return 0;
+
+    if (!MultiByteToWideChar(CP_ACP, 0, InterfaceName, -1, name, ARRAYSIZE(name)))
+        return 0;
+
+    error = GetIfTable(NULL, &size, FALSE);
+    if (error != ERROR_INSUFFICIENT_BUFFER)
+        return 0;
+
+    table = HeapAlloc(GetProcessHeap(), 0, size);
+    if (!table)
+        return 0;
+
+    error = GetIfTable(table, &size, FALSE);
+    if (error != NO_ERROR)
+    {
+        HeapFree(GetProcessHeap(), 0, table);
+        return 0;
+    }
+
+    for (i = 0; i < table->dwNumEntries; i++)
+    {
+        if (!lstrcmpiW(table->table[i].wszName, name))
+        {
+            NET_IFINDEX index = table->table[i].dwIndex;
+            HeapFree(GetProcessHeap(), 0, table);
+            return index;
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, table);
+    return 0;
+}
+
+
+/******************************************************************
  *    GetIfTable (IPHLPAPI.@)
  *
  * PARAMS

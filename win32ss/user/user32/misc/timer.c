@@ -36,3 +36,19 @@ KillSystemTimer( HWND hWnd, UINT_PTR IDEvent)
 {
   return NtUserxKillSystemTimer(hWnd, IDEvent);
 }
+
+/*
+ * @implemented
+ */
+UINT_PTR
+WINAPI
+SetCoalescableTimer(HWND hwnd,
+                    UINT_PTR idEvent,
+                    UINT elapse,
+                    TIMERPROC timerProc,
+                    ULONG tolerance)
+{
+    /* This kernel has one timer resolution, so the tolerance is not applied. */
+    UNREFERENCED_PARAMETER(tolerance);
+    return SetTimer(hwnd, idEvent, elapse, timerProc);
+}

@@ -1,0 +1,34 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why do Git, Python, 7-Zip, and Notepad++ start on the amd64 live CD?",
+  "allowedInputs": [
+    "The tree as it stood before this change, including the kernel32, user32, ntdll, and comctl32 specs and the API-set table",
+    "Public contracts for the DPI, timer, locale, loader, wheel-scroll, and subclass calls those programs use",
+    "Wine 10.0 GetWindowSubclass, already the basis of dll/win32/comctl32/commctrl.c",
+    "Serial logs from booting this tree: output/m7-npp-boot.log",
+    "The user report that git --version, python print(1), 7-Zip, and Notepad++ each completed one ordinary action"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "ReactOS amd64",
+    "name": "milestone-7-x64-apps",
+    "traceOrReplayId": "output/m7-npp-boot.log"
+  },
+  "cursor": {
+    "prompt": "Milestone 7: boot the amd64 live CD and repeat the missing-export loop until git --version, python -c \"print(1)\", 7-Zip opening one archive, and Notepad++ opening one file each succeed, then update the Wine library that supplied the last missing piece and rerun all four.",
+    "model": "Grok 4.7",
+    "date": "2026-11-07",
+    "session": "d6b6a1b0-e8b1-4390-904b-ed0a3e85b0b4"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "named x64 actions completed on the amd64 live CD",
+    "before": null,
+    "after": null,
+    "note": "No probe score was recorded. On the final boot the user reported that git --version, python print(1), 7-Zip opening one archive, and Notepad++ opening one file all succeeded."
+  }
+}

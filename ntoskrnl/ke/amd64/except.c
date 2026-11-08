@@ -380,6 +380,17 @@ KiDispatchException(IN PEXCEPTION_RECORD ExceptionRecord,
     }
     else
     {
+        if (ExceptionRecord->ExceptionCode == STATUS_ACCESS_VIOLATION)
+        {
+            DPRINT1("User AV in %.16s at %p fault %p write %Ix\n",
+                    PsGetCurrentProcess()->ImageFileName,
+                    ExceptionRecord->ExceptionAddress,
+                    ExceptionRecord->NumberParameters > 1 ?
+                        (PVOID)ExceptionRecord->ExceptionInformation[1] : NULL,
+                    ExceptionRecord->NumberParameters > 0 ?
+                        ExceptionRecord->ExceptionInformation[0] : 0);
+        }
+
         /* User mode exception, was it first-chance? */
         if (FirstChance)
         {

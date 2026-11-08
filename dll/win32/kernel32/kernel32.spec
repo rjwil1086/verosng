@@ -257,7 +257,7 @@
 @ stdcall EnumSystemLanguageGroupsA(ptr long ptr)
 @ stdcall EnumSystemLanguageGroupsW(ptr long ptr)
 @ stdcall EnumSystemLocalesA(ptr long)
-@ stdcall -version=0x600+ EnumSystemLocalesEx(ptr long long ptr)
+@ stdcall EnumSystemLocalesEx(ptr long long ptr)
 @ stdcall EnumSystemLocalesW(ptr long)
 @ stdcall EnumTimeFormatsA(ptr long long)
 @ stdcall -version=0x600+ EnumTimeFormatsEx(ptr wstr long long)
@@ -327,6 +327,7 @@
 @ stdcall FlsAlloc(ptr)
 @ stdcall FlsFree(long)
 @ stdcall FlsGetValue(long)
+@ stdcall FlsGetValue2(long)
 @ stdcall FlsSetValue(long ptr)
 @ stdcall FlushConsoleInputBuffer(long)
 @ stdcall FlushFileBuffers(long)
@@ -442,6 +443,7 @@
 @ stdcall -version=0x601+ GetCurrentProcessorNumberEx(ptr) ntdll.RtlGetCurrentProcessorNumberEx
 @ stdcall -norelay GetCurrentThread()
 @ stdcall -norelay GetCurrentThreadId()
+@ stdcall GetCurrentThreadStackLimits(ptr ptr)
 @ stdcall GetDateFormatA(long long ptr str ptr long)
 @ stdcall GetDateFormatEx(wstr long ptr wstr wstr long wstr)
 @ stdcall GetDateFormatW(long long ptr wstr ptr long)
@@ -508,7 +510,7 @@
 @ stdcall GetLocaleInfoA(long long ptr long)
 @ stdcall GetLocaleInfoEx(wstr long ptr long)
 @ stdcall GetLocaleInfoW(long long ptr long)
-@ stdcall -version=0x600+ IsValidLocaleName(wstr)
+@ stdcall IsValidLocaleName(wstr)
 @ stdcall GetLogicalDriveStringsA(long ptr)
 @ stdcall GetLogicalDriveStringsW(long ptr)
 @ stdcall GetLogicalDrives()
@@ -618,7 +620,7 @@
 @ stdcall GetSystemTime(ptr)
 @ stdcall GetSystemTimeAdjustment(ptr ptr ptr)
 @ stdcall GetSystemTimeAsFileTime(ptr)
-@ stdcall -version=0x602+ GetSystemTimePreciseAsFileTime(ptr)
+@ stdcall GetSystemTimePreciseAsFileTime(ptr)
 @ stdcall GetSystemTimes(ptr ptr ptr)
 @ stdcall GetSystemWindowsDirectoryA(ptr long)
 @ stdcall GetSystemWindowsDirectoryW(ptr long)
@@ -631,6 +633,7 @@
 @ stdcall GetTempFileNameW(wstr wstr long ptr)
 @ stdcall GetTempPathA(long ptr)
 @ stdcall GetTempPathW(long ptr)
+@ stdcall GetTempPath2W(long ptr)
 @ stdcall GetThreadContext(long ptr)
 @ stdcall -stub -version=0x600+ GetThreadErrorMode()
 @ stdcall -version=0x601+ GetThreadGroupAffinity(ptr ptr)
@@ -653,7 +656,7 @@
 @ stdcall -version=0x600+ GetUILanguageInfo(long wstr wstr ptr ptr)
 @ stdcall GetUserDefaultLCID()
 @ stdcall GetUserDefaultLangID()
-@ stdcall -version=0x600+ GetUserDefaultLocaleName(wstr long)
+@ stdcall GetUserDefaultLocaleName(wstr long)
 @ stdcall GetUserDefaultUILanguage()
 @ stdcall GetUserGeoID(long)
 @ stdcall -version=0x600+ GetUserPreferredUILanguages(long ptr wstr ptr)
@@ -731,7 +734,7 @@
 @ stdcall InitializeCriticalSectionEx(ptr long long)
 @ stdcall -stub InitializeProcThreadAttributeList(ptr long long ptr)
 @ stdcall InitializeSListHead(ptr) ntdll.RtlInitializeSListHead
-@ stdcall -version=0x600+ InitializeSRWLock(ptr) ntdll.RtlInitializeSRWLock
+@ stdcall InitializeSRWLock(ptr) ntdll.RtlInitializeSRWLock
 @ stdcall -arch=i386 -ret64 InterlockedCompareExchange64(ptr double double) ntdll.RtlInterlockedCompareExchange64
 @ stdcall -arch=i386 InterlockedCompareExchange(ptr long long)
 @ stdcall -arch=i386 InterlockedDecrement(ptr)
@@ -797,7 +800,7 @@
 @ stdcall -version=0x601+ K32InitializeProcessForWsWatch(long) InitializeProcessForWsWatch
 @ stdcall -version=0x601+ K32QueryWorkingSet(long ptr long) QueryWorkingSet
 @ stdcall -version=0x601+ K32QueryWorkingSetEx(long ptr long) QueryWorkingSetEx
-@ stdcall -version=0x600+ LCIDToLocaleName(long wstr long long)
+@ stdcall LCIDToLocaleName(long wstr long long)
 @ stdcall LCMapStringA(long long str long ptr long)
 @ stdcall LCMapStringEx(long long wstr long ptr long ptr ptr long)
 @ stdcall LCMapStringW(long long wstr long ptr long)
@@ -833,7 +836,7 @@
 @ stdcall LocalShrink(long long)
 @ stdcall LocalSize(long)
 @ stdcall LocalUnlock(long)
-@ stdcall -version=0x600+ LocaleNameToLCID(wstr long)
+@ stdcall LocaleNameToLCID(wstr long)
 @ stdcall LockFile(long long long long long)
 @ stdcall LockFileEx(long long long long long ptr)
 @ stdcall LockResource(long)
@@ -1077,6 +1080,7 @@
 @ stdcall SetDefaultCommConfigA(str ptr long)
 @ stdcall SetDefaultCommConfigW(wstr ptr long)
 @ stdcall SetDllDirectoryA(str)
+@ stdcall SetDefaultDllDirectories(long)
 @ stdcall SetDllDirectoryW(wstr)
 @ stub -version=0x600+ SetDynamicTimeZoneInformation
 @ stdcall SetEndOfFile(long)

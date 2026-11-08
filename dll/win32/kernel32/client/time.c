@@ -136,13 +136,14 @@ GetSystemTimeAsFileTime(OUT PFILETIME lpFileTime)
 }
 
 /*
- * @unimplemented
+ * @implemented
  */
 VOID
 WINAPI
 GetSystemTimePreciseAsFileTime(OUT PFILETIME lpFileTime)
 {
-    STUB;
+    /* This kernel publishes one system time. That value is the precise reading. */
+    GetSystemTimeAsFileTime(lpFileTime);
 }
 
 /*

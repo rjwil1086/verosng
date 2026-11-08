@@ -3,6 +3,7 @@
 @ stdcall AddClipboardFormatListener(ptr)
 @ stdcall AdjustWindowRect(ptr long long)
 @ stdcall AdjustWindowRectEx(ptr long long long)
+@ stdcall AdjustWindowRectExForDpi(ptr long long long long)
 @ stdcall AlignRects(ptr long long long)
 @ stdcall AllowForegroundActivation()
 @ stdcall AllowSetForegroundWindow(long)
@@ -10,6 +11,7 @@
 @ stdcall AnyPopup()
 @ stdcall AppendMenuA(long long long ptr)
 @ stdcall AppendMenuW(long long long ptr)
+@ stdcall AreDpiAwarenessContextsEqual(ptr ptr)
 @ stdcall ArrangeIconicWindows(long)
 @ stdcall AttachThreadInput(long long long) NtUserAttachThreadInput
 @ stdcall BeginDeferWindowPos(long)
@@ -294,8 +296,8 @@
 @ stdcall GetDlgItemTextW(long long ptr long)
 @ stdcall GetDoubleClickTime() NtUserGetDoubleClickTime
 @ stdcall -version=0x601+ GetDpiForMonitorInternal(ptr long ptr ptr)
-@ stdcall -version=0xA00+ GetDpiForSystem()
-@ stdcall -version=0xA00+ GetDpiForWindow(ptr)
+@ stdcall GetDpiForSystem()
+@ stdcall GetDpiForWindow(ptr)
 @ stdcall GetFocus()
 @ stdcall GetForegroundWindow() NtUserGetForegroundWindow
 @ stdcall GetGUIThreadInfo(long ptr) NtUserGetGUIThreadInfo
@@ -378,6 +380,7 @@
 @ stdcall GetSysColorBrush(long)
 @ stdcall GetSystemMenu(long long) ; NtUserGetSystemMenu
 @ stdcall GetSystemMetrics(long)
+@ stdcall GetSystemMetricsForDpi(long long)
 @ stdcall GetTabbedTextExtentA(long str long long ptr)
 @ stdcall GetTabbedTextExtentW(long wstr long long ptr)
 @ stdcall GetTaskmanWindow ()
@@ -399,6 +402,7 @@
 @ stdcall GetWindowLongA(long long)
 @ stdcall -arch=x86_64,arm64 GetWindowLongPtrA(ptr long)
 @ stdcall -arch=x86_64,arm64 GetWindowLongPtrW(ptr long)
+@ stdcall GetWindowDpiAwarenessContext(ptr)
 @ stdcall GetWindowLongW(long long)
 @ stdcall GetWindowModuleFileName(long ptr long) GetWindowModuleFileNameA
 @ stdcall GetWindowModuleFileNameA(long ptr long)
@@ -629,6 +633,7 @@
 @ stdcall SendNotifyMessageW(long long long long)
 @ stdcall SetActiveWindow(long) NtUserSetActiveWindow
 @ stdcall SetCapture(long) NtUserSetCapture
+@ stdcall SetCoalescableTimer(long long long ptr long)
 @ stdcall SetCaretBlinkTime(long)
 @ stdcall SetCaretPos(long long)
 @ stdcall SetClassLongA(long long long)
@@ -692,6 +697,7 @@
 @ stdcall SetSystemTimer(long long long ptr) NtUserSetSystemTimer
 @ stdcall SetTaskmanWindow (long)
 @ stdcall SetThreadDesktop(long) NtUserSetThreadDesktop
+@ stdcall SetThreadDpiAwarenessContext(ptr)
 @ stdcall SetTimer(long long long ptr) NtUserSetTimer
 @ stdcall SetUserObjectInformationA(long long ptr long) NtUserSetObjectInformation
 @ stdcall SetUserObjectInformationW(long long ptr long) NtUserSetObjectInformation

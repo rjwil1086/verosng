@@ -525,6 +525,25 @@ FlsGetValue(DWORD dwFlsIndex)
     return pFlsData->Data[dwFlsIndex];
 }
 
+/*
+ * @implemented
+ */
+PVOID
+WINAPI
+FlsGetValue2(DWORD dwFlsIndex)
+{
+    PRTL_FLS_DATA pFlsData;
+
+    /* Same slot as FlsGetValue. This read leaves the last error alone. */
+    pFlsData = NtCurrentTeb()->FlsData;
+    if (!dwFlsIndex || dwFlsIndex >= FLS_MAXIMUM_AVAILABLE || !pFlsData)
+    {
+        return NULL;
+    }
+
+    return pFlsData->Data[dwFlsIndex];
+}
+
 
 /*
  * @implemented

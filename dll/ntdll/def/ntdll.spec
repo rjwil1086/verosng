@@ -1020,7 +1020,7 @@
 @ stdcall -arch=win32 -ret64 RtlLargeIntegerShiftRight(double long)
 @ stdcall -arch=win32 -ret64 RtlLargeIntegerSubtract(double double)
 @ stdcall RtlLargeIntegerToChar(ptr long long ptr)
-@ stdcall -version=0x600+ RtlLcidToLocaleName(long ptr long long)
+@ stdcall RtlLcidToLocaleName(long ptr long long)
 @ stdcall RtlLeaveCriticalSection(ptr)
 @ stdcall RtlLengthRequiredSid(long)
 @ stdcall RtlLengthSecurityDescriptor(ptr)

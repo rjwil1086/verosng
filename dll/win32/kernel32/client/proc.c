@@ -1202,6 +1202,19 @@ GetCurrentThread(VOID)
 /*
  * @implemented
  */
+VOID
+WINAPI
+GetCurrentThreadStackLimits(PULONG_PTR LowLimit,
+                            PULONG_PTR HighLimit)
+{
+    /* The reserved stack runs from DeallocationStack up to StackBase. */
+    *LowLimit = (ULONG_PTR)NtCurrentTeb()->DeallocationStack;
+    *HighLimit = (ULONG_PTR)NtCurrentTeb()->NtTib.StackBase;
+}
+
+/*
+ * @implemented
+ */
 DWORD
 WINAPI
 GetCurrentProcessId(VOID)

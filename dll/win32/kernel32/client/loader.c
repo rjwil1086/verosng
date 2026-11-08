@@ -21,6 +21,23 @@ BasepInitializeTermsrvFpns(VOID)
     return STATUS_NOT_IMPLEMENTED;
 }
 
+BOOL
+WINAPI
+SetDefaultDllDirectories(DWORD flags)
+{
+    /* APPLICATION_DIR | USER_DIRS | SYSTEM32 | DEFAULT_DIRS */
+    const DWORD allowed = 0x200 | 0x400 | 0x800 | 0x1000;
+
+    if (!flags || (flags & ~allowed))
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    /* The loader keeps its current search path. The flags are accepted. */
+    return TRUE;
+}
+
 DWORD
 WINAPI
 BasepGetModuleHandleExParameterValidation(DWORD dwFlags,

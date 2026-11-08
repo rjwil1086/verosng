@@ -2161,6 +2161,18 @@ GetTempPathW(IN DWORD count,
  */
 DWORD
 WINAPI
+GetTempPath2W(IN DWORD count,
+              OUT LPWSTR path)
+{
+    /* A normal process uses the same temporary directory. */
+    return GetTempPathW(count, path);
+}
+
+/*
+ * @implemented
+ */
+DWORD
+WINAPI
 GetCurrentDirectoryA(IN DWORD nBufferLength,
                      OUT LPSTR lpBuffer)
 {
