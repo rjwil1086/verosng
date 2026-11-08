@@ -1,12 +1,13 @@
 {
     "build":  {
                   "version":  "0.4.17-dev",
-                  "git":  "d8d10cb194c-dirty"
+                  "git":  "8b592df03ac-dirty"
               },
     "boot":  {
                  "status":  "untested",
                  "accelerator":  "tcg"
              },
+    "pluginLog":  "output/abi-boot/abi.jsonl",
     "weights":  {
                     "driverAbi":  40,
                     "kernel":  25,
@@ -16,63 +17,65 @@
                     "applications":  5
                 },
     "weightsUsed":  {
-                        "driverAbi":  61.5,
-                        "graphics":  7.7,
-                        "syscalls":  23.1,
-                        "applications":  7.7
+                        "kernel":  25,
+                        "drivers":  10,
+                        "syscalls":  15,
+                        "graphics":  5,
+                        "driverAbi":  40,
+                        "applications":  5
                     },
     "headline":  {
                      "id":  "driverAbi",
                      "title":  "Driver ABI",
-                     "percent":  0,
+                     "percent":  50,
                      "weight":  40,
                      "counts":  {
-                                    "works":  0,
+                                    "works":  1,
                                     "partial":  0,
                                     "broken":  0,
                                     "missing":  1,
-                                    "untested":  39
+                                    "untested":  38
                                 }
                  },
     "overall":  {
-                    "percent":  28.8
+                    "percent":  68.8
                 },
     "categories":  [
                        {
                            "id":  "driverAbi",
                            "title":  "Driver ABI",
-                           "percent":  0,
+                           "percent":  50,
                            "weight":  40,
                            "counts":  {
-                                          "works":  0,
+                                          "works":  1,
                                           "partial":  0,
                                           "broken":  0,
                                           "missing":  1,
-                                          "untested":  39
+                                          "untested":  38
                                       }
                        },
                        {
                            "id":  "kernel",
                            "title":  "Kernel exports",
-                           "percent":  null,
+                           "percent":  100,
                            "weight":  25,
                            "counts":  {
-                                          "works":  0,
+                                          "works":  10,
                                           "partial":  0,
                                           "broken":  0,
                                           "missing":  0,
-                                          "untested":  62
+                                          "untested":  52
                                       }
                        },
                        {
                            "id":  "syscalls",
                            "title":  "Syscalls",
-                           "percent":  84.7,
+                           "percent":  85.1,
                            "weight":  15,
                            "counts":  {
-                                          "works":  79,
-                                          "partial":  13,
-                                          "broken":  5,
+                                          "works":  81,
+                                          "partial":  10,
+                                          "broken":  6,
                                           "missing":  4,
                                           "untested":  0
                                       }
@@ -80,14 +83,14 @@
                        {
                            "id":  "drivers",
                            "title":  "Drivers",
-                           "percent":  null,
+                           "percent":  50,
                            "weight":  10,
                            "counts":  {
                                           "works":  0,
-                                          "partial":  0,
+                                          "partial":  4,
                                           "broken":  0,
                                           "missing":  0,
-                                          "untested":  8
+                                          "untested":  4
                                       }
                        },
                        {
@@ -232,9 +235,9 @@
                       "name":  "IoAllocateMdl",
                       "category":  "driverAbi",
                       "group":  "IRP",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -784,9 +787,9 @@
                       "name":  "IoAllocateMdl",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -844,9 +847,9 @@
                       "name":  "MmMapLockedPagesSpecifyCache",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -892,9 +895,9 @@
                       "name":  "KeInitializeEvent",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -904,9 +907,9 @@
                       "name":  "ExAllocatePoolWithTag",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -916,9 +919,9 @@
                       "name":  "ExFreePoolWithTag",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -928,9 +931,9 @@
                       "name":  "ObReferenceObjectByHandle",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -940,9 +943,9 @@
                       "name":  "ObfDereferenceObject",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -952,9 +955,9 @@
                       "name":  "PsCreateSystemThread",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\ntoskrnl\\ntoskrnl.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -1036,9 +1039,9 @@
                       "name":  "RtlInitUnicodeString",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\dll\\ntdll\\def\\ntdll.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -1048,9 +1051,9 @@
                       "name":  "DbgPrint",
                       "category":  "kernel",
                       "group":  "ntoskrnl",
-                      "status":  "untested",
+                      "status":  "works",
                       "present":  true,
-                      "source":  "spec",
+                      "source":  "plugin",
                       "evidence":  "D:\\Projects\\ReactOS\\dll\\ntdll\\def\\ntdll.spec",
                       "notes":  "",
                       "numberMatch":  "untested"
@@ -1436,7 +1439,7 @@
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_INVALID_HANDLE; ReactOS: STATUS_INVALID_PARAMETER",
+                      "notes":  "Windows: 0xC0000005; ReactOS: STATUS_INVALID_PARAMETER",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1492,11 +1495,11 @@
                       "name":  "NtQueryInformationProcess",
                       "category":  "syscalls",
                       "group":  "top",
-                      "status":  "works",
+                      "status":  "broken",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_INFO_LENGTH_MISMATCH; ReactOS: STATUS_INFO_LENGTH_MISMATCH",
+                      "notes":  "Windows: STATUS_SUCCESS; ReactOS: STATUS_INFO_LENGTH_MISMATCH",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1504,11 +1507,11 @@
                       "name":  "NtQueryInformationThread",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "partial",
+                      "status":  "works",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_INVALID_PARAMETER; ReactOS: STATUS_INFO_LENGTH_MISMATCH",
+                      "notes":  "Windows: STATUS_INFO_LENGTH_MISMATCH; ReactOS: STATUS_INFO_LENGTH_MISMATCH",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1720,11 +1723,11 @@
                       "name":  "NtQueryInformationFile",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "partial",
+                      "status":  "works",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_NOT_IMPLEMENTED; ReactOS: 0xC0000003",
+                      "notes":  "Windows: 0xC0000003; ReactOS: 0xC0000003",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1744,11 +1747,11 @@
                       "name":  "NtQueryDirectoryFile",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "partial",
+                      "status":  "works",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_NOT_IMPLEMENTED; ReactOS: 0xC0000005",
+                      "notes":  "Windows: 0xC0000005; ReactOS: 0xC0000005",
                       "numberMatch":  "untested"
                   },
                   {
@@ -1828,11 +1831,11 @@
                       "name":  "NtProtectVirtualMemory",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "partial",
+                      "status":  "works",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: 0xC0000005; ReactOS: 0xC0000045",
+                      "notes":  "Windows: 0xC0000045; ReactOS: 0xC0000045",
                       "numberMatch":  "untested"
                   },
                   {
@@ -2368,11 +2371,11 @@
                       "name":  "NtQueryInformationToken",
                       "category":  "syscalls",
                       "group":  "all",
-                      "status":  "works",
+                      "status":  "partial",
                       "present":  true,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: 0xC0000003; ReactOS: 0xC0000003",
+                      "notes":  "Windows: 0xC0000005; ReactOS: 0xC0000003",
                       "numberMatch":  "untested"
                   },
                   {
@@ -2528,7 +2531,7 @@
                       "present":  false,
                       "source":  "diff",
                       "evidence":  "output/syscall-diff/report.json",
-                      "notes":  "Windows: STATUS_OBJECT_NAME_INVALID; ReactOS: missing",
+                      "notes":  "Windows: 0xC0000005; ReactOS: missing",
                       "numberMatch":  "untested"
                   },
                   {
@@ -2584,7 +2587,7 @@
                       "name":  "scsiport",
                       "category":  "drivers",
                       "group":  "inbox",
-                      "status":  "untested",
+                      "status":  "partial",
                       "present":  true,
                       "source":  "manual",
                       "evidence":  "drivers/storage/port/scsiport",
@@ -2608,7 +2611,7 @@
                       "name":  "tcpip",
                       "category":  "drivers",
                       "group":  "inbox",
-                      "status":  "untested",
+                      "status":  "partial",
                       "present":  true,
                       "source":  "manual",
                       "evidence":  "drivers/network/tcpip",
@@ -2620,7 +2623,7 @@
                       "name":  "i8042prt",
                       "category":  "drivers",
                       "group":  "inbox",
-                      "status":  "untested",
+                      "status":  "partial",
                       "present":  true,
                       "source":  "manual",
                       "evidence":  "drivers/input/i8042prt",
@@ -2632,7 +2635,7 @@
                       "name":  "videoprt",
                       "category":  "drivers",
                       "group":  "inbox",
-                      "status":  "untested",
+                      "status":  "partial",
                       "present":  true,
                       "source":  "manual",
                       "evidence":  "win32ss/drivers/videoprt",

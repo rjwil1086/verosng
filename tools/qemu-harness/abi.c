@@ -74,7 +74,18 @@ typedef struct
 
 typedef struct
 {
+    char name[32];
+    uint64_t preferred;
+    uint64_t size;
+    uint64_t actual;
+    int found;
+} ImageEnt;
+
+typedef struct
+{
     uint64_t address;
+    uint64_t preferred;
+    int image;
     char symbol[160];
 } ExportEnt;
 
@@ -104,6 +115,10 @@ should_log(uint64_t pc, int kind)
 static FILE *g_log;
 static ExportEnt g_exports[4096];
 static int g_export_count;
+static ImageEnt g_images[8];
+static int g_image_count;
+static int g_located;
+static int g_locate_attempts;
 static Pending g_pending[32];
 static int g_pending_count;
 
@@ -215,6 +230,24 @@ load_map(const char *path)
         char symbol[160];
         unsigned long long address;
 
+        if (strncmp(line, "# image ", 8) == 0 && g_image_count < 8)
+        {
+            char name[32];
+            unsigned long long preferred;
+            unsigned long long size;
+
+            if (sscanf(line + 8, "%31s 0x%llx 0x%llx", name, &preferred, &size) == 3)
+            {
+                strncpy(g_images[g_image_count].name, name, 31);
+                g_images[g_image_count].name[31] = '\0';
+                g_images[g_image_count].preferred = (uint64_t)preferred;
+                g_images[g_image_count].size = (uint64_t)size;
+                g_images[g_image_count].actual = 0;
+                g_images[g_image_count].found = 0;
+                g_image_count++;
+            }
+            continue;
+        }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\r')
         {
             continue;
@@ -222,7 +255,30 @@ load_map(const char *path)
         if (sscanf(line, "%159s 0x%llx", symbol, &address) == 2 ||
             sscanf(line, "%159s %llx", symbol, &address) == 2)
         {
+            char *bang;
+            int image;
+
+            image = -1;
+            bang = strchr(symbol, '!');
+            if (bang != NULL)
+            {
+                int n;
+
+                for (n = 0; n < g_image_count; n++)
+                {
+                    size_t len;
+
+                    len = strlen(g_images[n].name);
+                    if (strncmp(symbol, g_images[n].name, len) == 0 && symbol[len] == '!')
+                    {
+                        image = n;
+                        break;
+                    }
+                }
+            }
             g_exports[g_export_count].address = (uint64_t)address;
+            g_exports[g_export_count].preferred = (uint64_t)address;
+            g_exports[g_export_count].image = image;
             strncpy(g_exports[g_export_count].symbol, symbol, 159);
             g_exports[g_export_count].symbol[159] = '\0';
             g_export_count++;
@@ -244,6 +300,143 @@ export_at(uint64_t address)
         }
     }
     return NULL;
+}
+
+static bool read_mem(uint64_t addr, void *dest, size_t len);
+
+static int
+pe_export_name(uint64_t base, char *name, size_t name_len)
+{
+    uint8_t dos[64];
+    uint8_t pe[512];
+    uint32_t lfanew;
+    uint16_t magic;
+    uint32_t export_rva;
+    uint32_t name_rva;
+    uint8_t dir[40];
+
+    if (!read_mem(base, dos, sizeof(dos)) || dos[0] != 'M' || dos[1] != 'Z')
+    {
+        return 0;
+    }
+    memcpy(&lfanew, dos + 0x3C, sizeof(lfanew));
+    if (lfanew > 0x400 || !read_mem(base + lfanew, pe, sizeof(pe)))
+    {
+        return 0;
+    }
+    if (pe[0] != 'P' || pe[1] != 'E')
+    {
+        return 0;
+    }
+    memcpy(&magic, pe + 24, sizeof(magic));
+    if (magic != 0x20B)
+    {
+        return 0;
+    }
+    memcpy(&export_rva, pe + 24 + 112, sizeof(export_rva));
+    if (export_rva == 0 || !read_mem(base + export_rva, dir, sizeof(dir)))
+    {
+        return 0;
+    }
+    memcpy(&name_rva, dir + 12, sizeof(name_rva));
+    if (name_rva == 0 || !read_mem(base + name_rva, name, name_len))
+    {
+        return 0;
+    }
+    name[name_len - 1] = '\0';
+    return 1;
+}
+
+static void
+locate_images(void)
+{
+    uint64_t addr;
+    int i;
+
+    if (g_located || g_image_count == 0)
+    {
+        return;
+    }
+    for (addr = 0xFFFFF80000000000ULL; addr < 0xFFFFF80008000000ULL; addr += 0x1000ULL)
+    {
+        char name[32];
+        int n;
+
+        if (!pe_export_name(addr, name, sizeof(name)))
+        {
+            continue;
+        }
+        for (n = 0; n < g_image_count; n++)
+        {
+            uint64_t slide;
+
+            if (g_images[n].found || _stricmp(name, g_images[n].name) != 0)
+            {
+                continue;
+            }
+            g_images[n].actual = addr;
+            g_images[n].found = 1;
+            slide = addr - g_images[n].preferred;
+            for (i = 0; i < g_export_count; i++)
+            {
+                if (g_exports[i].image == n)
+                {
+                    g_exports[i].address = g_exports[i].preferred + slide;
+                }
+            }
+            if (g_log != NULL)
+            {
+                fprintf(g_log, "{\"kind\":\"image\",\"phase\":\"load\",\"symbol\":");
+                json_escape(g_log, g_images[n].name);
+                fprintf(g_log, ",\"pc\":\"0x%llx\",\"result\":\"seen\"}\n",
+                        (unsigned long long)addr);
+                fflush(g_log);
+            }
+        }
+    }
+    for (i = 0; i < g_image_count; i++)
+    {
+        if (g_images[i].found)
+        {
+            g_located = 1;
+            return;
+        }
+    }
+    g_locate_attempts++;
+    if (g_locate_attempts >= 4)
+    {
+        g_located = 1;
+        if (g_log != NULL)
+        {
+            fprintf(g_log, "{\"kind\":\"image\",\"phase\":\"load\",\"symbol\":\"none\",\"pc\":\"0x0\",\"result\":\"seen\"}\n");
+            fflush(g_log);
+        }
+    }
+}
+
+static bool
+decode_rip_indirect(const uint8_t *bytes, size_t size, uint64_t vaddr, uint64_t *target)
+{
+    size_t index;
+    int32_t disp;
+    uint64_t slot;
+
+    index = 0;
+    if (size >= 7 && bytes[0] >= 0x40 && bytes[0] <= 0x4F)
+    {
+        index = 1;
+    }
+    if (size < index + 6 || bytes[index] != 0xFF)
+    {
+        return false;
+    }
+    if (bytes[index + 1] != 0x15 && bytes[index + 1] != 0x25)
+    {
+        return false;
+    }
+    memcpy(&disp, bytes + index + 2, sizeof(disp));
+    slot = vaddr + index + 6 + (int64_t)disp;
+    return read_mem(slot, target, sizeof(*target));
 }
 
 static bool
@@ -1031,6 +1224,10 @@ on_tb(struct qemu_plugin_tb *tb)
         vaddr = q_insn_vaddr(insn);
         size = full > sizeof(bytes) ? sizeof(bytes) : full;
         q_insn_data(insn, bytes, size);
+        if (!g_located && vaddr >= 0xFFFFF80000000000ULL)
+        {
+            locate_images();
+        }
 
         if (g_windows && is_remembered_ret(vaddr))
         {
@@ -1097,16 +1294,19 @@ on_tb(struct qemu_plugin_tb *tb)
         prev_size = size;
         prev_ok = 1;
 
-        if (decode_branch(bytes, size, vaddr, &target))
+        target = 0;
+        symbol = NULL;
+        if (decode_branch(bytes, size, vaddr, &target) ||
+            decode_rip_indirect(bytes, size, vaddr, &target))
         {
             symbol = export_at(target);
-            if (symbol != NULL)
+        }
+        if (symbol != NULL)
+        {
+            site = new_site(SITE_EXPORT, symbol, "call", vaddr, full);
+            if (site != NULL)
             {
-                site = new_site(SITE_EXPORT, symbol, "call", vaddr, full);
-                if (site != NULL)
-                {
-                    q_register_exec(insn, on_insn, QEMU_PLUGIN_CB_R_REGS, site);
-                }
+                q_register_exec(insn, on_insn, QEMU_PLUGIN_CB_R_REGS, site);
             }
         }
     }

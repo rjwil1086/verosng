@@ -5,7 +5,7 @@
   "capturedAt": "2026-11-08T00:21:28Z",
   "target": "Win10 22H2",
   "overall": 80.2,
-  "kernelAbi": null,
+  "kernelAbi": 100,
   "lastBuild": null,
   "northStar": {
     "label": "amd64 probe syscalls",
@@ -846,17 +846,257 @@
     }
   ],
   "applicationsSummary": {
-    "working": null,
-    "partial": null,
-    "failing": null
+    "working": 4,
+    "partial": 0,
+    "failing": 0
   },
-  "applications": null,
+  "applications": [
+    {
+      "slug": "7-zip",
+      "name": "7-Zip",
+      "status": "working"
+    },
+    {
+      "slug": "git",
+      "name": "git",
+      "status": "working"
+    },
+    {
+      "slug": "notepad",
+      "name": "notepad++",
+      "status": "working"
+    },
+    {
+      "slug": "python",
+      "name": "python",
+      "status": "working"
+    }
+  ],
   "driversSummary": {
-    "working": null,
-    "partial": null,
-    "failing": null
+    "working": 50,
+    "partial": 0,
+    "failing": 2
   },
-  "driverGroups": null,
+  "driverGroups": [
+    {
+      "category": "Drivers",
+      "drivers": [
+        {
+          "name": "acpi",
+          "status": "working"
+        },
+        {
+          "name": "Afd",
+          "status": "working"
+        },
+        {
+          "name": "atapi",
+          "status": "working"
+        },
+        {
+          "name": "Beep",
+          "status": "working"
+        },
+        {
+          "name": "Blue",
+          "status": "working"
+        },
+        {
+          "name": "bochsmp",
+          "status": "working"
+        },
+        {
+          "name": "BusLogic",
+          "status": "failing"
+        },
+        {
+          "name": "cdrom",
+          "status": "working"
+        },
+        {
+          "name": "Disk",
+          "status": "working"
+        },
+        {
+          "name": "e1000",
+          "status": "working"
+        },
+        {
+          "name": "fdc",
+          "status": "working"
+        },
+        {
+          "name": "Floppy",
+          "status": "working"
+        },
+        {
+          "name": "hidusb",
+          "status": "working"
+        },
+        {
+          "name": "i8042prt",
+          "status": "working"
+        },
+        {
+          "name": "isapnp",
+          "status": "working"
+        },
+        {
+          "name": "kbdclass",
+          "status": "working"
+        },
+        {
+          "name": "ksecdd",
+          "status": "working"
+        },
+        {
+          "name": "mouclass",
+          "status": "working"
+        },
+        {
+          "name": "mouhid",
+          "status": "working"
+        },
+        {
+          "name": "MountMgr",
+          "status": "working"
+        },
+        {
+          "name": "Ndis",
+          "status": "working"
+        },
+        {
+          "name": "Ndisuio",
+          "status": "working"
+        },
+        {
+          "name": "Netio",
+          "status": "working"
+        },
+        {
+          "name": "NMIDebug",
+          "status": "working"
+        },
+        {
+          "name": "Null",
+          "status": "working"
+        },
+        {
+          "name": "parport",
+          "status": "working"
+        },
+        {
+          "name": "partmgr",
+          "status": "working"
+        },
+        {
+          "name": "Pci",
+          "status": "working"
+        },
+        {
+          "name": "pciide",
+          "status": "working"
+        },
+        {
+          "name": "RamDisk",
+          "status": "working"
+        },
+        {
+          "name": "sacdrv",
+          "status": "failing"
+        },
+        {
+          "name": "serial",
+          "status": "working"
+        },
+        {
+          "name": "storahci",
+          "status": "working"
+        },
+        {
+          "name": "swenum",
+          "status": "working"
+        },
+        {
+          "name": "Tcpip",
+          "status": "working"
+        },
+        {
+          "name": "ucx01000",
+          "status": "working"
+        },
+        {
+          "name": "usbccgp",
+          "status": "working"
+        },
+        {
+          "name": "usbehci",
+          "status": "working"
+        },
+        {
+          "name": "usbhub",
+          "status": "working"
+        },
+        {
+          "name": "usbhub3",
+          "status": "working"
+        },
+        {
+          "name": "usbohci",
+          "status": "working"
+        },
+        {
+          "name": "usbstor",
+          "status": "working"
+        },
+        {
+          "name": "usbuhci",
+          "status": "working"
+        },
+        {
+          "name": "usbxhci",
+          "status": "working"
+        },
+        {
+          "name": "vga",
+          "status": "working"
+        },
+        {
+          "name": "VgaSave",
+          "status": "working"
+        },
+        {
+          "name": "Wdf01000",
+          "status": "working"
+        }
+      ]
+    },
+    {
+      "category": "File systems",
+      "drivers": [
+        {
+          "name": "Cdfs",
+          "status": "working"
+        },
+        {
+          "name": "Fs_Rec",
+          "status": "working"
+        },
+        {
+          "name": "Msfs",
+          "status": "working"
+        },
+        {
+          "name": "Mup",
+          "status": "working"
+        },
+        {
+          "name": "Npfs",
+          "status": "working"
+        }
+      ]
+    }
+  ],
   "regression": {
     "previousLabel": "No earlier snapshot",
     "previousOverall": null,
@@ -900,83 +1140,71 @@
     "bootResult": "Windows probe DIFF END OK; ReactOS probe DIFF END OK",
     "crashCount": 0
   },
-  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 81 of 101 names. 10 names failed on both sides with different codes, 6 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. kernelAbi, lastBuild, applications, drivers, subsystems, traceCorpus, task, driverAbi, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied.",
+  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 81 of 101 names. 10 names failed on both sides with different codes, 6 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. lastBuild, subsystems, traceCorpus, task, driverAbi, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied. applicationsSummary counts 4 recorded runs in compat/catalog/apps.json (working 4, partial 0, failing 0). Untested catalog rows stay out of the count. These runs are the recorded 32-bit results, not a new amd64 launch. driversSummary counts 52 in-box DriverEntry results in output/driver/load.log (working 50, partial 0, failing 2). A zero status is working. winnull is the separately loaded Windows null.sys and is not in this count. kernelAbi is 100 from the kernel-exports category (10 exports returned or bugchecked; log output/abi-boot/abi.jsonl). Untested rows stay out of that percent.",
   "unmeasured": [
-    {
-      "section": "kernelAbi",
-      "reason": "The amd64 probe does not call ntoskrnl, HAL, or KMDF exports."
-    },
-    {
-      "section": "lastBuild",
-      "reason": "The guest banner is a date and commit, not a monotonic build number."
-    },
-    {
-      "section": "northStar.lastWeek",
-      "reason": "No snapshot in this file is at least seven days old."
-    },
-    {
-      "section": "northStar.lastMonth",
-      "reason": "No snapshot in this file is at least thirty days old."
-    },
-    {
-      "section": "applicationsSummary",
-      "reason": "The amd64 probe does not launch applications."
-    },
-    {
-      "section": "applications",
-      "reason": "The amd64 probe does not launch applications."
-    },
-    {
-      "section": "driversSummary",
-      "reason": "The amd64 probe does not load drivers."
-    },
-    {
-      "section": "driverGroups",
-      "reason": "The amd64 probe does not load drivers."
-    },
-    {
-      "section": "regression.previousOverall",
-      "reason": "No earlier snapshot is in the repo."
-    },
-    {
-      "section": "regression.currentBuild",
-      "reason": "The guest banner is a date and commit, not a monotonic build number."
-    },
-    {
-      "section": "regression.change",
-      "reason": "No earlier snapshot is in the repo."
-    },
-    {
-      "section": "regression.improvements",
-      "reason": "No earlier snapshot is in the repo."
-    },
-    {
-      "section": "regression.regressions",
-      "reason": "No earlier snapshot is in the repo."
-    },
-    {
-      "section": "subsystems",
-      "reason": "The probe does not score subsystems."
-    },
-    {
-      "section": "highestImpact",
-      "reason": "The probe does not score subsystems."
-    },
-    {
-      "section": "traceCorpus",
-      "reason": "The probe records one call per name, not a usage share."
-    },
-    {
-      "section": "task",
-      "reason": "Each mismatch is one probe call. No estimated gain was measured."
-    },
-    {
-      "section": "driverAbi",
-      "reason": "The amd64 probe does not exercise IRP, PnP, power, DMA, or KMDF."
-    },
-    {
-      "section": "graphics",
-      "reason": "The amd64 probe does not exercise the display stack."
-    }
+    [
+      [
+        {
+          "section": "lastBuild",
+          "reason": "The guest banner is a date and commit, not a monotonic build number."
+        },
+        {
+          "section": "northStar.lastWeek",
+          "reason": "No snapshot in this file is at least seven days old."
+        },
+        {
+          "section": "northStar.lastMonth",
+          "reason": "No snapshot in this file is at least thirty days old."
+        },
+        {
+          "section": "regression.previousOverall",
+          "reason": "No earlier snapshot is in the repo."
+        },
+        {
+          "section": "regression.currentBuild",
+          "reason": "The guest banner is a date and commit, not a monotonic build number."
+        },
+        {
+          "section": "regression.change",
+          "reason": "No earlier snapshot is in the repo."
+        },
+        {
+          "section": "regression.improvements",
+          "reason": "No earlier snapshot is in the repo."
+        },
+        {
+          "section": "regression.regressions",
+          "reason": "No earlier snapshot is in the repo."
+        },
+        {
+          "section": "subsystems",
+          "reason": "The probe does not score subsystems."
+        },
+        {
+          "section": "highestImpact",
+          "reason": "The probe does not score subsystems."
+        },
+        {
+          "section": "traceCorpus",
+          "reason": "The probe records one call per name, not a usage share."
+        },
+        {
+          "section": "task",
+          "reason": "Each mismatch is one probe call. No estimated gain was measured."
+        },
+        {
+          "section": "driverAbi",
+          "reason": "The driver ABI list is not filled from a category percent."
+        },
+        {
+          "section": "graphics",
+          "reason": "The amd64 probe does not exercise the display stack."
+        }
+      ],
+      {
+        "section": "driverAbi",
+        "reason": "The driver ABI list is not filled from a category percent."
+      }
+    ]
   ]
 }
