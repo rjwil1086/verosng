@@ -2,18 +2,18 @@
   "spdx": "GPL-2.0-or-later",
   "schemaVersion": 1,
   "sample": false,
-  "capturedAt": "2026-11-07T17:34:14Z",
+  "capturedAt": "2026-11-08T00:21:28Z",
   "target": "Win10 22H2",
-  "overall": 78.2,
+  "overall": 80.2,
   "kernelAbi": null,
   "lastBuild": null,
   "northStar": {
-    "label": "i386 probe syscalls",
-    "current": 78.2,
+    "label": "amd64 probe syscalls",
+    "current": 80.2,
     "lastWeek": null,
     "lastMonth": null
   },
-  "syscallOverall": 78.2,
+  "syscallOverall": 80.2,
   "syscalls": [
     {
       "name": "NtClose",
@@ -94,17 +94,17 @@
     },
     {
       "name": "NtQueryInformationProcess",
-      "compatibility": 100,
-      "windowsCalls": 1,
-      "matches": 1,
-      "mismatches": 0
-    },
-    {
-      "name": "NtQueryInformationThread",
       "compatibility": 0,
       "windowsCalls": 1,
       "matches": 0,
       "mismatches": 1
+    },
+    {
+      "name": "NtQueryInformationThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
     },
     {
       "name": "NtSetInformationProcess",
@@ -227,10 +227,10 @@
     },
     {
       "name": "NtQueryInformationFile",
-      "compatibility": 0,
+      "compatibility": 100,
       "windowsCalls": 1,
-      "matches": 0,
-      "mismatches": 1
+      "matches": 1,
+      "mismatches": 0
     },
     {
       "name": "NtSetInformationFile",
@@ -241,10 +241,10 @@
     },
     {
       "name": "NtQueryDirectoryFile",
-      "compatibility": 0,
+      "compatibility": 100,
       "windowsCalls": 1,
-      "matches": 0,
-      "mismatches": 1
+      "matches": 1,
+      "mismatches": 0
     },
     {
       "name": "NtQueryAttributesFile",
@@ -290,10 +290,10 @@
     },
     {
       "name": "NtProtectVirtualMemory",
-      "compatibility": 0,
+      "compatibility": 100,
       "windowsCalls": 1,
-      "matches": 0,
-      "mismatches": 1
+      "matches": 1,
+      "mismatches": 0
     },
     {
       "name": "NtQueryVirtualMemory",
@@ -605,10 +605,10 @@
     },
     {
       "name": "NtQueryInformationToken",
-      "compatibility": 100,
+      "compatibility": 0,
       "windowsCalls": 1,
-      "matches": 1,
-      "mismatches": 0
+      "matches": 0,
+      "mismatches": 1
     },
     {
       "name": "NtCreateDirectoryObject",
@@ -762,13 +762,13 @@
     },
     {
       "syscall": "NtCreateThreadEx",
-      "windows": "STATUS_INVALID_HANDLE",
+      "windows": "0xC0000005",
       "veros": "STATUS_INVALID_PARAMETER",
       "count": 1
     },
     {
-      "syscall": "NtQueryInformationThread",
-      "windows": "STATUS_INVALID_PARAMETER",
+      "syscall": "NtQueryInformationProcess",
+      "windows": "STATUS_SUCCESS",
       "veros": "STATUS_INFO_LENGTH_MISMATCH",
       "count": 1
     },
@@ -776,24 +776,6 @@
       "syscall": "NtOpenFile",
       "windows": "STATUS_ACCESS_DENIED",
       "veros": "0xC0000005",
-      "count": 1
-    },
-    {
-      "syscall": "NtQueryInformationFile",
-      "windows": "STATUS_NOT_IMPLEMENTED",
-      "veros": "0xC0000003",
-      "count": 1
-    },
-    {
-      "syscall": "NtQueryDirectoryFile",
-      "windows": "STATUS_NOT_IMPLEMENTED",
-      "veros": "0xC0000005",
-      "count": 1
-    },
-    {
-      "syscall": "NtProtectVirtualMemory",
-      "windows": "0xC0000005",
-      "veros": "0xC0000045",
       "count": 1
     },
     {
@@ -806,6 +788,12 @@
       "syscall": "NtYieldExecution",
       "windows": "STATUS_SUCCESS",
       "veros": "0x40000024",
+      "count": 1
+    },
+    {
+      "syscall": "NtQueryInformationToken",
+      "windows": "0xC0000005",
+      "veros": "0xC0000003",
       "count": 1
     },
     {
@@ -834,7 +822,7 @@
     },
     {
       "syscall": "NtAlpcConnectPort",
-      "windows": "STATUS_OBJECT_NAME_INVALID",
+      "windows": "0xC0000005",
       "veros": "missing",
       "count": 1
     },
@@ -873,7 +861,7 @@
     "previousLabel": "No earlier snapshot",
     "previousOverall": null,
     "currentBuild": null,
-    "currentOverall": 78.2,
+    "currentOverall": 80.2,
     "change": null,
     "improvements": null,
     "regressions": null
@@ -907,16 +895,16 @@
     }
   ],
   "lastHarnessRun": {
-    "guest": "ReactOS i386",
+    "guest": "ReactOS amd64",
     "harness": "syscall-diff",
-    "bootResult": "Windows probe DIFF END OK; ReactOS probe log has no DIFF END OK trailer",
+    "bootResult": "Windows probe DIFF END OK; ReactOS probe DIFF END OK",
     "crashCount": 0
   },
-  "notes": "overall and syscallOverall are exact status matches from the i386 probe: 79 of 101 names. 13 names failed on both sides with different codes, 5 disagreed on success, and 4 were missing on the i386 side. A different error is a mismatch. 0 names were not reached. kernelAbi, lastBuild, applications, drivers, subsystems, traceCorpus, task, driverAbi, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied.",
+  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 81 of 101 names. 10 names failed on both sides with different codes, 6 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. kernelAbi, lastBuild, applications, drivers, subsystems, traceCorpus, task, driverAbi, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied.",
   "unmeasured": [
     {
       "section": "kernelAbi",
-      "reason": "The i386 probe does not call ntoskrnl, HAL, or KMDF exports."
+      "reason": "The amd64 probe does not call ntoskrnl, HAL, or KMDF exports."
     },
     {
       "section": "lastBuild",
@@ -932,19 +920,19 @@
     },
     {
       "section": "applicationsSummary",
-      "reason": "The i386 probe does not launch applications."
+      "reason": "The amd64 probe does not launch applications."
     },
     {
       "section": "applications",
-      "reason": "The i386 probe does not launch applications."
+      "reason": "The amd64 probe does not launch applications."
     },
     {
       "section": "driversSummary",
-      "reason": "The i386 probe does not load drivers."
+      "reason": "The amd64 probe does not load drivers."
     },
     {
       "section": "driverGroups",
-      "reason": "The i386 probe does not load drivers."
+      "reason": "The amd64 probe does not load drivers."
     },
     {
       "section": "regression.previousOverall",
@@ -984,11 +972,11 @@
     },
     {
       "section": "driverAbi",
-      "reason": "The i386 probe does not exercise IRP, PnP, power, DMA, or KMDF."
+      "reason": "The amd64 probe does not exercise IRP, PnP, power, DMA, or KMDF."
     },
     {
       "section": "graphics",
-      "reason": "The i386 probe does not exercise the display stack."
+      "reason": "The amd64 probe does not exercise the display stack."
     }
   ]
 }

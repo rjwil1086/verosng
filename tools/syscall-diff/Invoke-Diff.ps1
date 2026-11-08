@@ -15,9 +15,9 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $script:MonitorPort = 4446
 
 function Build-Probe {
-    $gcc = "D:\RosBE\i386\bin\i686-w64-mingw32-gcc.exe"
-    if (-not (Test-Path $gcc)) { Write-Error "RosBE i686 gcc was not found at $gcc" }
-    $env:PATH = "D:\RosBE\bin;D:\RosBE\i386\bin;" + $env:PATH
+    $gcc = "D:\RosBE\amd64\bin\x86_64-w64-mingw32-gcc.exe"
+    if (-not (Test-Path $gcc)) { Write-Error "RosBE amd64 gcc was not found at $gcc" }
+    $env:PATH = "D:\RosBE\bin;D:\RosBE\amd64\bin;" + $env:PATH
     $exe = Join-Path $out "probe.exe"
     & $gcc -std=c99 -Wall -Wextra -O2 -o $exe (Join-Path $PSScriptRoot "probe.c")
     if ($LASTEXITCODE -ne 0) { throw "probe build failed" }
@@ -329,9 +329,9 @@ if (-not $SkipWindows) {
 }
 
 if (-not $SkipReactOS) {
-    $bootcd = Join-Path $SourceRoot "build\bootcd.iso"
+    $bootcd = Join-Path $SourceRoot "build-amd64\bootcd.iso"
     if (-not (Test-Path $bootcd)) { Write-Error "ReactOS bootcd was not found at $bootcd" }
-    if (-not (Test-Path $Qemu32)) { Write-Error "QEMU was not found at $Qemu32" }
+    if (-not (Test-Path $Qemu64)) { Write-Error "QEMU was not found at $Qemu64" }
     if (Test-Path $reactosLog) { Remove-Item $reactosLog -Force }
     $rosSink = Join-Path $out "reactos-sink.img"
     New-SinkImage $rosSink
@@ -347,7 +347,7 @@ if (-not $SkipReactOS) {
         "-drive file=`"$rosSink`",format=raw,if=ide,index=0"
     Write-Host "Booting ReactOS"
     $err = Join-Path $out "reactos.err"
-    $proc = Start-Process -FilePath $Qemu32 -ArgumentList $arg -PassThru -RedirectStandardError $err -WindowStyle Hidden
+    $proc = Start-Process -FilePath $Qemu64 -ArgumentList $arg -PassThru -RedirectStandardError $err -WindowStyle Hidden
     Start-Sleep -Seconds 300
     if (-not $proc.HasExited) {
         Send-ProbeCommand

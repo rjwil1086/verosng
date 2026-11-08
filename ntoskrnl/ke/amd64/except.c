@@ -243,6 +243,54 @@ KiPrepareUserDebugData(void)
     _disable();
 }
 
+/*
+ * Clang amd64 has no SEH frames, so _SEH2_EXCEPT does not catch a probe
+ * of a bad user pointer. The debugger would then stop the machine.
+ * The syscall returns the access violation instead.
+ */
+static
+VOID
+KiAbortUserSyscallFault(IN PKTRAP_FRAME FaultFrame,
+                        IN PEXCEPTION_RECORD ExceptionRecord)
+{
+    PKTRAP_FRAME SyscallFrame;
+    ULONG_PTR FaultAddress;
+
+    if (ExceptionRecord->ExceptionCode != STATUS_ACCESS_VIOLATION ||
+        ExceptionRecord->NumberParameters < 2 ||
+        KeGetPreviousMode() != UserMode ||
+        KeGetCurrentIrql() != PASSIVE_LEVEL)
+    {
+        return;
+    }
+
+    FaultAddress = ExceptionRecord->ExceptionInformation[1];
+    if (FaultAddress > (ULONG_PTR)MmUserProbeAddress)
+    {
+        return;
+    }
+
+    SyscallFrame = KeGetCurrentThread()->TrapFrame;
+    if (SyscallFrame == NULL || SyscallFrame == FaultFrame)
+    {
+        return;
+    }
+
+    /* The syscall entry stores the user return address and stack here. */
+    if ((ULONG_PTR)SyscallFrame->Rip > (ULONG_PTR)MmUserProbeAddress ||
+        (ULONG_PTR)SyscallFrame->Rsp > (ULONG_PTR)MmUserProbeAddress)
+    {
+        return;
+    }
+
+    DPRINT1("Returning syscall access fault 0x%08lx at %p to %.16s\n",
+            ExceptionRecord->ExceptionCode,
+            (PVOID)FaultAddress,
+            PsGetCurrentProcess()->ImageFileName);
+
+    KiAbortSystemCall(SyscallFrame, ExceptionRecord->ExceptionCode);
+}
+
 VOID
 NTAPI
 KiDispatchException(IN PEXCEPTION_RECORD ExceptionRecord,
@@ -307,6 +355,8 @@ KiDispatchException(IN PEXCEPTION_RECORD ExceptionRecord,
 
             /* If the Debugger couldn't handle it, dispatch the exception */
             if (RtlDispatchException(ExceptionRecord, &Context)) goto Handled;
+
+            KiAbortUserSyscallFault(TrapFrame, ExceptionRecord);
         }
 
         /* This is a second-chance exception, only for the debugger */

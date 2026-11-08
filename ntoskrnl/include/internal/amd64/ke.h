@@ -414,6 +414,7 @@ VOID KiSegmentNotPresentFault(VOID);
 VOID KiStackFault(VOID);
 VOID KiGeneralProtectionFault(VOID);
 VOID KiPageFault(VOID);
+DECLSPEC_NORETURN VOID KiAbortSystemCall(IN PKTRAP_FRAME SyscallFrame, IN NTSTATUS Status);
 VOID KiFloatingErrorFault(VOID);
 VOID KiAlignmentFault(VOID);
 VOID KiMcheckAbort(VOID);

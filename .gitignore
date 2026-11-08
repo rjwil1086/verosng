@@ -1,6 +1,7 @@
 compile_commands.json
 output-*
 /build/
+/build-amd64/
 /output/
 tools/qemu-harness/abi.dll
 modules/optional

@@ -686,7 +686,7 @@ co_MsqInsertMouseMessage(MSG* Msg, DWORD flags, ULONG_PTR dwExtraInfo, BOOL Hook
                    GreMovePointer(hdcScreen, Msg->pt.x, Msg->pt.y);
            }
            /* Check if we have to hide cursor */
-           else if (CurInfo->ShowingCursor >= 0)
+           else if (hdcScreen && CurInfo->ShowingCursor >= 0)
                GreMovePointer(hdcScreen, -1, -1);
 
            /* Update global cursor info */

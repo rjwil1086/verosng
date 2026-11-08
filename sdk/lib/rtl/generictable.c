@@ -22,6 +22,9 @@ typedef struct _TABLE_ENTRY_HEADER
 
 /* PRIVATE FUNCTIONS *********************************************************/
 
+/* Clang 18 drops the empty-table test when this is inlined into
+ * RtlInsertElementGenericTable, so the first insert compares a null node. */
+DECLSPEC_NOINLINE
 TABLE_SEARCH_RESULT
 NTAPI
 RtlpFindGenericTableNodeOrParent(IN PRTL_GENERIC_TABLE Table,

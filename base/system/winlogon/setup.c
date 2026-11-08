@@ -127,10 +127,12 @@ RunSetupThreadProc(
                             &ProcessInformation);
     if (!Result)
     {
-        TRACE("Failed to run setup process\n");
+        ERR("WL: Failed to run setup '%ws' (error %lu)\n", CommandLine, GetLastError());
         SwitchDesktop(WLSession->WinlogonDesktop);
         return FALSE;
     }
+
+    ERR("WL: Started setup '%ws'\n", CommandLine);
 
     /* Wait for process termination */
     WaitForSingleObject(ProcessInformation.hProcess, INFINITE);

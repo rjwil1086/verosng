@@ -2,7 +2,7 @@
 
 # Milestones
 
-Milestones 0–4 are done. Milestone 5 is in progress. The daily boot stays i386 until milestone 6, which makes the amd64 boot the default. Milestone 7 makes that boot report Windows 10. Milestone 8 moves the build, the applications, and the in-tree drivers onto it.
+Milestones 0–5 are done. The daily boot is amd64. Milestone 7 makes that boot report Windows 10. Milestone 8 moves the applications and the in-tree drivers onto it.
 
 ## Milestone 0: Project Infrastructure
 
@@ -168,9 +168,10 @@ The kernel still reports NT 5.2 through this milestone. Milestone 7 changes that
 Deliverables:
 
 - An `ARCH=amd64` bootcd that the daily boot, the boot test, and crash collection launch
+- `ARCH=amd64` is the default build, in `build-amd64`
 - `qemu-system-x86_64` is that boot
 - The plugin and syscall-diff rebuilt for `SYSCALL` and the x64 register ABI
-- i386 still builds, and it is no longer the boot that runs by default
+- i386 still builds when the build is asked for it, and it is no longer the boot that runs by default
 
 Export names stay the same.
 
@@ -209,7 +210,6 @@ Milestone 6 makes the amd64 boot the daily boot. Milestone 7 makes that boot rep
 
 Deliverables:
 
-- `ARCH=amd64` is the default build
 - CI and the compatibility snapshot use the amd64 boot
 - The milestone 3 applications run as 64-bit binaries
 - In-tree drivers that loaded on the i386 live CD load on the amd64 boot
@@ -401,7 +401,7 @@ If it were my project, Year 1 would end with:
 
 I would not spend Year 1 touching WDDM.
 
-Milestone 6 makes the amd64 boot the daily boot. Milestone 7 reports Windows 10 from that boot. Milestone 8 moves the remaining build, applications, and in-tree drivers onto it before graphics work. None of these is a reason to start WDDM in Year 1.
+Milestone 6 makes the amd64 boot the daily boot and the default build. Milestone 7 reports Windows 10 from that boot. Milestone 8 moves the applications and the in-tree drivers onto it before graphics work. None of these is a reason to start WDDM in Year 1.
 
 The biggest force multiplier is getting to this workflow:
 

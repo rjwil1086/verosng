@@ -135,17 +135,16 @@ NtSyscallFailure(void)
 
 PVOID
 KiSystemCallHandler(
-    VOID)
+    PKTRAP_FRAME TrapFrame)
 {
-    PKTRAP_FRAME TrapFrame;
     PKSERVICE_TABLE_DESCRIPTOR DescriptorTable;
     PKTHREAD Thread;
     PULONG64 KernelParams, UserParams;
     ULONG ServiceNumber, TableIndex, Count;
     ULONG64 UserRsp;
 
-    /* Get a pointer to the trap frame */
-    TrapFrame = (PKTRAP_FRAME)((PULONG64)_AddressOfReturnAddress() + 1 + MAX_SYSCALL_PARAMS);
+    /* The syscall stub passes the frame. Deriving it from the return
+     * address depends on the compiler's prologue, which is not stable. */
 
     /* Increase system call count */
     __addgsdword(FIELD_OFFSET(KIPCR, Prcb.KeSystemCalls), 1);

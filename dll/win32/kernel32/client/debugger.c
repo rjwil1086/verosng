@@ -692,6 +692,17 @@ VOID
 WINAPI
 OutputDebugStringA(IN LPCSTR _OutputString)
 {
+#if defined(__clang__) && defined(_M_AMD64)
+    /*
+     * This compiler has no exception registration, so the raise below
+     * is unhandled and CSRSS kills the caller. A debug print must not
+     * take down setup or the shell. Send the text to the kernel debugger,
+     * which is what the handler below does when no monitor is attached.
+     */
+    if (_OutputString)
+        DbgPrint("%s", _OutputString);
+    return;
+#endif
     _SEH2_TRY
     {
         ULONG_PTR a_nArgs[2];

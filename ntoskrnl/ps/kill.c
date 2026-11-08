@@ -89,6 +89,35 @@ PspTerminateProcess(IN PEPROCESS Process,
     /* Check if this is a Critical Process */
     if (Process->BreakOnTermination)
     {
+        PKTRAP_FRAME TrapFrame = KeGetCurrentThread()->TrapFrame;
+
+        /* The prompt below waits on the serial line. Record who asked
+         * for the exit before that wait, so a file-backed port still
+         * shows the caller. */
+        PVOID Caller = NULL;
+
+        if (TrapFrame &&
+            KeGetPreviousMode() == UserMode &&
+            TrapFrame->Rsp <= (ULONG64)MmHighestUserAddress)
+        {
+            _SEH2_TRY
+            {
+                ProbeForRead((PVOID)TrapFrame->Rsp, sizeof(PVOID), 1);
+                Caller = *(PVOID *)TrapFrame->Rsp;
+            }
+            _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+            {
+                Caller = NULL;
+            }
+            _SEH2_END;
+        }
+
+        DPRINT1("Critical exit status 0x%08lx by %.16s RIP %p caller %p\n",
+                ExitStatus,
+                PsGetCurrentProcess()->ImageFileName,
+                TrapFrame ? (PVOID)TrapFrame->Rip : NULL,
+                Caller);
+
         /* Break to debugger */
         PspCatchCriticalBreak("Terminating critical process 0x%p (%s)\n",
                               Process,
@@ -1230,6 +1259,35 @@ NtTerminateProcess(IN HANDLE ProcessHandle OPTIONAL,
     /* Check if this is a Critical Process, and Bugcheck */
     if (Process->BreakOnTermination)
     {
+        PKTRAP_FRAME TrapFrame = KeGetCurrentThread()->TrapFrame;
+
+        /* The prompt below waits on the serial line. Record who asked
+         * for the exit before that wait, so a file-backed port still
+         * shows the caller. */
+        PVOID Caller = NULL;
+
+        if (TrapFrame &&
+            KeGetPreviousMode() == UserMode &&
+            TrapFrame->Rsp <= (ULONG64)MmHighestUserAddress)
+        {
+            _SEH2_TRY
+            {
+                ProbeForRead((PVOID)TrapFrame->Rsp, sizeof(PVOID), 1);
+                Caller = *(PVOID *)TrapFrame->Rsp;
+            }
+            _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+            {
+                Caller = NULL;
+            }
+            _SEH2_END;
+        }
+
+        DPRINT1("Critical exit status 0x%08lx by %.16s RIP %p caller %p\n",
+                ExitStatus,
+                PsGetCurrentProcess()->ImageFileName,
+                TrapFrame ? (PVOID)TrapFrame->Rip : NULL,
+                Caller);
+
         /* Break to debugger */
         PspCatchCriticalBreak("Terminating critical process 0x%p (%s)\n",
                               Process,

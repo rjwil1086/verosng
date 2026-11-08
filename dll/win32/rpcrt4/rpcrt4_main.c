@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
 
 #include "ntstatus.h"
 #define WIN32_NO_STATUS
@@ -78,6 +79,7 @@ static CRITICAL_SECTION_DEBUG threaddata_cs_debug =
 static CRITICAL_SECTION threaddata_cs = { &threaddata_cs_debug, -1, 0, 0, 0, 0 };
 
 static struct list threaddata_list = LIST_INIT(threaddata_list);
+static DWORD RpcSehTls = TLS_OUT_OF_INDEXES;
 
 struct context_handle_list
 {
@@ -120,6 +122,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
     switch (fdwReason) {
     case DLL_PROCESS_ATTACH:
+        RpcSehTls = TlsAlloc();
         break;
 
     case DLL_THREAD_DETACH:
@@ -210,8 +213,36 @@ RPC_STATUS WINAPI RpcIfInqId(RPC_IF_HANDLE if_handle, RPC_IF_ID *if_id)
  *
  * Raises an exception.
  */
+void RPC_ENTRY I_RpcSehPushFrame(RPC_SEH_FRAME *Frame)
+{
+    Frame->Previous = (RpcSehTls == TLS_OUT_OF_INDEXES) ? NULL : TlsGetValue(RpcSehTls);
+    if (RpcSehTls != TLS_OUT_OF_INDEXES)
+        TlsSetValue(RpcSehTls, Frame);
+}
+
+void RPC_ENTRY I_RpcSehPopFrame(RPC_SEH_FRAME *Frame)
+{
+    RPC_SEH_FRAME *Top;
+
+    if (RpcSehTls == TLS_OUT_OF_INDEXES)
+        return;
+    Top = TlsGetValue(RpcSehTls);
+    if (Top == Frame)
+        TlsSetValue(RpcSehTls, Frame->Previous);
+}
+
 void DECLSPEC_NORETURN WINAPI RpcRaiseException(RPC_STATUS exception)
 {
+  RPC_SEH_FRAME *Frame;
+
+  Frame = (RpcSehTls == TLS_OUT_OF_INDEXES) ? NULL : TlsGetValue(RpcSehTls);
+  if (Frame)
+  {
+    Frame->Code = exception;
+    TlsSetValue(RpcSehTls, Frame->Previous);
+    longjmp(Frame->Jmp, 1);
+  }
+
   /* shouldn't return */
   RaiseException(exception, 0, 0, NULL);
   ERR("handler continued execution\n");

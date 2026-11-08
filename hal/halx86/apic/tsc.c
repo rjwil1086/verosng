@@ -92,10 +92,12 @@ HalpInitializeTsc(VOID)
     /* Read register C, so that the next interrupt can happen */
     HalpReadCmos(RTC_REGISTER_C);
 
-    /* Wait for completion */
+    /* Wait for completion. The counter is written by the interrupt handler. */
     _enable();
-    while (TscCalibrationPhase < NUM_SAMPLES) _ReadWriteBarrier();
+    while (*(volatile UCHAR *)&TscCalibrationPhase < NUM_SAMPLES)
+        __asm__ __volatile__("" : : : "memory");
     _disable();
+    __asm__ __volatile__("" : : : "memory");
 
     /* Disable the periodic interrupt in the CMOS */
     HalpWriteCmos(RTC_REGISTER_B, RegisterB & ~RTC_REG_B_PI);

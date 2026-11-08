@@ -830,6 +830,15 @@ PUBLIC KiSystemCallEntry64
     mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_EFlags], r11
     mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Rbp], rbp
 
+    /* Keep the user nonvolatiles. A fault abort cannot unwind them. */
+    mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Rbx], rbx
+    mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Rsi], rsi
+    mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Rdi], rdi
+    mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Dr0], r12
+    mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Dr1], r13
+    mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Dr2], r14
+    mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Dr3], r15
+
     /* Store user stack pointer in the trap frame */
     mov rax, gs:[PcUserRsp]
     mov [rsp + MAX_SYSCALL_PARAM_SIZE + KTRAP_FRAME_Rsp], rax
@@ -863,6 +872,7 @@ PUBLIC KiSystemCallEntry64
 GLOBAL_LABEL KiSystemCall64Again
 
     /* Call the C-handler (will enable interrupts) */
+    lea rcx, [rsp + MAX_SYSCALL_PARAM_SIZE]
     call KiSystemCallHandler
 
     /* The return value from KiSystemCallHandler is the address of the Nt-function */
@@ -947,6 +957,26 @@ NoUserApcPending:
     sysretq
 
 .ENDP
+
+/*
+ * A bad user pointer in a syscall has no SEH frame on this compiler.
+ * rcx is the syscall trap frame. edx is the status to return.
+ */
+PUBLIC KiAbortSystemCall
+KiAbortSystemCall:
+    mov eax, edx
+    mov rbx, [rcx + KTRAP_FRAME_Rbx]
+    mov rsi, [rcx + KTRAP_FRAME_Rsi]
+    mov rdi, [rcx + KTRAP_FRAME_Rdi]
+    mov rbp, [rcx + KTRAP_FRAME_Rbp]
+    mov r12, [rcx + KTRAP_FRAME_Dr0]
+    mov r13, [rcx + KTRAP_FRAME_Dr1]
+    mov r14, [rcx + KTRAP_FRAME_Dr2]
+    mov r15, [rcx + KTRAP_FRAME_Dr3]
+    mov rsp, rcx
+    sub rsp, MAX_SYSCALL_PARAM_SIZE
+    sti
+    jmp KiSystemServiceExit
 
 
 /*!

@@ -389,10 +389,10 @@ ENDM
 
 .macro .pushframe param
     /*
-     * FIXME. .seh_pushframe doesn't accept code argument.
-     * Patch sent.
+     * This gas rejects the code operand. The argument is accepted so
+     * callers can keep passing it, and the directive is emitted without it.
      */
-    .seh_pushframe \param
+    .seh_pushframe
 .endm
 
 .macro .pushreg reg

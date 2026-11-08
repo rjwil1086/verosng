@@ -126,6 +126,37 @@ typedef int RPC_STATUS;
     #define RpcEndFinally _SEH2_END;
     #define RpcExceptionCode() _SEH2_GetExceptionCode()
     #define RpcAbnormalTermination() (_SEH2_GetExceptionCode() != 0)
+
+    /* Clang amd64 has no SEH plugin, so RpcTryExcept does not catch.
+     * An uncaught RPC exception kills the caller, including winlogon. */
+#if defined(__clang__) && (defined(_M_AMD64) || defined(__x86_64__)) && !defined(_NTDDK_)
+#include <setjmp.h>
+typedef struct _RPC_SEH_FRAME
+{
+    jmp_buf Jmp;
+    volatile RPC_STATUS Code;
+    struct _RPC_SEH_FRAME *Previous;
+} RPC_SEH_FRAME;
+void RPC_ENTRY I_RpcSehPushFrame(RPC_SEH_FRAME *Frame);
+void RPC_ENTRY I_RpcSehPopFrame(RPC_SEH_FRAME *Frame);
+#undef RpcTryExcept
+#undef RpcExcept
+#undef RpcEndExcept
+#undef RpcExceptionCode
+#define RpcTryExcept \
+    do { \
+        RPC_SEH_FRAME _rpc_frame __attribute__((aligned(16))); \
+        _rpc_frame.Code = RPC_S_OK; \
+        I_RpcSehPushFrame(&_rpc_frame); \
+        if (setjmp(_rpc_frame.Jmp) == 0) {
+#define RpcExcept(expr) \
+            I_RpcSehPopFrame(&_rpc_frame); \
+        } else if (expr) {
+#define RpcEndExcept \
+        } \
+    } while (0);
+#define RpcExceptionCode() (_rpc_frame.Code)
+#endif
 #endif
 
 #if defined(__RPC_WIN64__)

@@ -439,6 +439,8 @@
 @ stdcall RpcObjectSetType(ptr ptr)
 @ stdcall RpcProtseqVectorFreeA(ptr)
 @ stdcall RpcProtseqVectorFreeW(ptr)
+@ stdcall I_RpcSehPushFrame(ptr)
+@ stdcall I_RpcSehPopFrame(ptr)
 @ stdcall RpcRaiseException(long)
 @ stub RpcRegisterAsyncInfo
 @ stdcall RpcRevertToSelf()

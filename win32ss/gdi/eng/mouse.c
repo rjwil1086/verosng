@@ -808,7 +808,7 @@ GreMovePointer(
     pdc = DC_LockDc(hdc);
     if (!pdc)
     {
-        DPRINT1("Failed to lock the DC.\n");
+        DPRINT1("Failed to lock the DC %p.\n", hdc);
         return;
     }
     ASSERT(pdc->dctype == DCTYPE_DIRECT);

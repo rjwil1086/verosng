@@ -121,6 +121,7 @@ static size_t g_name_used;
 static void *g_rcx;
 static void *g_r8;
 static void *g_r9;
+static void *g_r10;
 static const char *g_mark_path;
 static int g_marked;
 
@@ -398,6 +399,10 @@ cache_regs(void)
         else if (_stricmp(name, "r9") == 0)
         {
             g_r9 = reg->handle;
+        }
+        else if (_stricmp(name, "r10") == 0)
+        {
+            g_r10 = reg->handle;
         }
     }
     if (g_array_unref != NULL)
@@ -786,7 +791,15 @@ on_windows(unsigned int vcpu, Site *site, uint64_t eax, uint64_t edx, uint64_t r
     call->has_args = site->has_args;
     if (site->has_args)
     {
-        call->arg1 = read_reg(g_rcx);
+        /* SYSCALL saves the return address in rcx and passes argument 1 in r10. */
+        if (strcmp(site->insn_name, "syscall") == 0)
+        {
+            call->arg1 = read_reg(g_r10);
+        }
+        else
+        {
+            call->arg1 = read_reg(g_rcx);
+        }
         call->arg2 = edx;
         call->arg3 = r8;
         call->arg4 = read_reg(g_r9);
@@ -832,6 +845,27 @@ write_event(const char *kind, const char *phase, const char *symbol, const char 
 }
 
 static void
+write_syscall(uint64_t pc, const char *insn, uint64_t rax, uint64_t r10, uint64_t rdx,
+              uint64_t r8, uint64_t r9)
+{
+    if (g_log == NULL)
+    {
+        return;
+    }
+
+    fprintf(g_log, "{\"kind\":\"syscall\",\"phase\":\"enter\",\"symbol\":");
+    json_escape(g_log, insn != NULL ? insn : "");
+    fprintf(g_log, ",\"insn\":");
+    json_escape(g_log, insn != NULL ? insn : "");
+    fprintf(g_log,
+            ",\"pc\":\"0x%llx\",\"rax\":\"0x%llx\",\"r10\":\"0x%llx\",\"rdx\":\"0x%llx\","
+            "\"r8\":\"0x%llx\",\"r9\":\"0x%llx\",\"result\":\"seen\"}\n",
+            (unsigned long long)pc, (unsigned long long)rax, (unsigned long long)r10,
+            (unsigned long long)rdx, (unsigned long long)r8, (unsigned long long)r9);
+    fflush(g_log);
+}
+
+static void
 on_insn(unsigned int vcpu_index, void *userdata)
 {
     Site *site;
@@ -869,7 +903,16 @@ on_insn(unsigned int vcpu_index, void *userdata)
 
     if (site->kind == SITE_SYSCALL)
     {
-        write_event("syscall", "enter", site->insn_name, site->insn_name, site->vaddr, eax, edx, "seen");
+        if (strcmp(site->insn_name, "syscall") == 0)
+        {
+            write_syscall(site->vaddr, site->insn_name, eax, read_reg(g_r10), edx,
+                          read_reg(g_r8), read_reg(g_r9));
+        }
+        else
+        {
+            write_event("syscall", "enter", site->insn_name, site->insn_name, site->vaddr, eax, edx,
+                        "seen");
+        }
     }
     else if (site->kind == SITE_EXPORT)
     {

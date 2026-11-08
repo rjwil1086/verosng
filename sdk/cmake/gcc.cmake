@@ -152,6 +152,12 @@ elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS_DEBUG "")
 endif()
 
+if(WIN32)
+    set(CMAKE_SHARED_LIBRARY_PREFIX "")
+    set(CMAKE_SHARED_MODULE_PREFIX "")
+    set(CMAKE_IMPORT_LIBRARY_PREFIX "")
+endif()
+
 # Debugging
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
     if(SEPARATE_DBG)
@@ -205,6 +211,7 @@ elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang")
     add_compile_options(
         -Wno-pragma-pack
         -Wno-unknown-warning-option
+        -Wno-error=implicit-function-declaration
     )
 endif()
 

@@ -653,10 +653,10 @@ IopInitializeDriverModule(
     /* Finally, call its init function */
     Status = driverObject->DriverInit(driverObject, &RegistryPath);
     *DriverEntryStatus = Status;
+    DPRINT1("'%wZ' DriverEntry returned 0x%08lx\n", &DriverName, Status);
     if (!NT_SUCCESS(Status))
     {
-        DPRINT1("'%wZ' initialization failed, status (0x%08lx)\n", &DriverName, Status);
-        // return a special status value in case of failure
+        /* return a special status value in case of failure */
         Status = STATUS_FAILED_DRIVER_ENTRY;
     }
 

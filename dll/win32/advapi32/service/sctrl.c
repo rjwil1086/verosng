@@ -149,6 +149,9 @@ ScLookupServiceByServiceName(LPCWSTR lpServiceName)
     TRACE("ScLookupServiceByServiceName(%S)\n",
           lpServiceName);
 
+    if (lpActiveServices == NULL)
+        return NULL;
+
     if (lpActiveServices[0].bOwnProcess)
         return &lpActiveServices[0];
 
@@ -669,7 +672,8 @@ ScServiceDispatcher(HANDLE hPipe,
         }
         else
         {
-            if (ControlPacket->dwControl == SERVICE_CONTROL_START_OWN)
+            if (ControlPacket->dwControl == SERVICE_CONTROL_START_OWN &&
+                lpActiveServices != NULL)
                 lpActiveServices[0].bOwnProcess = TRUE;
 
             lpService = ScLookupServiceByServiceName(lpServiceName);

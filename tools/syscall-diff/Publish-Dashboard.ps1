@@ -140,26 +140,26 @@ function New-DashboardSnapshot {
         }
     }
 
-    $note = "overall and syscallOverall are exact status matches from the i386 probe"
+    $note = "overall and syscallOverall are exact status matches from the amd64 probe"
     if ($null -eq $percent) {
         $note += ": no name had both a Windows result and a ReactOS result."
     }
     else {
-        $note += ": $works of $scored names. $partial names failed on both sides with different codes, $broken disagreed on success, and $missing were missing on the i386 side. A different error is a mismatch. $untested names were not reached."
+        $note += ": $works of $scored names. $partial names failed on both sides with different codes, $broken disagreed on success, and $missing were missing on the amd64 side. A different error is a mismatch. $untested names were not reached."
     }
     $note += " kernelAbi, lastBuild, applications, drivers, subsystems, traceCorpus, task, driverAbi, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied."
 
     $previousLabel = "No earlier snapshot"
     if ($null -ne $previousOverall) { $previousLabel = "Previous snapshot" }
     $gaps = @()
-    $gaps += [ordered]@{ section = "kernelAbi"; reason = "The i386 probe does not call ntoskrnl, HAL, or KMDF exports." }
+    $gaps += [ordered]@{ section = "kernelAbi"; reason = "The amd64 probe does not call ntoskrnl, HAL, or KMDF exports." }
     $gaps += [ordered]@{ section = "lastBuild"; reason = "The guest banner is a date and commit, not a monotonic build number." }
     if ($null -eq $lastWeek) { $gaps += [ordered]@{ section = "northStar.lastWeek"; reason = "No snapshot in this file is at least seven days old." } }
     if ($null -eq $lastMonth) { $gaps += [ordered]@{ section = "northStar.lastMonth"; reason = "No snapshot in this file is at least thirty days old." } }
-    $gaps += [ordered]@{ section = "applicationsSummary"; reason = "The i386 probe does not launch applications." }
-    $gaps += [ordered]@{ section = "applications"; reason = "The i386 probe does not launch applications." }
-    $gaps += [ordered]@{ section = "driversSummary"; reason = "The i386 probe does not load drivers." }
-    $gaps += [ordered]@{ section = "driverGroups"; reason = "The i386 probe does not load drivers." }
+    $gaps += [ordered]@{ section = "applicationsSummary"; reason = "The amd64 probe does not launch applications." }
+    $gaps += [ordered]@{ section = "applications"; reason = "The amd64 probe does not launch applications." }
+    $gaps += [ordered]@{ section = "driversSummary"; reason = "The amd64 probe does not load drivers." }
+    $gaps += [ordered]@{ section = "driverGroups"; reason = "The amd64 probe does not load drivers." }
     if ($null -eq $previousOverall) { $gaps += [ordered]@{ section = "regression.previousOverall"; reason = "No earlier snapshot is in the repo." } }
     $gaps += [ordered]@{ section = "regression.currentBuild"; reason = "The guest banner is a date and commit, not a monotonic build number." }
     if ($null -eq $change) { $gaps += [ordered]@{ section = "regression.change"; reason = "No earlier snapshot is in the repo." } }
@@ -169,8 +169,8 @@ function New-DashboardSnapshot {
     $gaps += [ordered]@{ section = "highestImpact"; reason = "The probe does not score subsystems." }
     $gaps += [ordered]@{ section = "traceCorpus"; reason = "The probe records one call per name, not a usage share." }
     $gaps += [ordered]@{ section = "task"; reason = "Each mismatch is one probe call. No estimated gain was measured." }
-    $gaps += [ordered]@{ section = "driverAbi"; reason = "The i386 probe does not exercise IRP, PnP, power, DMA, or KMDF." }
-    $gaps += [ordered]@{ section = "graphics"; reason = "The i386 probe does not exercise the display stack." }
+    $gaps += [ordered]@{ section = "driverAbi"; reason = "The amd64 probe does not exercise IRP, PnP, power, DMA, or KMDF." }
+    $gaps += [ordered]@{ section = "graphics"; reason = "The amd64 probe does not exercise the display stack." }
 
     return [ordered]@{
         spdx                 = "GPL-2.0-or-later"
@@ -182,7 +182,7 @@ function New-DashboardSnapshot {
         kernelAbi            = $null
         lastBuild            = $null
         northStar            = [ordered]@{
-            label     = "i386 probe syscalls"
+            label     = "amd64 probe syscalls"
             current   = $percent
             lastWeek  = $lastWeek
             lastMonth = $lastMonth
@@ -217,7 +217,7 @@ function New-DashboardSnapshot {
             [ordered]@{ label = "Test pass rate"; weight = 5 }
         )
         lastHarnessRun       = [ordered]@{
-            guest       = "ReactOS i386"
+            guest       = "ReactOS amd64"
             harness     = "syscall-diff"
             bootResult  = $BootResult
             crashCount  = $CrashCount
@@ -292,6 +292,9 @@ else { $bootResult += "; ReactOS probe log has no DIFF END OK trailer" }
 $crashes = Get-CrashCount -Logs @($ReactOSLog, $bootLog)
 $captured = (Get-Item $reportPath).LastWriteTimeUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")
 $previous = Read-PreviousSnapshot $OutputPath
+if ($previous -and $previous.lastHarnessRun -and [string]$previous.lastHarnessRun.guest -ne "ReactOS amd64") {
+    $previous = $null
+}
 $snapshot = New-DashboardSnapshot -Calls $parsed.calls -Previous $previous -CapturedAt $captured -BootResult $bootResult -CrashCount $crashes
 
 if ($snapshot.overall -eq 67.3 -or $snapshot.lastBuild -eq 1832) {

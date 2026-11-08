@@ -15,6 +15,22 @@
 
 /* FUNCTIONS *****************************************************************/
 
+static
+BOOLEAN
+KiUserRangeBad(IN PVOID Address,
+               IN SIZE_T Length)
+{
+    ULONG_PTR Start = (ULONG_PTR)Address;
+    ULONG_PTR End = Start + Length;
+
+    if (Address == NULL || End < Start || End > (ULONG_PTR)MmUserProbeAddress)
+    {
+        return TRUE;
+    }
+
+    return (Start & (sizeof(ULONG) - 1)) != 0;
+}
+
 VOID
 NTAPI
 KiContinuePreviousModeUser(
@@ -185,6 +201,18 @@ NtRaiseException(
     PKEXCEPTION_FRAME ExceptionFrame = &LocalExceptionFrame;
 #endif
 
+    /*
+     * A null argument is not a user buffer. This compiler has no SEH
+     * frame, and the probe below runs at APC_LEVEL, so the fault would
+     * stop in the debugger instead of returning.
+     */
+    if (KeGetPreviousMode() != KernelMode &&
+        (KiUserRangeBad(ExceptionRecord, sizeof(ULONG)) ||
+         KiUserRangeBad(Context, sizeof(CONTEXT))))
+    {
+        return STATUS_ACCESS_VIOLATION;
+    }
+
     /* Get trap frame and link previous one */
     Thread = KeGetCurrentThread();
     TrapFrame = Thread->TrapFrame;
@@ -226,6 +254,13 @@ NtContinue(
     KEXCEPTION_FRAME LocalExceptionFrame;
     PKEXCEPTION_FRAME ExceptionFrame = &LocalExceptionFrame;
 #endif
+
+    /* A null context cannot be continued. See NtRaiseException. */
+    if (KeGetPreviousMode() != KernelMode &&
+        KiUserRangeBad(Context, sizeof(CONTEXT)))
+    {
+        return STATUS_ACCESS_VIOLATION;
+    }
 
     /* Get trap frame and link previous one*/
     Thread = KeGetCurrentThread();

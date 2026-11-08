@@ -11,7 +11,9 @@
 #include <string.h>
 #include <wchar.h>
 
-#define CURRENT_PROCESS ((unsigned long)(long)-1)
+typedef UINT_PTR SLOT;
+
+#define CURRENT_PROCESS ((SLOT)(INT_PTR)-1)
 #define FILE_SHARE_BOTH (FILE_SHARE_READ | FILE_SHARE_WRITE)
 #define FILE_OPTIONS (FILE_SYNCHRONOUS_IO_NONALERT | FILE_NON_DIRECTORY_FILE)
 #define FILE_ACCESS (SYNCHRONIZE | FILE_READ_DATA | FILE_WRITE_DATA | \
@@ -42,7 +44,7 @@ typedef struct
         long Status;
         void *Pointer;
     } u;
-    unsigned long Information;
+    SLOT Information;
 } IO_STATUS_BLOCK;
 
 typedef struct
@@ -53,25 +55,17 @@ typedef struct
 } CALL;
 
 typedef long (__stdcall *FN0)(void);
-typedef long (__stdcall *FN1)(unsigned long);
-typedef long (__stdcall *FN2)(unsigned long, unsigned long);
-typedef long (__stdcall *FN3)(unsigned long, unsigned long, unsigned long);
-typedef long (__stdcall *FN4)(unsigned long, unsigned long, unsigned long, unsigned long);
-typedef long (__stdcall *FN5)(unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long);
-typedef long (__stdcall *FN6)(unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long, unsigned long);
-typedef long (__stdcall *FN7)(unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long, unsigned long, unsigned long);
-typedef long (__stdcall *FN8)(unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long, unsigned long, unsigned long, unsigned long);
-typedef long (__stdcall *FN9)(unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
-typedef long (__stdcall *FN10)(unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
-typedef long (__stdcall *FN11)(unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-    unsigned long);
+typedef long (__stdcall *FN1)(SLOT);
+typedef long (__stdcall *FN2)(SLOT, SLOT);
+typedef long (__stdcall *FN3)(SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN4)(SLOT, SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN5)(SLOT, SLOT, SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN6)(SLOT, SLOT, SLOT, SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN7)(SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN8)(SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN9)(SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN10)(SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT);
+typedef long (__stdcall *FN11)(SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT, SLOT);
 
 static const CALL g_calls[] =
 {
@@ -217,6 +211,9 @@ emit(const char *name, const char *status)
     }
     fwrite(line, 1, (size_t)n, stdout);
     fflush(stdout);
+    /* The kernel debugger owns COM1 on a debug boot, so also send the
+     * line through the debug print path that the serial log captures. */
+    OutputDebugStringA(line);
 }
 
 static void
@@ -240,7 +237,7 @@ on_fault(EXCEPTION_POINTERS *info)
 }
 
 static long
-call_n(void *fn, int argc, unsigned long *arg)
+call_n(void *fn, int argc, SLOT *arg)
 {
     switch (argc)
     {
@@ -275,7 +272,7 @@ call_n(void *fn, int argc, unsigned long *arg)
 }
 
 static int
-guarded(void *fn, int argc, unsigned long *arg, long *status)
+guarded(void *fn, int argc, SLOT *arg, long *status)
 {
     if (setjmp(g_jump) != 0)
     {
@@ -334,11 +331,11 @@ is_done(const char *name)
 }
 
 static void
-invoke(const char *name, int argc, int timeout, unsigned long *arg)
+invoke(const char *name, int argc, int timeout, SLOT *arg)
 {
     void *fn;
     long status;
-    unsigned long local[11];
+    SLOT local[11];
     int i;
 
     emit(name, "STARTED");
@@ -354,13 +351,13 @@ invoke(const char *name, int argc, int timeout, unsigned long *arg)
         memset(local, 0, sizeof(local));
         if (timeout >= 0 && timeout < 11)
         {
-            local[timeout] = (unsigned long)(ULONG_PTR)&g_zero;
+            local[timeout] = (SLOT)&g_zero;
         }
         arg = local;
     }
     else if (timeout >= 0 && timeout < argc)
     {
-        arg[timeout] = (unsigned long)(ULONG_PTR)&g_zero;
+        arg[timeout] = (SLOT)&g_zero;
     }
     for (i = argc; i < 11; i++)
     {
@@ -427,18 +424,18 @@ run_real(void)
     USTR name;
     OBJATTR obj;
     IO_STATUS_BLOCK iosb;
-    unsigned long file = 0;
-    unsigned long section = 0;
-    unsigned long base = 0;
-    unsigned long size = 0;
-    unsigned long view = 0x1000;
+    SLOT file = 0;
+    SLOT section = 0;
+    SLOT base = 0;
+    SLOT size = 0;
+    SLOT view = 0x1000;
     unsigned long long maximum = 0x1000;
-    unsigned long retlen = 0;
+    SLOT retlen = 0;
     unsigned char info[64];
     unsigned char bytes[4] = { 1, 2, 3, 4 };
     unsigned char back[4];
     unsigned long offset_slot[2];
-    unsigned long arg[11];
+    SLOT arg[11];
     const CALL *spec;
 
     memset(&iosb, 0, sizeof(iosb));
@@ -455,10 +452,10 @@ run_real(void)
 
     spec = find_call("NtCreateFile");
     memset(arg, 0, sizeof(arg));
-    arg[0] = (unsigned long)(ULONG_PTR)&file;
+    arg[0] = (SLOT)&file;
     arg[1] = FILE_ACCESS;
-    arg[2] = (unsigned long)(ULONG_PTR)&obj;
-    arg[3] = (unsigned long)(ULONG_PTR)&iosb;
+    arg[2] = (SLOT)&obj;
+    arg[3] = (SLOT)&iosb;
     arg[5] = FILE_ATTRIBUTE_NORMAL;
     arg[6] = FILE_SHARE_BOTH;
     arg[7] = FILE_OPEN_IF;
@@ -468,8 +465,8 @@ run_real(void)
     spec = find_call("NtWriteFile");
     memset(arg, 0, sizeof(arg));
     arg[0] = file;
-    arg[4] = (unsigned long)(ULONG_PTR)&iosb;
-    arg[5] = (unsigned long)(ULONG_PTR)bytes;
+    arg[4] = (SLOT)&iosb;
+    arg[5] = (SLOT)bytes;
     arg[6] = 4;
     invoke("NtWriteFile", spec->Argc, spec->Timeout, arg);
 
@@ -478,16 +475,16 @@ run_real(void)
     spec = find_call("NtReadFile");
     memset(arg, 0, sizeof(arg));
     arg[0] = file;
-    arg[4] = (unsigned long)(ULONG_PTR)&iosb;
-    arg[5] = (unsigned long)(ULONG_PTR)back;
+    arg[4] = (SLOT)&iosb;
+    arg[5] = (SLOT)back;
     arg[6] = 4;
-    arg[7] = (unsigned long)(ULONG_PTR)offset_slot;
+    arg[7] = (SLOT)offset_slot;
     invoke("NtReadFile", spec->Argc, spec->Timeout, arg);
 
     spec = find_call("NtDeviceIoControlFile");
     memset(arg, 0, sizeof(arg));
     arg[0] = file;
-    arg[4] = (unsigned long)(ULONG_PTR)&iosb;
+    arg[4] = (SLOT)&iosb;
     invoke("NtDeviceIoControlFile", spec->Argc, spec->Timeout, arg);
 
     base = 0;
@@ -495,8 +492,8 @@ run_real(void)
     spec = find_call("NtAllocateVirtualMemory");
     memset(arg, 0, sizeof(arg));
     arg[0] = CURRENT_PROCESS;
-    arg[1] = (unsigned long)(ULONG_PTR)&base;
-    arg[3] = (unsigned long)(ULONG_PTR)&size;
+    arg[1] = (SLOT)&base;
+    arg[3] = (SLOT)&size;
     arg[4] = MEM_COMMIT | MEM_RESERVE;
     arg[5] = PAGE_READWRITE;
     invoke("NtAllocateVirtualMemory", spec->Argc, spec->Timeout, arg);
@@ -504,16 +501,16 @@ run_real(void)
     spec = find_call("NtQueryInformationProcess");
     memset(arg, 0, sizeof(arg));
     arg[0] = CURRENT_PROCESS;
-    arg[2] = (unsigned long)(ULONG_PTR)info;
+    arg[2] = (SLOT)info;
     arg[3] = sizeof(info);
-    arg[4] = (unsigned long)(ULONG_PTR)&retlen;
+    arg[4] = (SLOT)&retlen;
     invoke("NtQueryInformationProcess", spec->Argc, spec->Timeout, arg);
 
     spec = find_call("NtCreateSection");
     memset(arg, 0, sizeof(arg));
-    arg[0] = (unsigned long)(ULONG_PTR)&section;
+    arg[0] = (SLOT)&section;
     arg[1] = SECTION_MAP_BOTH;
-    arg[3] = (unsigned long)(ULONG_PTR)&maximum;
+    arg[3] = (SLOT)&maximum;
     arg[4] = PAGE_READWRITE;
     arg[5] = SEC_COMMIT;
     invoke("NtCreateSection", spec->Argc, spec->Timeout, arg);
@@ -524,8 +521,8 @@ run_real(void)
     memset(arg, 0, sizeof(arg));
     arg[0] = section;
     arg[1] = CURRENT_PROCESS;
-    arg[2] = (unsigned long)(ULONG_PTR)&base;
-    arg[6] = (unsigned long)(ULONG_PTR)&view;
+    arg[2] = (SLOT)&base;
+    arg[6] = (SLOT)&view;
     arg[7] = 1;
     arg[9] = PAGE_READWRITE;
     invoke("NtMapViewOfSection", spec->Argc, spec->Timeout, arg);
@@ -540,8 +537,8 @@ run_real(void)
     size = 0;
     memset(arg, 0, sizeof(arg));
     arg[0] = CURRENT_PROCESS;
-    arg[1] = (unsigned long)(ULONG_PTR)&base;
-    arg[2] = (unsigned long)(ULONG_PTR)&size;
+    arg[1] = (SLOT)&base;
+    arg[2] = (SLOT)&size;
     arg[3] = MEM_RELEASE;
     invoke("NtFreeVirtualMemory", spec->Argc, spec->Timeout, arg);
 
