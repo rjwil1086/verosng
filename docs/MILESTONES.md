@@ -10,9 +10,9 @@ Three goals share the amd64 kernel.
 
 Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
 
-Goal 2 continues from milestone 5. It waits for milestone 9 only when a driver refuses to load until it sees version 10. Goal 3 starts at milestone 12. It does not wait for every network and USB driver.
+Goal 2 continues from milestone 5. It waits for milestone 11 only when a driver refuses to load until it sees version 10. Goal 3 starts at milestone 13. It does not wait for milestone 12 to finish every network and USB driver, and it does not wait for milestone 17.
 
-The open work starts at milestone 8. Milestone 10 can proceed beside it for a driver that does not require version 10. A new shell, DPI scaling, and antivirus filters wait until a program under test requires them.
+The open work is milestone 8. Milestone 9 raises physical memory to the Windows 10 22H2 maximum of 6 TB before more processors start. Milestone 10 makes the daily boot the multiprocessor kernel before the version report. Milestone 12 can proceed beside milestone 8 for a driver that does not require version 10. A new shell, DPI scaling, and antivirus filters wait until a program under test requires them.
 
 ## Milestone 0: Project Infrastructure
 
@@ -154,7 +154,7 @@ What landed:
 - IRP, PnP, power, and DMA paths that `storahci` uses
 - The QEMU AHCI disk identified as `QEMU HARDDISK` through in-tree `storahci`
 
-Retail Windows drivers are milestone 10.
+Retail Windows drivers are milestone 12.
 
 ## Milestone 6: amd64 boot
 
@@ -175,7 +175,7 @@ Success criteria:
 - The daily boot is the amd64 guest
 - The top-100 probe is recaptured on that native path and is the headline score
 
-A Windows driver returning from `DriverEntry` is milestone 10. The kernel still reports NT 5.2 until milestone 9.
+A Windows driver returning from `DriverEntry` is milestone 12. The kernel still reports NT 5.2 until milestone 11.
 
 ## Milestone 7: x64 application surface
 
@@ -219,7 +219,61 @@ Success criteria:
 - Each of those names matches the Windows 10 22H2 guest on the probe's real-argument call.
 - The rest of the top-100 probe does not regress.
 
-## Milestone 9: Application version report
+Physical memory above 8 GiB is milestone 9. Logical processors, Hyper-Threading, and AMD SMT are milestone 10. This milestone stays on the current boot until those switches.
+
+## Milestone 9: amd64 physical memory
+
+Goal: Goal 1. The amd64 boot keeps physical RAM up to the Windows 10 22H2 maximum of 6 TB.
+
+Windows 10 22H2 documents 128 GB for Home, 2 TB for Pro and Education, and 6 TB for Enterprise and Pro for Workstations. There is no edition split here, so the ceiling is 6 TB. A larger machine still boots, and memory past that ceiling is omitted.
+
+FreeLoader keeps its own 1 GiB map. The kernel receives every firmware range up to 6 TB. The PFN database is followed immediately by nonpaged pool, and that pool ends before the HAL. A 4 KB page frame holds 36 bits, so a page above 1 TB can be named. The write and dirty bits stay where they are. The nonpaged pool ceiling stays 128 GB.
+
+A task stays only when the amd64 live CD still reaches the desktop. This lands before more processors start, so the page tables are settled on one processor.
+
+Tasks:
+
+- Size the FreeLoader page lookup table for the 1 GiB the loader maps. Walk every firmware descriptor above that and pass those pages to the kernel. Clip the list at 6 TB.
+- Place nonpaged pool at the first byte after the PFN database.
+- Widen the amd64 page-frame fields so a page above 1 TB can be named.
+- Boot the live CD at 8 GiB and at 16 GiB to the desktop. Boot again at the largest size this host can give QEMU.
+
+Success criteria:
+
+- 8 GiB and 16 GiB both reach the desktop, and the reported RAM matches the guest aside from firmware holes.
+- The kernel accepts a physical page above 8 GiB and below 6 TB.
+- A guest larger than 6 TB boots with the first 6 TB.
+- The milestone 8 statuses do not regress.
+
+## Milestone 10: amd64 logical processors
+
+Goal: Goal 1. The amd64 boot starts every logical processor, and Hyper-Threading and AMD SMT behave as they do on Windows 10 22H2 for a machine that fits in one processor group.
+
+The 6 TB physical ceiling from milestone 9 stays. The page tables this milestone shoots down already use that layout.
+
+One group holds at most 64 logical processors. The KTHREAD and KPRCB layouts stay. Processor groups, multi-node NUMA, hybrid efficiency classes, and core parking stay out. A machine with more than 64 logical processors keeps the first 64.
+
+A task stays only when the amd64 live CD still reaches the desktop. The live entries switch to `ntkrnlmp.exe` and `halmp.dll` only after a 2-CPU boot has reached the desktop. `ONECPU` stays the single-processor escape. The uniprocessor images stay on the CD.
+
+Tasks:
+
+- Start each application processor. Real mode enters long mode, then `KiSystemStartup`. Wait with a timeout. `ONECPU` starts only the boot processor.
+- Shoot the TLB down with an IPI. Implement `KeIpiGenericCall`. Deliver IPIs by physical APIC ID past 8 processors. Update a running thread's cycle time from the CPU it is on.
+- Read Intel leaves `0x1F` or `0xB`, and AMD leaves `80000008` and `8000001E`. A core with one logical processor is not SMT. A core with two is SMT for both vendors. Fill `MultiThreadProcessorSet`. Use x2APIC when an APIC ID does not fit in xAPIC.
+- When two threads can run, place them on different cores before they share a Hyper-Thread or an AMD SMT sibling.
+- Report that topology from `GetLogicalProcessorInformationEx`: the logical count, one core record per core with the sibling mask, packages, caches, one NUMA node, and group 0. Die and module records appear only when CPUID reports those levels.
+- Point the live CD at `ntkrnlmp.exe` and `halmp.dll`. Rerun the milestone 8 probe.
+
+Success criteria:
+
+- `-smp 4,sockets=1,cores=4,threads=1` reports 4 logical processors and 4 cores.
+- `-cpu qemu64 -smp 4,sockets=1,cores=2,threads=2` reports 4 logical processors and 2 cores, each mask covering a pair.
+- `-cpu EPYC -smp 4,sockets=1,cores=2,threads=2` reports that same shape from the AMD leaves.
+- Two runnable threads prefer two cores over two siblings of one core.
+- The desktop still appears, and the milestone 8 statuses do not regress.
+- `ONECPU` still boots on the boot processor.
+
+## Milestone 11: Application version report
 
 Goal: Goal 1. The amd64 boot reports Windows 10 22H2 to an application.
 
@@ -228,6 +282,7 @@ This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WI
 Requirements:
 
 - Milestones 7 and 8 are done for the programs under test. The paths an application takes after it sees version 10 already return.
+- Milestone 10 is done. The daily boot is already the multiprocessor kernel.
 - `GetVersion` and `GetVersionEx` for an image without a Windows 10 manifest still return 6.2. `RtlGetVersion` and `SharedUserData` report the real version.
 - `KmWin2k3VersionLie` still forces 5.2.3790 for a driver that fails when the major version is above 5.
 
@@ -246,7 +301,7 @@ Outcome:
 - The milestone 8 statuses do not regress.
 - A driver covered by the 5.2 shim still observes 5.2.3790.
 
-## Milestone 10: Windows storage, network, and USB drivers
+## Milestone 12: Windows storage, network, and USB drivers
 
 Goal: Goal 2. A retail Windows 10 22H2 driver for non-graphics hardware loads on the amd64 boot.
 
@@ -274,26 +329,9 @@ Success criteria:
 - The exports it calls into `ntoskrnl`, the HAL, and KMDF return.
 - The device it owns performs its ordinary operation.
 - A driver that rejects a version above 5 still runs under `KmWin2k3VersionLie`.
-- A driver that requires version 10 waits until milestone 9, then passes that check and still returns.
+- A driver that requires version 10 waits until milestone 11, then passes that check and still returns.
 
-## Milestone 11: Remaining non-graphics drivers
-
-Goal: Goal 2. Extend the same bar past boot and network hardware.
-
-A task stays only when the amd64 live CD still reaches the desktop. Run the milestone 10 task loop for each device below. The device stays off the boot path.
-
-Tasks:
-
-- One audio driver
-- One Bluetooth driver
-- One printer driver
-- One storage filter
-
-Success criteria:
-
-- Each chosen driver returns from `DriverEntry`, its kernel calls return, and the device performs its ordinary operation.
-
-## Milestone 12: Graphics HAL
+## Milestone 13: Graphics HAL
 
 Goal: Goal 3. One boundary owns pixel and GPU work so the backend can change.
 
@@ -329,7 +367,7 @@ Success criteria:
 - The GDI desktop still shows a milestone 7 window through the software backend.
 - A second backend can be selected without an application change.
 
-## Milestone 13: First 3D backend
+## Milestone 14: First 3D backend
 
 Goal: Goal 3. A 3D application renders through the Windows-facing DLLs on the software or virtual backend.
 
@@ -347,7 +385,7 @@ Success criteria:
 - One 3D program draws a frame on the amd64 boot.
 - The milestone 7 window still appears.
 
-## Milestone 14: DRM backend
+## Milestone 15: DRM backend
 
 Goal: Goal 3. The same HAL gains a DRM backend, using a GPL Linux GPU driver as the hardware source.
 
@@ -365,16 +403,16 @@ Tasks:
 
 - Add the DRM backend and fall back to software when it cannot start. Boot to the desktop.
 - Modeset one simple QEMU display device through that backend and show the desktop.
-- Draw the milestone 13 frame on that device.
+- Draw the milestone 14 frame on that device.
 - Bring up one real Linux GPU driver on one machine, with the software backend still selected by default.
-- Draw the milestone 13 frame on that GPU, then make that backend the selected one.
+- Draw the milestone 14 frame on that GPU, then make that backend the selected one.
 
 Success criteria:
 
-- The milestone 13 program draws a frame on that GPU.
+- The milestone 14 program draws a frame on that GPU.
 - Selecting the DRM backend does not change the application or the DLL exports.
 
-## Milestone 15: WDDM 2.0 backend
+## Milestone 16: WDDM 2.0 backend
 
 Goal: Goal 3. The same HAL gains a WDDM 2.0 backend.
 
@@ -390,14 +428,31 @@ Tasks:
 
 - Add the WDDM backend and fall back to the current backend when it cannot start. Boot to the desktop.
 - Make one `D3DKMT` query return the Windows status for the probe's arguments.
-- Present the milestone 13 frame through this backend inside QEMU.
+- Present the milestone 14 frame through this backend inside QEMU.
 - Load one unmodified Windows GPU driver while the previous backend is still the boot display.
 - Present a frame with that driver, then make the WDDM backend the selected display.
 
 Success criteria:
 
-- The milestone 13 program draws a frame through this backend.
+- The milestone 14 program draws a frame through this backend.
 - An unmodified Windows GPU driver is the last step, after the backend's own entry points return.
+
+## Milestone 17: Remaining non-graphics drivers
+
+Goal: Goal 2. Extend the same bar past boot and network hardware.
+
+A task stays only when the amd64 live CD still reaches the desktop. Run the milestone 12 task loop for each device below. The device stays off the boot path. Goal 3 does not wait for this milestone.
+
+Tasks:
+
+- One audio driver
+- One Bluetooth driver
+- One printer driver
+- One storage filter
+
+Success criteria:
+
+- Each chosen driver returns from `DriverEntry`, its kernel calls return, and the device performs its ordinary operation.
 
 ## What should the compatibility dashboard look like?
 
