@@ -1,0 +1,123 @@
+{
+    "Memory manager": [
+        "NtAllocateVirtualMemory",
+        "NtFreeVirtualMemory",
+        "NtMapViewOfSection",
+        "NtUnmapViewOfSection",
+        "NtProtectVirtualMemory",
+        "NtQueryVirtualMemory",
+        "NtReadVirtualMemory",
+        "NtWriteVirtualMemory",
+        "NtCreateSection",
+        "NtOpenSection",
+        "NtQuerySection"
+    ],
+    "Filesystem": [
+        "NtCreateFile",
+        "NtReadFile",
+        "NtWriteFile",
+        "NtDeviceIoControlFile",
+        "NtOpenFile",
+        "NtQueryInformationFile",
+        "NtSetInformationFile",
+        "NtQueryDirectoryFile",
+        "NtQueryAttributesFile",
+        "NtQueryFullAttributesFile",
+        "NtFlushBuffersFile",
+        "NtQueryVolumeInformationFile",
+        "NtFsControlFile",
+        "NtNotifyChangeDirectoryFile",
+        "NtLockFile",
+        "NtUnlockFile",
+        "NtCancelIoFile"
+    ],
+    "Processes": [
+        "NtCreateUserProcess",
+        "NtQueryInformationProcess",
+        "NtSetInformationProcess",
+        "NtOpenProcess",
+        "NtTerminateProcess",
+        "NtCreateProcess",
+        "NtCreateProcessEx"
+    ],
+    "Threads": [
+        "NtCreateThreadEx",
+        "NtQueryInformationThread",
+        "NtSetInformationThread",
+        "NtOpenThread",
+        "NtTerminateThread",
+        "NtCreateThread",
+        "NtResumeThread",
+        "NtSuspendThread",
+        "NtYieldExecution",
+        "NtContinue",
+        "NtCreateWorkerFactory",
+        "NtWaitForWorkViaWorkerFactory"
+    ],
+    "Objects": [
+        "NtClose",
+        "NtQueryObject",
+        "NtDuplicateObject",
+        "NtCreateSymbolicLinkObject",
+        "NtOpenSymbolicLinkObject",
+        "NtQuerySymbolicLinkObject",
+        "NtCreateDirectoryObject",
+        "NtOpenDirectoryObject",
+        "NtCreateEvent",
+        "NtOpenEvent",
+        "NtSetEvent",
+        "NtResetEvent",
+        "NtCreateMutant",
+        "NtOpenMutant",
+        "NtReleaseMutant",
+        "NtCreateSemaphore",
+        "NtOpenSemaphore",
+        "NtReleaseSemaphore",
+        "NtCreateTimer",
+        "NtOpenTimer",
+        "NtSetTimer",
+        "NtCancelTimer",
+        "NtWaitForSingleObject",
+        "NtWaitForMultipleObjects"
+    ],
+    "Registry": [
+        "NtCreateKey",
+        "NtOpenKey",
+        "NtDeleteKey",
+        "NtEnumerateKey",
+        "NtEnumerateValueKey",
+        "NtQueryKey",
+        "NtQueryValueKey",
+        "NtSetValueKey",
+        "NtDeleteValueKey",
+        "NtFlushKey"
+    ],
+    "Security": [
+        "NtOpenProcessToken",
+        "NtOpenThreadToken",
+        "NtAdjustPrivilegesToken",
+        "NtQueryInformationToken"
+    ],
+    "Power": [
+        "NtPowerInformation",
+        "NtInitiatePowerAction"
+    ],
+    "IPC": [
+        "NtCreatePort",
+        "NtConnectPort",
+        "NtRequestWaitReplyPort",
+        "NtReplyWaitReceivePort",
+        "NtCreateIoCompletion",
+        "NtOpenIoCompletion",
+        "NtSetIoCompletion",
+        "NtRemoveIoCompletion",
+        "NtAlpcConnectPort",
+        "NtAlpcSendWaitReceivePort"
+    ],
+    "System": [
+        "NtQuerySystemInformation",
+        "NtSetSystemInformation",
+        "NtDelayExecution",
+        "NtRaiseException"
+    ]
+}

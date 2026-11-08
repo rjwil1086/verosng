@@ -2,7 +2,7 @@
 
 param(
     [string]$SourceRoot = "",
-    [ValidateSet("All", "Syscalls", "KernelAbi", "Applications", "Drivers")]
+    [ValidateSet("All", "Syscalls", "KernelAbi", "Applications", "Drivers", "Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "Graphics")]
     [string[]]$Section = @("All"),
     [string]$WebsitePath = "",
     [string]$DriverLog = "",
@@ -70,7 +70,9 @@ function Write-JsonFile {
 
 function Get-SectionSet {
     param([string[]]$Names)
-    if ($Names -contains "All") { return @("Syscalls", "KernelAbi", "Applications", "Drivers") }
+    if ($Names -contains "All") {
+        return @("Syscalls", "KernelAbi", "Applications", "Drivers", "Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "Graphics")
+    }
     return @($Names | Select-Object -Unique)
 }
 
@@ -431,4 +433,17 @@ if ($refreshApps -or $refreshDrivers) {
     if ($refreshApps) { $appText = "$($site.applicationsSummary.working) working, $($site.applicationsSummary.partial) partial, $($site.applicationsSummary.failing) failing" }
     if ($refreshDrivers) { $driverText = "$($site.driversSummary.working) working, $($site.driversSummary.partial) partial, $($site.driversSummary.failing) failing" }
     Write-Host "Updated $WebsitePath applications: $appText; drivers: $driverText"
+}
+
+$tabSections = New-Object System.Collections.Generic.List[string]
+if ($sections -contains "Syscalls") {
+    foreach ($name in @("Regressions", "HeatMap", "Tasks")) { $tabSections.Add($name) | Out-Null }
+}
+foreach ($name in @("Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "Graphics")) {
+    if ($sections -contains $name) { $tabSections.Add($name) | Out-Null }
+}
+$tabUnique = @($tabSections | Select-Object -Unique)
+if ($tabUnique.Count -gt 0) {
+    & (Join-Path $PSScriptRoot "Publish-TabProbes.ps1") -SourceRoot $SourceRoot -WebsitePath $WebsitePath -Section $tabUnique
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

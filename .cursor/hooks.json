@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/update-dashboard.ps1",
+        "timeout": 180,
+        "failClosed": false,
+        "loop_limit": 1
+      }
+    ]
+  }
+}

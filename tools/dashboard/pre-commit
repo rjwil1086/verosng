@@ -1,0 +1,6 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+root=$(git rev-parse --show-toplevel) || exit 1
+cd "$root" || exit 1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/dashboard/Invoke-DashboardHook.ps1 -Stage
+exit $?
