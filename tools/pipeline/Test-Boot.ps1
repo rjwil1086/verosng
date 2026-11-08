@@ -4,7 +4,7 @@ param(
     [string]$Iso = "",
     [string]$SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
     [int]$TimeoutSec = 1200,
-    [string]$Qemu = "C:\Program Files\qemu\qemu-system-i386.exe",
+    [string]$Qemu = "C:\Program Files\qemu\qemu-system-x86_64.exe",
     [string]$Plugin = "",
     [string]$Map = "",
     [string]$OutputDir = "",
@@ -19,7 +19,7 @@ if (-not $OutputDir) {
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
 if (-not $Iso) {
-    $Iso = Join-Path $SourceRoot "build\bootcd.iso"
+    $Iso = Join-Path $SourceRoot "build-amd64\bootcd.iso"
 }
 if (-not (Test-Path $Qemu)) {
     Write-Error "QEMU was not found at $Qemu"

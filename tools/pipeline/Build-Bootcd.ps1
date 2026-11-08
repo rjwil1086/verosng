@@ -4,7 +4,6 @@ param(
     [string]$SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
     [string]$BuildDir = "",
     [string]$RosBE = "",
-    [ValidateSet("amd64", "i386")]
     [string]$Arch = "amd64"
 )
 
@@ -23,13 +22,11 @@ function Find-RosBE {
     return $null
 }
 
+if ($Arch -ne "amd64") {
+    Write-Error "ARCH=amd64 is the only supported OS build. A native i386 boot is not supported. 32-bit applications run on the amd64 boot."
+}
 if (-not $BuildDir) {
-    if ($Arch -eq "amd64") {
-        $BuildDir = Join-Path $SourceRoot "build-amd64"
-    }
-    else {
-        $BuildDir = Join-Path $SourceRoot "build"
-    }
+    $BuildDir = Join-Path $SourceRoot "build-amd64"
 }
 $RosBERoot = Find-RosBE -Hint $RosBE
 if (-not $RosBERoot) {
@@ -41,49 +38,29 @@ if (-not $RosBERoot) {
 }
 
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
-$envCmd = Join-Path $RosBERoot "rosbe-gcc-env.cmd"
 $buildArgs = "--build `"$BuildDir`" --target bootcd"
 $runner = Join-Path $BuildDir "build-bootcd.cmd"
-if ($Arch -eq "i386") {
-    $toolchain = Join-Path $SourceRoot "toolchain-gcc.cmake"
-    $cmakeArgs = "-S `"$SourceRoot`" -B `"$BuildDir`" -G Ninja -DCMAKE_TOOLCHAIN_FILE:FILEPATH=`"$toolchain`" -DARCH:STRING=i386 -DCMAKE_BUILD_TYPE=Debug -DENABLE_CCACHE:BOOL=0"
-    $lines = @(
-        "@echo off",
-        "set ROS_ARCH=i386",
-        "set BUILD_ENVIRONMENT=MinGW",
-        "set _ROSBE_BASEDIR=$RosBERoot",
-        "set _ROSBE_HOST_MINGWPATH=$RosBERoot\i386",
-        "set _ROSBE_TARGET_MINGWPATH=$RosBERoot\i386",
-        "set BISON_PKGDATADIR=$RosBERoot\share\bison",
-        "set M4=$RosBERoot\bin\m4.exe",
-        "set _ROSBE_ORIGINALPATH=$RosBERoot;$RosBERoot\bin;%PATH%",
-        "set PATH=$RosBERoot\bin;$RosBERoot\i386\bin;%PATH%",
-        "call `"$envCmd`""
-    )
+$clang = $null
+foreach ($candidate in @(
+    "D:\LLVM-18\clang+llvm-18.1.8-x86_64-pc-windows-msvc\bin\clang.exe",
+    "C:\Program Files\LLVM\bin\clang.exe"
+)) {
+    if (Test-Path $candidate) { $clang = $candidate; break }
 }
-else {
-    $clang = $null
-    foreach ($candidate in @(
-        "D:\LLVM-18\clang+llvm-18.1.8-x86_64-pc-windows-msvc\bin\clang.exe",
-        "C:\Program Files\LLVM\bin\clang.exe"
-    )) {
-        if (Test-Path $candidate) { $clang = $candidate; break }
-    }
-    if (-not $clang) {
-        Write-Error "amd64 needs Clang. RosBE's amd64 GCC was built without plugin support, so it cannot compile this tree."
-    }
-    $clangBin = Split-Path $clang -Parent
-    $toolchain = Join-Path $SourceRoot "toolchain-clang.cmake"
-    $cmakeArgs = "-S `"$SourceRoot`" -B `"$BuildDir`" -G Ninja -DCMAKE_TOOLCHAIN_FILE:FILEPATH=`"$toolchain`" -DARCH:STRING=amd64 -DCMAKE_BUILD_TYPE=Debug -DENABLE_CCACHE:BOOL=0"
-    $lines = @(
-        "@echo off",
-        "set ROS_ARCH=amd64",
-        "set _ROSBE_ROSSCRIPTDIR=$RosBERoot",
-        "set BISON_PKGDATADIR=$RosBERoot\share\bison",
-        "set M4=$RosBERoot\bin\m4.exe",
-        "set PATH=$clangBin;$RosBERoot\amd64\bin;$RosBERoot\bin;%PATH%"
-    )
+if (-not $clang) {
+    Write-Error "amd64 needs Clang. RosBE's amd64 GCC was built without plugin support, so it cannot compile this tree."
 }
+$clangBin = Split-Path $clang -Parent
+$toolchain = Join-Path $SourceRoot "toolchain-clang.cmake"
+$cmakeArgs = "-S `"$SourceRoot`" -B `"$BuildDir`" -G Ninja -DCMAKE_TOOLCHAIN_FILE:FILEPATH=`"$toolchain`" -DARCH:STRING=amd64 -DCMAKE_BUILD_TYPE=Debug -DENABLE_CCACHE:BOOL=0"
+$lines = @(
+    "@echo off",
+    "set ROS_ARCH=amd64",
+    "set _ROSBE_ROSSCRIPTDIR=$RosBERoot",
+    "set BISON_PKGDATADIR=$RosBERoot\share\bison",
+    "set M4=$RosBERoot\bin\m4.exe",
+    "set PATH=$clangBin;$RosBERoot\amd64\bin;$RosBERoot\bin;%PATH%"
+)
 $lines += @(
     "cmake $cmakeArgs",
     "if errorlevel 1 exit /b %errorlevel%",

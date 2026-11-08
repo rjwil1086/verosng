@@ -5,6 +5,11 @@ if [ "x$ROS_ARCH" = "x" ]; then
 	exit 1
 fi
 
+if [ "$ROS_ARCH" = "i386" ]; then
+	echo "ARCH=amd64 is the only supported OS build. A native i386 boot is not supported. 32-bit applications run on the amd64 boot."
+	exit 1
+fi
+
 BUILD_ENVIRONMENT=MinGW
 ARCH=$ROS_ARCH
 REACTOS_SOURCE_DIR=$(cd `dirname $0` && pwd)

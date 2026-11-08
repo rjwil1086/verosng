@@ -1,11 +1,11 @@
 # Local build
 
-This fork is built and booted on Windows. The first configuration is GCC, i386, Debug, target `bootcd`.
+This fork is built and booted on Windows. `ARCH=amd64` is the only supported OS build. 32-bit applications run on that boot. The daily configuration is Clang, amd64, Debug, target `bootcd`.
 
 ## Tools
 
 - ReactOS Build Environment 2.2.1. The silent installer returned exit code 2, so the same files were extracted to `D:\RosBE`. The scripts also look for `C:\RosBE`. `rosbe-gcc-env.cmd` is the toolchain entry point.
-- QEMU 11.1.0 at `C:\Program Files\qemu\qemu-system-i386.exe`. It is not on `PATH`. `qemu-system-i386 -accel help` lists only `tcg`, so boot tests pass `-accel tcg` and record `accelerator=tcg`. Do not pass `-accel whpx` to this binary. Windows 10 22H2 and VerOS NG boots pass `-m 8192 -smp 4`.
+- QEMU 11.1.0 at `C:\Program Files\qemu\qemu-system-x86_64.exe`. It is not on `PATH`. Boot tests pass `-accel tcg` and record `accelerator=tcg`. Do not pass `-accel whpx`. Windows 10 22H2 and VerOS NG boots pass `-m 8192 -smp 4`.
 
 If a real boot never prints the ReactOS version banner within 20 minutes, switch to a QEMU build that includes WHPX. `WinHvPlatform.dll` is already on this machine.
 
@@ -20,9 +20,9 @@ From the source root:
 .\tools\pipeline\Invoke-Pipeline.ps1
 ```
 
-`Build-Bootcd.ps1` configures an out-of-tree `build/` directory and builds `bootcd` with Ninja at `-j 8`. It sets `BISON_PKGDATADIR` and `M4` before the toolchain script, because the extracted RosBE bison otherwise looks for data under its original build path. A parallel MinGW link can fail with `Cannot open output file: Invalid argument`, and `pefixup` can fail with `Can't open` when the image is still being written. The script retries the build up to 8 times, and Ninja resumes at the failed target. `Test-Boot.ps1` boots that ISO for 20 minutes, writes a serial log, and loads `tools/qemu-harness/abi.dll` when the DLL is present. `Invoke-Pipeline.ps1` builds, boots, writes a crash report, and refreshes `dashboard/data/snapshot.json`. When that snapshot records a plugin return or bugcheck for a kernel export or a driver ABI export, the same run copies those category percents into `veros/dashboard/latest.json`. `tools/syscall-diff/Publish-Dashboard.ps1` copies them again after it refreshes the syscall scores.
+`Build-Bootcd.ps1` configures an out-of-tree `build-amd64/` directory and builds `bootcd` with Ninja at `-j 8`. `Test-Boot.ps1` boots `build-amd64\bootcd.iso`. It sets `BISON_PKGDATADIR` and `M4` before the toolchain script, because the extracted RosBE bison otherwise looks for data under its original build path. A parallel MinGW link can fail with `Cannot open output file: Invalid argument`, and `pefixup` can fail with `Can't open` when the image is still being written. The script retries the build up to 8 times, and Ninja resumes at the failed target. `Test-Boot.ps1` boots that ISO for 20 minutes, writes a serial log, and loads `tools/qemu-harness/abi.dll` when the DLL is present. `Invoke-Pipeline.ps1` builds, boots, writes a crash report, and refreshes `dashboard/data/snapshot.json`. When that snapshot records a plugin return or bugcheck for a kernel export or a driver ABI export, the same run copies those category percents into `veros/dashboard/latest.json`. `tools/syscall-diff/Publish-Dashboard.ps1` copies them again after it refreshes the syscall scores.
 
-`build/` and `output/` are gitignored. Open `dashboard/index.html` after a snapshot refresh. The page reads `dashboard/data/snapshot.js`, so it works from the filesystem.
+`build-amd64/` and `output/` are gitignored. Open `dashboard/index.html` after a snapshot refresh. The page reads `dashboard/data/snapshot.js`, so it works from the filesystem.
 
 ## Harness
 

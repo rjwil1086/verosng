@@ -8,14 +8,14 @@
             "type": "shell",
             "command": "ninja bootcd",
             "options": {
-                "cwd": "${workspaceFolder}/build"
+                "cwd": "${workspaceFolder}/build-amd64"
             },
             "group": "build",
             "problemMatcher": [
                 {
                     "base": "$gcc",
                     "owner": "cpp",
-                    "fileLocation": ["relative", "${workspaceFolder}/build"],
+                    "fileLocation": ["relative", "${workspaceFolder}/build-amd64"],
                     "pattern": {
                         "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
                         "file": 1,
@@ -31,18 +31,20 @@
             "label": "launch bootcd",
             "type": "process",
             "options": {
-                "cwd": "${workspaceFolder}/build"
+                "cwd": "${workspaceFolder}/build-amd64"
             },
             "dependsOn": [
                 "build bootcd"
             ],
             "dependsOrder": "sequence",
-            "command": "qemu-system-i386",
+            "command": "qemu-system-x86_64",
             "args": [
+                "-accel", "tcg",
                 "-cdrom", "bootcd.iso",
                 "-hda", "${env:HOME}/reactos_hdd.qcow",
                 "-boot", "d",
-                "-m", "1024",
+                "-m", "8192",
+                "-smp", "4",
                 "-chardev", "socket,port=9091,host=localhost,server,nowait,id=char0",
                 "-serial", "chardev:char0",
                 "-nic", "user,model=e1000",

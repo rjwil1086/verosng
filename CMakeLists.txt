@@ -30,7 +30,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 # check that the ARCH (target architecture) variable is defined
 if(NOT ARCH)
-    message(FATAL_ERROR "Target architecture (ARCH) is not defined. Please, choose one of: i386, amd64, arm, arm64")
+    message(FATAL_ERROR "Target architecture (ARCH) is not defined. Please, choose one of: amd64, arm, arm64")
 endif()
 # Now the ARCH variable will be in lowercase.
 # It is needed because STREQUAL comparison
@@ -39,8 +39,12 @@ endif()
 # for more information.
 string(TOLOWER ${ARCH} ARCH)
 
+if(ARCH STREQUAL "i386")
+    message(FATAL_ERROR "ARCH=amd64 is the only supported PC build. A native i386 boot is not supported. 32-bit applications run on the amd64 boot.")
+endif()
+
 # set possible values for cmake GUI
-set_property(CACHE ARCH PROPERTY STRINGS "i386" "amd64" "arm" "arm64")
+set_property(CACHE ARCH PROPERTY STRINGS "amd64" "arm" "arm64")
 
 # Alternative WinNT-compatible architecture string
 if(ARCH STREQUAL "i386")

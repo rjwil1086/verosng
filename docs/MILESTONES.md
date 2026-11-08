@@ -179,7 +179,7 @@ Deliverables:
 - `ARCH=amd64` is the default build, in `build-amd64`
 - `qemu-system-x86_64` is that boot
 - The plugin and syscall-diff rebuilt for `SYSCALL` and the x64 register ABI
-- i386 still builds when the build is asked for it, and it is no longer the boot that runs by default
+- A native i386 OS build stayed configurable until milestone 9. That milestone makes `ARCH=amd64` the only supported OS build.
 
 Export names stay the same.
 
@@ -188,7 +188,7 @@ Success criteria:
 - The daily boot is the amd64 guest
 - The top-100 probe is recaptured on that native path and is the headline score
 
-A Windows driver returning from `DriverEntry` is milestone 16, and it waits until an application needs that device. The kernel still reports NT 5.2 until milestone 10. Milestone 9 is the later decision that an i386 CPU is not a supported boot.
+A Windows driver returning from `DriverEntry` is milestone 16, and it waits until an application needs that device. The kernel still reports NT 5.2 until milestone 10. Milestone 9 removes the native i386 OS build. 32-bit applications stay on the amd64 boot.
 
 ## Milestone 7: x64 application surface
 
@@ -259,6 +259,12 @@ Success criteria:
 
 - An i386 build failure does not block a commit whose amd64 live CD still reaches the desktop.
 - The milestone 8 probe still runs on that amd64 guest.
+
+What landed:
+
+- `ARCH=amd64` is the only supported OS build. CMake, `configure.cmd`, `configure.sh`, and the CMake presets reject `ARCH=i386`.
+- The daily boot, the boot test, crash collection, and the probe use `build-amd64` and `qemu-system-x86_64`. The CI workflow no longer builds a native i386 OS.
+- The i386 sources, the HAL, FreeLoader, the CRT, NTVDM, and the WoW64 path stay. A 32-bit application still runs on the amd64 boot in milestone 15.
 
 ## Milestone 10: Application version report
 

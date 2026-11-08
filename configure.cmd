@@ -76,6 +76,11 @@ if not defined ARCH (
     goto quit
 )
 
+if /I not "%ARCH%"=="i386" goto arch_ok
+echo ARCH=amd64 is the only supported OS build. A native i386 boot is not supported. 32-bit applications run on the amd64 boot.
+exit /b 1
+:arch_ok
+
 set USE_CLANG_CL=0
 
 REM Parse command line parameters

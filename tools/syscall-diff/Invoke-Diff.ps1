@@ -4,7 +4,6 @@ param(
     [string]$SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
     [string]$Disk = "D:\VMware\Windows 10 x64\Windows 10 x64.vmdk",
     [string]$Qemu64 = "C:\Program Files\qemu\qemu-system-x86_64.exe",
-    [string]$Qemu32 = "C:\Program Files\qemu\qemu-system-i386.exe",
     [switch]$SkipWindows,
     [switch]$SkipReactOS
 )
@@ -26,7 +25,7 @@ function Build-Probe {
 
 function New-ProbeIso {
     param([string]$Exe)
-    $mkisofs = Join-Path $SourceRoot "build\host-tools\bin\mkisofs.exe"
+    $mkisofs = Join-Path $SourceRoot "build-amd64\host-tools\bin\mkisofs.exe"
     if (-not (Test-Path $mkisofs)) { Write-Error "mkisofs was not found at $mkisofs" }
     $dir = Join-Path $out "iso"
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
