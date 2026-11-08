@@ -81,7 +81,9 @@ $driverAbiPaths = @(
 $graphicsPaths = @(
     "win32ss/",
     "dll/directx/",
-    "compat/catalog/graphics.json"
+    "compat/catalog/graphics.json",
+    "tools/graphics-diff/",
+    "compat/reference/win10-22h2-graphics.txt"
 )
 
 $sections = New-Object System.Collections.Generic.List[string]

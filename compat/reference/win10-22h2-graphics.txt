@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Milestone 19 application contract. The second column is how a Windows
+# success is recognized. Draw tokens are pixel hashes. Device tokens are
+# HRESULT and the feature level written back to the caller.
+Module.User32 module
+Module.Gdi32 module
+Module.Dxgi module
+Module.D3d11 module
+Module.Opengl32 module
+Gdi.BitsPixel number
+Gdi.MemoryDc status
+Gdi.Dib32 status
+Gdi.Fill draw
+Gdi.Rect draw
+Gdi.Line draw
+Gdi.Blit draw
+Gdi.Stretch draw
+Gdi.Alpha draw
+Gdi.Pixel draw
+D3d11.CreateDevice device
+D3d11.Clear draw
+Opengl.Draw draw

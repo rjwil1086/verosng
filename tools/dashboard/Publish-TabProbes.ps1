@@ -201,6 +201,30 @@ function Read-TraceCounts {
     return [pscustomobject]@{ Workloads = $workloads; Corpus = $corpus; Named = $namedTotal }
 }
 
+function Get-ContractStatus {
+    param($Report, [string[]]$Names)
+    $rows = @($Report.calls | Where-Object { $Names -contains $_.name })
+    if ($rows.Count -eq 0) { return "untested" }
+    $done = @($rows | Where-Object { $_.windowsCompleted -eq $true })
+    if ($done.Count -eq 0) { return "untested" }
+    $matched = @($done | Where-Object { $_.capabilityMatch -eq $true })
+    if ($matched.Count -eq $done.Count) { return "works" }
+    $present = @($rows | Where-Object { $_.reactos -ne "MISSING" -and $_.reactos -ne "missing" })
+    if ($present.Count -eq 0) { return "missing" }
+    return "partial"
+}
+
+function Get-GraphicsReport {
+    param([string]$Root)
+    $dir = Join-Path $Root "output\graphics-diff"
+    $reportPath = Join-Path $dir "report.json"
+    $winLog = Join-Path $dir "windows.log"
+    if (-not (Test-Path -LiteralPath $reportPath)) { return $null }
+    if (-not (Test-Path -LiteralPath $winLog)) { return $null }
+    if (-not (Select-String -LiteralPath $winLog -Pattern "DIFF END OK" -Quiet)) { return $null }
+    return (Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json)
+}
+
 function Get-GraphicsRows {
     param([string]$Root)
     $rows = @(
@@ -212,10 +236,18 @@ function Get-GraphicsRows {
         @{ Name = "D3D12"; Rel = "dll/directx/wine/d3d12"; Present = "untested"; Absent = "missing" },
         @{ Name = "WDDM"; Rel = "win32ss/gdi/ntgdi/d3dkmt.c"; Present = "partial"; Absent = "missing" }
     )
+    $measured = Get-GraphicsReport $Root
+    $drawNames = @("Gdi.Fill", "Gdi.Rect", "Gdi.Line", "Gdi.Blit", "Gdi.Stretch", "Gdi.Alpha", "Gdi.Pixel")
     $built = @()
     foreach ($row in $rows) {
         $exists = Test-Path -LiteralPath (Join-Path $Root ($row.Rel -replace '/', '\'))
         $status = $(if ($exists) { $row.Present } else { $row.Absent })
+        if ($measured -and $row.Name -eq "Software framebuffer") {
+            $status = Get-ContractStatus $measured $drawNames
+        }
+        elseif ($measured -and $row.Name -eq "D3D11") {
+            $status = Get-ContractStatus $measured @("D3d11.Clear")
+        }
         $value = switch ($status) {
             "works" { "Working" }
             "partial" { "Partial" }
@@ -497,6 +529,25 @@ function Invoke-TabSelfTest {
         if ($fb.value -ne "Partial" -or $drm.value -ne "Missing" -or $d3d.value -ne "Untested") {
             throw "graphics was $($fb.value)/$($drm.value)/$($d3d.value)"
         }
+        $gfx = Join-Path $root "output\graphics-diff"
+        New-Item -ItemType Directory -Force -Path $gfx | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $gfx "windows.log"), "DIFF END OK`r`n", $utf8)
+        $gfxReport = '{"calls":[' +
+            '{"name":"Gdi.Fill","windowsCompleted":true,"capabilityMatch":true,"reactos":"0x11111111"},' +
+            '{"name":"Gdi.Rect","windowsCompleted":true,"capabilityMatch":false,"reactos":"0x22222222"},' +
+            '{"name":"D3d11.Clear","windowsCompleted":true,"capabilityMatch":true,"reactos":"0x88888888"}' +
+            ']}'
+        [System.IO.File]::WriteAllText((Join-Path $gfx "report.json"), $gfxReport, $utf8)
+        & $PSCommandPath -SourceRoot $root -Section Graphics -WebsitePath $sitePath
+        $scored = Get-Content -LiteralPath $sitePath -Raw | ConvertFrom-Json
+        $fb2 = @($scored.graphics | Where-Object { $_.label -eq "Software framebuffer" })[0]
+        $drm2 = @($scored.graphics | Where-Object { $_.label -eq "DRM" })[0]
+        $d3d2 = @($scored.graphics | Where-Object { $_.label -eq "D3D11" })[0]
+        $wddm = @($scored.graphics | Where-Object { $_.label -eq "WDDM" })[0]
+        if ($fb2.value -ne "Partial" -or $d3d2.value -ne "Working" -or $drm2.value -ne "Missing") {
+            throw "measured graphics was $($fb2.value)/$($d3d2.value)/$($drm2.value)"
+        }
+        if ($wddm.value -ne "Partial") { throw "WDDM left the catalog and became $($wddm.value)" }
         $site2 = $filled
         $site2.syscalls[1].compatibility = 100
         $site2.overall = 100

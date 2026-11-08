@@ -1503,7 +1503,43 @@
     "body": "NtPowerInformation returned STATUS_INVALID_PARAMETER on Windows 10 22H2 and STATUS_NOT_IMPLEMENTED on this boot."
   },
   "driverAbi": 50,
-  "graphics": null,
+  "graphics": [
+    {
+      "label": "Software framebuffer",
+      "value": "Working",
+      "tone": "ok"
+    },
+    {
+      "label": "DRM",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "Compositor",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "DXVK",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "D3D11",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "D3D12",
+      "value": "Untested",
+      "tone": "warn"
+    },
+    {
+      "label": "WDDM",
+      "value": "Partial",
+      "tone": "warn"
+    }
+  ],
   "formula": [
     {
       "label": "Syscall compatibility",
@@ -1532,7 +1568,7 @@
     "bootResult": "Windows probe DIFF END OK; ReactOS probe DIFF END OK",
     "crashCount": 0
   },
-  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 88 of 101 names. 7 names failed on both sides with different codes, 2 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. lastBuild, subsystems, traceCorpus, task, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied. driverAbi is 50 from the driver ABI category (1 export returned or bugchecked; log output/abi-boot/abi.jsonl). Untested rows stay out of that percent. applicationsSummary counts 4 recorded runs in compat/catalog/apps.json (working 4, partial 0, failing 0). Untested catalog rows stay out of the count. These runs are the recorded 32-bit results, not a new amd64 launch. driversSummary counts 52 in-box DriverEntry results in output/driver/load.log (working 50, partial 0, failing 2). A zero status is working. winnull is the separately loaded Windows null.sys and is not in this count. Tab probes: Filled regression, subsystems, task from the amd64 probe, the plugin log, the Windows trace counts, and the tree.",
+  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 88 of 101 names. 7 names failed on both sides with different codes, 2 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. lastBuild, subsystems, traceCorpus, task, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied. driverAbi is 50 from the driver ABI category (1 export returned or bugchecked; log output/abi-boot/abi.jsonl). Untested rows stay out of that percent. applicationsSummary counts 4 recorded runs in compat/catalog/apps.json (working 4, partial 0, failing 0). Untested catalog rows stay out of the count. These runs are the recorded 32-bit results, not a new amd64 launch. driversSummary counts 52 in-box DriverEntry results in output/driver/load.log (working 50, partial 0, failing 2). A zero status is working. winnull is the separately loaded Windows null.sys and is not in this count. Tab probes: Filled regression, subsystems, task, graphics from the amd64 probe, the plugin log, the Windows trace counts, and the tree.",
   "unmeasured": [
     {
       "section": "lastBuild",
