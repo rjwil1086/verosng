@@ -1,0 +1,33 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How should the graphics milestones reach inbox DRM drivers and then a vendor WDDM 2.0 driver without a private graphics HAL?",
+  "allowedInputs": [
+    "docs/MILESTONES.md",
+    "The user request to update the milestones around the display-driver and ICD plan",
+    "dll/opengl/opengl32/icdload.c",
+    "win32ss/user/ntuser/display.c",
+    "win32ss/drivers/miniport/bochs/bochsmp.inf"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Let's update our milestones around this plan.",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "open-work list entries covering milestones 19 through 22",
+    "before": 2,
+    "after": 4,
+    "note": "Milestone numbers 19 through 22 stayed. The list now names each one. No boot was run."
+  }
+}
