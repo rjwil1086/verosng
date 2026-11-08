@@ -1,0 +1,32 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the website kernel ABI card show 24.2 again after the kernel commit cleared it?",
+  "allowedInputs": [
+    "The tree, including tools/kernel-abi/probe.c and the compare script",
+    "The Windows 10 22H2 guest log output/kernel-abi/windows.log, counted because it contains DIFF END OK",
+    "The VerOS amd64 live-CD guest log output/kernel-abi/reactos.log, counted because it contains DIFF END OK"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "Windows 10 22H2 and VerOS amd64 live CD",
+    "name": "kernel-abi probe",
+    "traceOrReplayId": "output/kernel-abi/windows.log and output/kernel-abi/reactos.log"
+  },
+  "cursor": {
+    "prompt": "Can we update the probe log so it's current instead?",
+    "model": "Grok 4.7",
+    "date": "2026-11-08",
+    "session": "8f5f674f-32fa-454d-86d8-2574e023a444"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "kernelAbi percent from exact token agreement on the kernel probe",
+    "before": null,
+    "after": 24.2,
+    "note": "15 of 62 names matched and ZwCreateFile stayed partial. The same 24.2 was published before the kernel commit cleared it for stale logs. Both new logs contain DIFF END OK and are newer than the kernel sources."
+  }
+}
