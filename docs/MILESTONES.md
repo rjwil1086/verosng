@@ -20,7 +20,7 @@ The open work follows this order. Finished milestones keep their numbers. A late
 10. Milestone 18. The remaining non-graphics drivers, after milestone 16, when the application needs that device. Milestones 19 through 22 do not wait for it.
 11. Milestone 19, when the application needs `opengl32` or `d3d11`.
 12. Milestone 20, when that application fails on the software rasterizer.
-13. Milestone 21, when that application still fails on virtio-gpu.
+13. Milestone 21, when that application still fails on virtio-gpu. AMD, Intel, and Nvidia firmware are separate installers.
 14. Milestone 22, when that application still fails on the DRM driver.
 15. Milestone 23. Physical memory above 8 GiB, when an application fails for lack of RAM. This finishes before milestone 24 when both are underway.
 16. Milestone 24. Logical processors, when an application needs them.
@@ -298,7 +298,7 @@ Outcome:
 What landed:
 
 - Before this change the boot published 5.2.3790 from `VER_PRODUCT*`. `SharedUserData` carried major 5 and minor 2, and its build slot was unset. `RtlGetVersion`, `PsGetVersion`, and unmanifested `GetVersion` all returned 5.2.3790. `CurrentVersion` was `5.2` and `CurrentBuildNumber` was `3790`.
-- The runtime NT version is 10.0.19045. The live CD log reports `PsGetVersion 10.0.19045`, `SharedUserData 10.0.19045`, and `RtlGetVersion 10.0.19045`. An image with no Windows 10 manifest gets `GetVersion` 6.2.9200. `CurrentVersion` is `6.3`, `CurrentMajorVersionNumber` is 10, and `CurrentBuildNumber` is `19045`.
+- The runtime NT version is 10.0.19045 with no service pack. The live CD log reports `PsGetVersion 10.0.19045`, `SharedUserData 10.0.19045`, and `RtlGetVersion 10.0.19045`. An image with no Windows 10 manifest gets `GetVersion` 6.2.9200. `CurrentVersion` is `6.3`, `CurrentMajorVersionNumber` is 10, and `CurrentBuildNumber` is `19045`. `CSDVersion` is 0, so the desktop line and `RtlGetVersion` carry an empty service-pack string.
 - The product banner stays VerOS NG 0.4.x. The PE stamp stays 5.2.3790. The tree still compiles as `_WIN32_WINNT=0x502`.
 - `KmWin2k3VersionLie` still overwrites the real version with 5.2.3790.
 - The desktop still appears. `verreport.exe` on the boot CD prints the same user-mode and registry values. The boot log recorded that split from `ntdll` and from the registry writer.
@@ -526,31 +526,41 @@ Success criteria:
 - The ICD and the DLL exports are unchanged.
 - A virtio-gpu start failure leaves framebuf selected.
 
-## Milestone 21: One DRM driver
+## Milestone 21: DRM drivers
 
-Goal: The same ICD renders through one GPL Linux GPU driver.
+Goal: The same ICD renders through the GPL AMD, Intel, and Nvidia drivers. Each vendor's firmware is its own installer.
 
-Start this when the milestone 19 program still fails on virtio-gpu. The kernel support covers the calls that one driver makes. The driver and its INF ship on the image, and PnP selects it by PCI id. The current display driver stays selected until that GPU has presented a frame. A firmware file ships with the driver when its license is GPL-2.0-compatible and it is listed in `media/doc/3rd Party Files.txt`. A task stays only when the amd64 live CD still reaches the desktop.
+Start this when the milestone 19 program still fails on virtio-gpu. The first driver is the one in the machine under test. Its kernel support covers the calls that driver makes. `amdgpu`, `i915` or `xe`, and `nouveau` follow once that GPU has presented a frame. Each driver and its INF ship on the image, and PnP selects it by PCI id. The current display driver stays selected until that GPU has presented a frame.
+
+The driver requests firmware by filename. The file stays out of this tree. The AMD installer, the Intel installer, and the Nvidia installer each place only that vendor's files where the loader looks, and each ships that vendor's license. A file ships in its installer when that license allows redistribution. A missing file leaves 3D off. A task stays only when the amd64 live CD still reaches the desktop.
 
 ```text
 Mesa
 ↓
-One DRM display driver
+amdgpu, i915 or xe, nouveau
 ↓
-One Linux GPU driver
+Firmware loader
+↓
+AMD installer, Intel installer, or Nvidia installer
 ```
 
 Tasks:
 
-- Add that display driver and its INF. Keep the current display selected when it cannot start. Boot to the desktop.
-- Modeset one simple QEMU display through that driver and show the desktop.
-- Draw the milestone 19 frame on that device.
-- Bring up one real GPU on one machine, with the current display still selected.
-- Draw the milestone 19 frame on that GPU, then let PnP select that driver for its PCI id.
+- Add the firmware loader. A missing file leaves 3D off. Boot to the desktop.
+- Add the first display driver and its INF. Keep the current display selected when it cannot start. Boot to the desktop.
+- Modeset that GPU and show the desktop.
+- Install that vendor's installer and draw the milestone 19 frame. Then let PnP select that driver for its PCI id.
+- Add `amdgpu`, `i915` or `xe`, and `nouveau`, with an INF for each vendor's PCI ids.
+- Ship the AMD installer with AMD firmware and the AMD license.
+- Ship the Intel installer with Intel firmware and the Intel license.
+- Ship the Nvidia installer with Nvidia firmware and the Nvidia license.
+- Draw the milestone 19 frame on one GPU from each vendor that has a machine.
 
 Success criteria:
 
-- The milestone 19 program draws a frame on that GPU.
+- The milestone 19 program draws a frame on a GPU whose installer is installed.
+- Installing one vendor's package leaves the other two vendors' firmware uninstalled.
+- A missing installer leaves that GPU in modeset with 3D off.
 - Selecting the DRM driver does not change the application or the DLL exports.
 - A start failure leaves the previous display driver selected.
 
@@ -578,7 +588,7 @@ dxgmms2
 WDDM 2.0 miniport
 ```
 
-This follows milestone 21. The vendor package matches the same PCI id and ranks above the inbox DRM driver. The inbox driver stays installed. A task stays only when the amd64 live CD still reaches the desktop. The current display driver stays the boot display until this miniport has presented a frame.
+This follows milestone 21. The vendor package matches the same PCI id and ranks above the inbox DRM driver. The inbox driver stays installed. The AMD, Intel, and Nvidia firmware installers stay separate packages. A task stays only when the amd64 live CD still reaches the desktop. The current display driver stays the boot display until this miniport has presented a frame.
 
 Tasks:
 
@@ -1005,6 +1015,15 @@ virtio-gpu:
 ✅
 
 DRM driver:
+✅
+
+AMD firmware installer:
+✅
+
+Intel firmware installer:
+✅
+
+Nvidia firmware installer:
 ✅
 
 DXVK:

@@ -1,0 +1,31 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How should AMD, Intel, and Nvidia GPU firmware be packaged so each vendor has its own installer?",
+  "allowedInputs": [
+    "docs/MILESTONES.md",
+    "The user request for a separate AMD installer, Intel installer, and Nvidia installer",
+    "The linux-firmware redistribution model discussed in this session: a GPL driver requests a file by name, and a separate package installs that file when its license allows redistribution"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Can we update the milestones around this idea of providing separate installers for each vendor? I'd want a AMD isntaller, a Intel installer, and a Nvidia installer. I see no reason to bundle them all together.",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "vendor firmware installers named in docs/MILESTONES.md",
+    "before": 0,
+    "after": 3,
+    "note": "Milestone numbers 22 through 26 stayed. No boot was run."
+  }
+}
