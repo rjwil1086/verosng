@@ -795,7 +795,8 @@ NtfsExtendAllocation(
                                       DesiredCluster,
                                       ClustersNeeded,
                                       &NextAssignedCluster,
-                                      &AssignedClusters);
+                                      &AssignedClusters,
+                                      FileRecord == Vcb->MasterFileTable);
 
         if (!NT_SUCCESS(Status))
         {
@@ -2478,6 +2479,48 @@ FixupUpdateSequenceArray(PDEVICE_EXTENSION Vcb,
 * STATUS_INSUFFICIENT_RESOURCES if we can't allocate enough memory for a copy of $Bitmap.
 * STATUS_CANT_WAIT if CanWait was FALSE and the function could not get immediate, exclusive access to the MFT.
 */
+static
+BOOLEAN
+NtfsMftBitSet(PUCHAR Bitmap, ULONGLONG Bit)
+{
+    return (Bitmap[Bit / 8] & (UCHAR)(1 << (Bit % 8))) != 0;
+}
+
+static
+VOID
+NtfsMftSetBit(PUCHAR Bitmap, ULONGLONG Bit, BOOLEAN Set)
+{
+    PUCHAR Byte = &Bitmap[Bit / 8];
+    UCHAR Mask = (UCHAR)(1 << (Bit % 8));
+
+    if (Set)
+        *Byte |= Mask;
+    else
+        *Byte &= (UCHAR)~Mask;
+}
+
+/* Bit 0 is the low bit of the first byte, matching RTL_BITMAP. */
+static
+ULONGLONG
+NtfsMftFindClearBit(PUCHAR Bitmap, ULONGLONG BitCount, ULONGLONG Hint)
+{
+    ULONGLONG Index;
+
+    if (Hint >= BitCount)
+        Hint = 24;
+    for (Index = Hint; Index < BitCount; Index++)
+    {
+        if (!NtfsMftBitSet(Bitmap, Index))
+            return Index;
+    }
+    for (Index = 24; Index < Hint; Index++)
+    {
+        if (!NtfsMftBitSet(Bitmap, Index))
+            return Index;
+    }
+    return ~0ULL;
+}
+
 NTSTATUS
 AddNewMftEntry(PFILE_RECORD_HEADER FileRecord,
                PDEVICE_EXTENSION DeviceExt,
@@ -2545,19 +2588,22 @@ AddNewMftEntry(PFILE_RECORD_HEADER FileRecord,
                           DeviceExt->NtfsInfo.BytesPerFileRecord;
     if (BitmapBits.HighPart != 0)
     {
-        DPRINT1("\tFIXME: bitmap sizes beyond 32bits are not yet supported! (Your NTFS volume is too large)\n");
-        NtfsGlobalData->EnableWriteSupport = FALSE;
-        ExFreePoolWithTag(BitmapBuffer, TAG_NTFS);
-        ReleaseAttributeContext(BitmapContext);
-        return STATUS_NOT_IMPLEMENTED;
+        /* RTL_BITMAP counts bits in a ULONG. Walk the bytes directly so a
+         * larger master file table does not turn writes off. */
+        MftIndex = NtfsMftFindClearBit(BitmapData, BitmapBits.QuadPart, 24);
+        if (MftIndex != ~0ULL)
+            NtfsMftSetBit(BitmapData, MftIndex, TRUE);
+    }
+    else
+    {
+        // convert buffer into bitmap
+        RtlInitializeBitMap(&Bitmap, (PULONG)BitmapData, BitmapBits.LowPart);
+
+        // set next available bit, preferrably after 23rd bit
+        MftIndex = RtlFindClearBitsAndSet(&Bitmap, 1, 24);
     }
 
-    // convert buffer into bitmap
-    RtlInitializeBitMap(&Bitmap, (PULONG)BitmapData, BitmapBits.LowPart);
-
-    // set next available bit, preferrably after 23rd bit
-    MftIndex = RtlFindClearBitsAndSet(&Bitmap, 1, 24);
-    if ((LONG)MftIndex == -1)
+    if (MftIndex == ~0ULL || (BitmapBits.HighPart == 0 && (LONG)MftIndex == -1))
     {
         DPRINT1("Couldn't find free space in MFT for file record, increasing MFT size.\n");
 
@@ -3410,14 +3456,6 @@ FreeMftEntry(PDEVICE_EXTENSION DeviceExt,
 
     BitmapBits.QuadPart = AttributeDataLength(DeviceExt->MFTContext->pRecord) /
                           DeviceExt->NtfsInfo.BytesPerFileRecord;
-    if (BitmapBits.HighPart != 0)
-    {
-        DPRINT1("\tFIXME: bitmap sizes beyond 32bits are not yet supported! (Your NTFS volume is too large)\n");
-        ExFreePoolWithTag(BitmapBuffer, TAG_NTFS);
-        ReleaseAttributeContext(BitmapContext);
-        return STATUS_NOT_IMPLEMENTED;
-    }
-
     if (MftIndex >= BitmapBits.QuadPart)
     {
         DPRINT1("ERROR: Mft index %I64u is beyond the end of the master file table!\n", MftIndex);
@@ -3426,8 +3464,13 @@ FreeMftEntry(PDEVICE_EXTENSION DeviceExt,
         return STATUS_INVALID_PARAMETER;
     }
 
-    RtlInitializeBitMap(&Bitmap, (PULONG)BitmapData, BitmapBits.LowPart);
-    RtlClearBits(&Bitmap, (ULONG)MftIndex, 1);
+    if (BitmapBits.HighPart != 0)
+        NtfsMftSetBit(BitmapData, MftIndex, FALSE);
+    else
+    {
+        RtlInitializeBitMap(&Bitmap, (PULONG)BitmapData, BitmapBits.LowPart);
+        RtlClearBits(&Bitmap, (ULONG)MftIndex, 1);
+    }
 
     Status = WriteAttribute(DeviceExt, BitmapContext, 0, BitmapData, BitmapDataSize, &LengthWritten, NULL);
     if (!NT_SUCCESS(Status))

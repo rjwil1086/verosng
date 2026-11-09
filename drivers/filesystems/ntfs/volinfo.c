@@ -206,19 +206,89 @@ NtfsGetFreeClusters(PDEVICE_EXTENSION DeviceExt)
 }
 
 /**
+* Claim up to Want clear clusters inside [From, ToExclusive). A full run is
+* preferred. The bits are marked in use. Returns FALSE when the window has none.
+*/
+static
+BOOLEAN
+NtfsClaimRun(PRTL_BITMAP Bitmap,
+             ULONG From,
+             ULONG ToExclusive,
+             ULONG Want,
+             PULONG Assigned,
+             PULONG Count)
+{
+    ULONG Pass;
+    ULONG RunStart;
+    ULONG RunLength;
+    ULONG Take;
+
+    if (From >= ToExclusive || Want == 0)
+        return FALSE;
+
+    for (Pass = 0; Pass < 2; Pass++)
+    {
+        ULONG Cursor = From;
+
+        RunLength = RtlFindNextForwardRunClear(Bitmap, Cursor, &RunStart);
+        while (RunLength != 0 && RunStart < ToExclusive)
+        {
+            if (RunStart < From)
+            {
+                ULONG Skip = From - RunStart;
+
+                if (RunLength <= Skip)
+                    goto Next;
+                RunStart = From;
+                RunLength -= Skip;
+            }
+
+            Take = min(RunLength, ToExclusive - RunStart);
+            if (Pass == 0 && Take < Want)
+                goto Next;
+
+            Take = min(Take, Want);
+            if (Take != 0)
+            {
+                RtlSetBits(Bitmap, RunStart, Take);
+                *Assigned = RunStart;
+                *Count = Take;
+                return TRUE;
+            }
+
+Next:
+            if (RunStart + RunLength <= RunStart)
+                break;
+            Cursor = RunStart + RunLength;
+            if (Cursor >= Bitmap->SizeOfBitMap)
+                break;
+            RunLength = RtlFindNextForwardRunClear(Bitmap, Cursor, &RunStart);
+        }
+    }
+
+    return FALSE;
+}
+
+/**
 * NtfsAllocateClusters
 * Allocates a run of clusters. The run allocated might be smaller than DesiredClusters.
+* ForMft is set when the clusters extend $MFT. Other files leave the reservation
+* zone alone until nowhere else is free.
 */
 NTSTATUS
 NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
                      ULONG FirstDesiredCluster,
                      ULONG DesiredClusters,
                      PULONG FirstAssignedCluster,
-                     PULONG AssignedClusters)
+                     PULONG AssignedClusters,
+                     BOOLEAN ForMft)
 {
     NTSTATUS Status;
     PRTL_BITMAP Bitmap = &DeviceExt->ClusterBitmap;
-    ULONG AssignedRun;
+    ULONG BitmapSize;
+    ULONG ZoneStart;
+    ULONG ZoneEnd;
+    BOOLEAN Claimed = FALSE;
 
     DPRINT("NtfsAllocateClusters(%p, %lu, %lu, %p, %p)\n", DeviceExt, FirstDesiredCluster, DesiredClusters, FirstAssignedCluster, AssignedClusters);
 
@@ -235,39 +305,46 @@ NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
     }
 
     /* The hint is just past the file's last cluster, which can be past the volume end */
-    if (FirstDesiredCluster >= Bitmap->SizeOfBitMap)
+    BitmapSize = Bitmap->SizeOfBitMap;
+    if (FirstDesiredCluster >= BitmapSize)
         FirstDesiredCluster = 0;
 
-    // TODO: Observe MFT reservation zone
+    ZoneStart = (ULONG)min(DeviceExt->NtfsInfo.MftZoneStart, BitmapSize);
+    ZoneEnd = (ULONG)min(DeviceExt->NtfsInfo.MftZoneEnd, BitmapSize);
+    if (ZoneEnd < ZoneStart)
+        ZoneEnd = ZoneStart;
 
-    // Can we get one contiguous run?
-    AssignedRun = RtlFindClearBitsAndSet(Bitmap, DesiredClusters, FirstDesiredCluster);
-
-    if (AssignedRun != 0xFFFFFFFF)
+    if (ForMft)
     {
-        *FirstAssignedCluster = AssignedRun;
-        *AssignedClusters = DesiredClusters;
+        ULONG Hint = FirstDesiredCluster;
+
+        if (Hint < ZoneStart || Hint >= ZoneEnd)
+            Hint = ZoneStart;
+        Claimed = NtfsClaimRun(Bitmap, Hint, ZoneEnd, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+        if (!Claimed)
+            Claimed = NtfsClaimRun(Bitmap, ZoneEnd, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+        if (!Claimed)
+            Claimed = NtfsClaimRun(Bitmap, 0, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
     }
     else
     {
-        // we can't get one contiguous run
-        *AssignedClusters = RtlFindNextForwardRunClear(Bitmap, FirstDesiredCluster, FirstAssignedCluster);
+        if (FirstDesiredCluster < ZoneStart)
+            Claimed = NtfsClaimRun(Bitmap, FirstDesiredCluster, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+        else if (FirstDesiredCluster >= ZoneEnd)
+            Claimed = NtfsClaimRun(Bitmap, FirstDesiredCluster, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
 
-        if (*AssignedClusters == 0)
-        {
-            // we couldn't find any runs starting at DesiredFirstCluster
-            *AssignedClusters = RtlFindLongestRunClear(Bitmap, FirstAssignedCluster);
-        }
+        if (!Claimed)
+            Claimed = NtfsClaimRun(Bitmap, ZoneEnd, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+        if (!Claimed)
+            Claimed = NtfsClaimRun(Bitmap, 0, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+        if (!Claimed)
+            Claimed = NtfsClaimRun(Bitmap, ZoneStart, ZoneEnd, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+    }
 
-        if (*AssignedClusters == 0)
-        {
-            Status = STATUS_DISK_FULL;
-            goto Quit;
-        }
-
-        /* Hand out no more than was asked for, and mark it in use */
-        *AssignedClusters = min(*AssignedClusters, DesiredClusters);
-        RtlSetBits(Bitmap, *FirstAssignedCluster, *AssignedClusters);
+    if (!Claimed)
+    {
+        Status = STATUS_DISK_FULL;
+        goto Quit;
     }
 
     Status = NtfsWriteVolumeBitmap(DeviceExt, *FirstAssignedCluster, *AssignedClusters);

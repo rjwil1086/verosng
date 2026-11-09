@@ -48,7 +48,7 @@ typedef struct _NTFS_VOLUME_INFO
     ULONG MftRecordSize;
     ULONG IndexRecordSize;
     PNTFS_MFT_RECORD MasterFileTable;
-    /* FIXME: MFTContext is never freed. */
+    /* Freed with the volume when this device is mounted again. */
     PNTFS_ATTR_CONTEXT MFTContext;
     ULONG DeviceId;
     PUCHAR TemporarySector;
@@ -114,25 +114,14 @@ static PNTFS_ATTR_CONTEXT NtfsPrepareAttributeContext(PNTFS_ATTR_RECORD AttrReco
     RtlCopyMemory(&Context->Record, AttrRecord, AttrRecord->Length);
     if (AttrRecord->IsNonResident)
     {
-        LONGLONG DataRunOffset;
-        ULONGLONG DataRunLength;
-
+        /* Length 0 means the run cache has not been filled yet. Decoding the
+         * first run here left CacheRun pointing at the next run, so a later
+         * hit treated the second run as the first. */
         Context->CacheRun = (PUCHAR)&Context->Record + Context->Record.NonResident.MappingPairsOffset;
         Context->CacheRunOffset = 0;
-        Context->CacheRun = NtfsDecodeRun(Context->CacheRun, &DataRunOffset, &DataRunLength);
-        Context->CacheRunLength = DataRunLength;
-        if (DataRunOffset != -1)
-        {
-            /* Normal run. */
-            Context->CacheRunStartLCN =
-            Context->CacheRunLastLCN = DataRunOffset;
-        }
-        else
-        {
-            /* Sparse run. */
-            Context->CacheRunStartLCN = -1;
-            Context->CacheRunLastLCN = 0;
-        }
+        Context->CacheRunLength = 0;
+        Context->CacheRunStartLCN = 0;
+        Context->CacheRunLastLCN = 0;
         Context->CacheRunCurrentOffset = 0;
     }
 
@@ -252,9 +241,11 @@ static ULONG NtfsReadAttribute(PNTFS_VOLUME_INFO Volume, PNTFS_ATTR_CONTEXT Cont
 
     AlreadyRead = 0;
 
-    // FIXME: Cache seems to be non-working. Disable it for now
-    //if(Context->CacheRunOffset <= Offset && Offset < Context->CacheRunOffset + Context->CacheRunLength * Volume->ClusterSize)
-    if (0)
+    /* CacheRunOffset is the file offset where the cached run begins, and
+     * CacheRun points at the encoded run that follows it. */
+    if (Context->CacheRunLength != 0 &&
+        Context->CacheRunOffset <= Offset &&
+        Offset < Context->CacheRunOffset + Context->CacheRunLength * Volume->ClusterSize)
     {
         DataRun = Context->CacheRun;
         LastLCN = Context->CacheRunLastLCN;
@@ -286,6 +277,13 @@ static ULONG NtfsReadAttribute(PNTFS_VOLUME_INFO Volume, PNTFS_ATTR_CONTEXT Cont
             if (Offset >= CurrentOffset &&
                 Offset < CurrentOffset + (DataRunLength * Volume->ClusterSize))
             {
+                /* Remember this run, not the position after the read. */
+                Context->CacheRun = DataRun;
+                Context->CacheRunOffset = CurrentOffset;
+                Context->CacheRunLength = DataRunLength;
+                Context->CacheRunStartLCN = DataRunStartLCN;
+                Context->CacheRunLastLCN = LastLCN;
+                Context->CacheRunCurrentOffset = CurrentOffset;
                 break;
             }
 
@@ -362,13 +360,6 @@ static ULONG NtfsReadAttribute(PNTFS_VOLUME_INFO Volume, PNTFS_ATTR_CONTEXT Cont
         } /* while */
 
     } /* if Disk */
-
-    Context->CacheRun = DataRun;
-    Context->CacheRunOffset = Offset + AlreadyRead;
-    Context->CacheRunStartLCN = DataRunStartLCN;
-    Context->CacheRunLength = DataRunLength;
-    Context->CacheRunLastLCN = LastLCN;
-    Context->CacheRunCurrentOffset = CurrentOffset;
 
     return AlreadyRead;
 }
@@ -1062,6 +1053,18 @@ const DEVVTBL NtfsFuncTable =
     L"ntfs",
 };
 
+static VOID
+NtfsFreeVolume(PNTFS_VOLUME_INFO Volume)
+{
+    if (Volume->MFTContext)
+        NtfsReleaseAttributeContext(Volume->MFTContext);
+    if (Volume->MasterFileTable)
+        FrLdrTempFree(Volume->MasterFileTable, TAG_NTFS_MFT);
+    if (Volume->TemporarySector)
+        FrLdrTempFree(Volume->TemporarySector, TAG_NTFS_DATA);
+    FrLdrTempFree(Volume, TAG_NTFS_VOLUME);
+}
+
 const DEVVTBL* NtfsMount(ULONG DeviceId)
 {
     PNTFS_VOLUME_INFO Volume;
@@ -1070,6 +1073,12 @@ const DEVVTBL* NtfsMount(ULONG DeviceId)
     ARC_STATUS Status;
 
     TRACE("Enter NtfsMount(%lu)\n", DeviceId);
+
+    if (DeviceId < MAX_FDS && NtfsVolumes[DeviceId])
+    {
+        NtfsFreeVolume(NtfsVolumes[DeviceId]);
+        NtfsVolumes[DeviceId] = NULL;
+    }
 
     //
     // Allocate data for volume information

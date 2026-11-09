@@ -408,6 +408,21 @@ NtfsGetVolumeData(PDEVICE_OBJECT DeviceObject,
     ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, VolumeRecord);
 
     NtfsInfo->MftZoneReservation = NtfsQueryMftZoneReservation();
+    if (NtfsInfo->MftZoneReservation < 1 || NtfsInfo->MftZoneReservation > 4)
+        NtfsInfo->MftZoneReservation = 1;
+
+    /* Reservation 1..4 is one through four eighths of the volume, placed
+     * at the MFT and clipped to the clusters that exist. */
+    NtfsInfo->MftZoneStart = NtfsInfo->MftStart.QuadPart;
+    if (NtfsInfo->MftZoneStart > NtfsInfo->ClusterCount)
+        NtfsInfo->MftZoneStart = 0;
+    NtfsInfo->MftZoneEnd = NtfsInfo->MftZoneStart +
+        (NtfsInfo->ClusterCount / 8) * NtfsInfo->MftZoneReservation;
+    if (NtfsInfo->MftZoneEnd < NtfsInfo->MftZoneStart ||
+        NtfsInfo->MftZoneEnd > NtfsInfo->ClusterCount)
+    {
+        NtfsInfo->MftZoneEnd = NtfsInfo->ClusterCount;
+    }
 
     /* NTFS defines its own case folding through $UpCase; without it every
      * case-insensitive comparison on this volume would use the wrong table. */
@@ -647,8 +662,8 @@ GetNfsVolumeData(PDEVICE_EXTENSION DeviceExt,
     DataBuffer->ClustersPerFileRecordSegment = DeviceExt->NtfsInfo.BytesPerFileRecord / DeviceExt->NtfsInfo.BytesPerCluster;
     DataBuffer->MftStartLcn.QuadPart = DeviceExt->NtfsInfo.MftStart.QuadPart;
     DataBuffer->Mft2StartLcn.QuadPart = DeviceExt->NtfsInfo.MftMirrStart.QuadPart;
-    DataBuffer->MftZoneStart.QuadPart = 0; // FIXME
-    DataBuffer->MftZoneEnd.QuadPart = 0; // FIXME
+    DataBuffer->MftZoneStart.QuadPart = DeviceExt->NtfsInfo.MftZoneStart;
+    DataBuffer->MftZoneEnd.QuadPart = DeviceExt->NtfsInfo.MftZoneEnd;
 
     Status = FindFirstAttribute(&Context, DeviceExt, DeviceExt->MasterFileTable, FALSE, &Attribute);
     while (NT_SUCCESS(Status))

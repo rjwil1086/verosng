@@ -2436,7 +2436,12 @@ Restart:
                 DefaultFs = L"BTRFS";
                 break;
 
-            /* If we don't understand input, default to FAT */
+            /* 2 is for NTFS */
+            case 2:
+                DefaultFs = L"NTFS";
+                break;
+
+            /* 0, and any value we do not understand, stays FAT */
             default:
                 DefaultFs = L"FAT";
                 break;
@@ -2444,8 +2449,8 @@ Restart:
     }
     else
     {
-        /* By default select the "FAT" file system */
-        DefaultFs = L"FAT";
+        /* By default select the NTFS file system */
+        DefaultFs = L"NTFS";
     }
 
     /* Create the file system list */

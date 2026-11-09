@@ -83,6 +83,10 @@ typedef struct _NTFS_INFO
     USHORT Flags;
 
     ULONG MftZoneReservation;
+
+    /* Cluster range held back for $MFT growth. End is exclusive. */
+    ULONGLONG MftZoneStart;
+    ULONGLONG MftZoneEnd;
 } NTFS_INFO, *PNTFS_INFO;
 
 #define NTFS_TYPE_CCB         '20SF'
@@ -1513,7 +1517,8 @@ NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
                      ULONG FirstDesiredCluster,
                      ULONG DesiredClusters,
                      PULONG FirstAssignedCluster,
-                     PULONG AssignedClusters);
+                     PULONG AssignedClusters,
+                     BOOLEAN ForMft);
 
 ULONGLONG
 NtfsGetFreeClusters(PDEVICE_EXTENSION DeviceExt);
