@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Local build and boot
 
-- Compile with RosBE. `ARCH=amd64` is the only supported OS build. 32-bit applications run on that boot. The daily boot config is Clang, amd64, Debug, target `bootcd`.
+- Compile with RosBE 2.2.1 and Clang 18.1.8. `ARCH=amd64` is the only supported OS build. 32-bit applications run on that boot. The daily boot config is Clang 18.1.8, amd64, Debug, target `bootcd`. Boot tests use QEMU 11.1.0.
 - `tools/pipeline/Build-Bootcd.ps1` writes `build-amd64/bootcd.iso`.
 - `tools/pipeline/Test-Boot.ps1` runs `C:\Program Files\qemu\qemu-system-x86_64.exe -accel tcg -m 8192 -smp 4`. Do not pass `-accel whpx`. Windows 10 22H2 boots use the same memory and CPU count.
 - Load `tools/qemu-harness/abi.dll` with `-plugin`. It logs `SYSENTER`, `SYSCALL`, `INT 2E`, and calls into mapped `ntoskrnl`, `hal`, and `wdf` exports.

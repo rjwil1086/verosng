@@ -1,10 +1,11 @@
 # Local build
 
-This fork is built and booted on Windows. `ARCH=amd64` is the only supported OS build. 32-bit applications run on that boot. The daily configuration is Clang, amd64, Debug, target `bootcd`.
+This fork is built and booted on Windows. `ARCH=amd64` is the only supported OS build. 32-bit applications run on that boot. The daily configuration is Clang 18.1.8, amd64, Debug, target `bootcd`.
 
 ## Tools
 
-- ReactOS Build Environment 2.2.1. The silent installer returned exit code 2, so the same files were extracted to `D:\RosBE`. The scripts also look for `C:\RosBE`. `rosbe-gcc-env.cmd` is the toolchain entry point.
+- ReactOS Build Environment 2.2.1. The silent installer returned exit code 2, so the same files were extracted to `D:\RosBE`. The scripts also look for `C:\RosBE`. `rosbe-gcc-env.cmd` is the toolchain entry point. The package is the unmodified 2.2.1 release.
+- Clang 18.1.8, the Windows package `clang+llvm-18.1.8-x86_64-pc-windows-msvc`. `Build-Bootcd.ps1` uses `D:\LLVM-18\clang+llvm-18.1.8-x86_64-pc-windows-msvc\bin\clang.exe`, then `C:\Program Files\LLVM\bin\clang.exe`. RosBE's amd64 GCC was built without plugin support, so the amd64 build uses this Clang.
 - QEMU 11.1.0 at `C:\Program Files\qemu\qemu-system-x86_64.exe`. It is not on `PATH`. Boot tests pass `-accel tcg` and record `accelerator=tcg`. Do not pass `-accel whpx`. Windows 10 22H2 and VerOS NG boots pass `-m 8192 -smp 4`.
 
 If a real boot never prints the ReactOS version banner within 20 minutes, switch to a QEMU build that includes WHPX. `WinHvPlatform.dll` is already on this machine.
