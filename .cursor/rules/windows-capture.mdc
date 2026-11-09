@@ -14,6 +14,8 @@ Two captures exist. Both stay under `output/`, which is gitignored.
 
 A Windows result is evidence only when that guest log contains `DIFF END OK`. A host run of the probe is not a Windows 10 22H2 result.
 
+`tools/syscall-diff`, `tools/graphics-diff`, and `tools/kernel-abi` reuse `output/<tool>/windows.log` when `tools/probe-stamp/Test-WindowsProbe.ps1` prints `REUSE` for that tool. The stamp is `output/<tool>/windows.probe`. It records the probe source hash and the log hash. A change to that probe's sources requires a new Windows 10 boot. Each runner's `-CheckWindows` reports the same decision.
+
 The tree may keep the probe source, the name list, the compare script, and a report of names plus status codes. It may not keep the VMDK, an ISO, a disk image, a trace, a disassembly, a header, a `.lib`, a `.sys`, or an object file.
 
 ```text

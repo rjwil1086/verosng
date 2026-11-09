@@ -7,10 +7,16 @@ param(
     [switch]$SelfTest,
     [switch]$RunGuests,
     [switch]$SkipWindows,
-    [switch]$SkipReactOS
+    [switch]$SkipReactOS,
+    [switch]$CheckWindows
 )
 
 $ErrorActionPreference = "Stop"
+$probeStamp = Join-Path $PSScriptRoot "..\probe-stamp\Test-WindowsProbe.ps1"
+if ($CheckWindows) {
+    & $probeStamp -SourceRoot $SourceRoot -Name 'kernel-abi'
+    exit $LASTEXITCODE
+}
 
 if ($SelfTest) {
     & (Join-Path $PSScriptRoot "Compare-KernelAbi.ps1") -SelfTest
@@ -243,9 +249,17 @@ if (-not (Test-Path $Qemu64)) { throw "QEMU was not found at $Qemu64" }
 $windowsLog = Join-Path $out "windows.log"
 $reactosLog = Join-Path $out "reactos.log"
 $iso = New-ProbeIso -Exe $built.Exe -Sys $built.Sys -OutDir $out
-if (-not $SkipWindows) {
+$decision = & $probeStamp -SourceRoot $SourceRoot -Name 'kernel-abi' -PassThru
+$LASTEXITCODE = 0
+if (-not $decision.Reuse -and $SkipWindows) {
+    throw "The saved Windows log is not for this probe. $($decision.Detail)"
+}
+if (-not $decision.Reuse) {
     if (Test-Path $windowsLog) { Remove-Item $windowsLog -Force }
     Start-WindowsProbe -Iso $iso -Log $windowsLog
+    if ((Test-Path $windowsLog) -and (Select-String -LiteralPath $windowsLog -Pattern "DIFF END OK" -Quiet)) {
+        & $probeStamp -SourceRoot $SourceRoot -Name 'kernel-abi' -Action Stamp
+    }
 }
 if (-not $SkipReactOS) {
     if (Test-Path $reactosLog) { Remove-Item $reactosLog -Force }

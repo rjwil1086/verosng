@@ -5,10 +5,16 @@ param(
     [string]$Disk = "D:\VMware\Windows 10 x64\Windows 10 x64.vmdk",
     [string]$Qemu64 = "C:\Program Files\qemu\qemu-system-x86_64.exe",
     [switch]$SkipWindows,
-    [switch]$SkipReactOS
+    [switch]$SkipReactOS,
+    [switch]$CheckWindows
 )
 
 $ErrorActionPreference = "Stop"
+$probeStamp = Join-Path $PSScriptRoot "..\probe-stamp\Test-WindowsProbe.ps1"
+if ($CheckWindows) {
+    & $probeStamp -SourceRoot $SourceRoot -Name 'syscall-diff'
+    exit $LASTEXITCODE
+}
 $out = Join-Path $SourceRoot "output\syscall-diff"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 $script:MonitorPort = 4446
@@ -317,11 +323,15 @@ function Stop-Qemu {
 }
 
 function Install-StartupProbe {
-    param([string]$Exe)
+    param([string]$Exe, [string]$ProbeHash)
+    if (-not $ProbeHash) { throw "The startup probe needs a probe hash" }
     $vhd = Join-Path $out "windows.vhdx"
     $sparse = Join-Path $out "windows-sparse.vhdx"
     $marker = Join-Path $out "windows-startup.ok"
-    if ((Test-Path $vhd) -and (Test-Path $marker)) { return $vhd }
+    if ((Test-Path $vhd) -and (Test-Path $marker)) {
+        $saved = ([System.IO.File]::ReadAllText($marker)).Trim()
+        if ($saved -eq $ProbeHash) { return $vhd }
+    }
     if (-not (Test-Path $sparse)) {
         Write-Host "Copying the Windows disk to a VHDX"
         & "C:\Program Files\qemu\qemu-img.exe" convert -O vhdx $Disk $sparse
@@ -358,7 +368,7 @@ function Install-StartupProbe {
         $startup = "${letter}:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
         New-Item -ItemType Directory -Force -Path $startup | Out-Null
         Copy-Item $Exe (Join-Path $startup "probe.exe") -Force
-        Set-Content -Path $marker -Value "ok" -Encoding ASCII
+        [System.IO.File]::WriteAllText($marker, $ProbeHash)
     }
     finally {
         Dismount-DiskImage -ImagePath $vhd | Out-Null
@@ -371,7 +381,12 @@ $iso = New-ProbeIso $exe
 $windowsLog = Join-Path $out "windows.log"
 $reactosLog = Join-Path $out "reactos.log"
 
-if (-not $SkipWindows) {
+$decision = & $probeStamp -SourceRoot $SourceRoot -Name 'syscall-diff' -PassThru
+$LASTEXITCODE = 0
+if (-not $decision.Reuse -and $SkipWindows) {
+    throw "The saved Windows log is not for this probe. $($decision.Detail)"
+}
+if (-not $decision.Reuse) {
     $vmrun = "C:\Program Files\VMware\VMware Workstation\vmrun.exe"
     if (Test-Path $vmrun) {
         $listed = & $vmrun list
@@ -385,7 +400,7 @@ if (-not $SkipWindows) {
     $winSink = Join-Path $out "windows-sink.img"
     New-SinkImage $winSink
     Add-SinkFile $winSink $exe "PROBE   EXE"
-    $vhd = Install-StartupProbe $exe
+    $vhd = Install-StartupProbe $exe $decision.ProbeHash
     $codeFd = "C:\Program Files\qemu\share\edk2-x86_64-code.fd"
     $varsFd = Join-Path $out "ovmf-vars.fd"
     Copy-Item "C:\Program Files\qemu\share\edk2-i386-vars.fd" $varsFd -Force
@@ -417,6 +432,9 @@ if (-not $SkipWindows) {
     }
     Stop-Qemu $proc
     Publish-Sink $winSink $windowsLog
+    if ((Test-Path $windowsLog) -and (Select-String -LiteralPath $windowsLog -Pattern "DIFF END OK" -Quiet)) {
+        & $probeStamp -SourceRoot $SourceRoot -Name 'syscall-diff' -Action Stamp
+    }
     Write-Host "Windows log $windowsLog"
 }
 

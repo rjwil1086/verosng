@@ -6,10 +6,16 @@ param(
     [string]$Qemu64 = "C:\Program Files\qemu\qemu-system-x86_64.exe",
     [switch]$SelfTest,
     [switch]$SkipWindows,
-    [switch]$SkipReactOS
+    [switch]$SkipReactOS,
+    [switch]$CheckWindows
 )
 
 $ErrorActionPreference = "Stop"
+$probeStamp = Join-Path $PSScriptRoot "..\probe-stamp\Test-WindowsProbe.ps1"
+if ($CheckWindows) {
+    & $probeStamp -SourceRoot $SourceRoot -Name 'graphics-diff'
+    exit $LASTEXITCODE
+}
 if ($SelfTest) {
     & (Join-Path $PSScriptRoot "Test-Compare.ps1")
     exit $LASTEXITCODE
@@ -257,11 +263,15 @@ function Stop-Qemu {
 }
 
 function Install-StartupProbe {
-    param([string]$Exe)
+    param([string]$Exe, [string]$ProbeHash)
+    if (-not $ProbeHash) { throw "The startup probe needs a probe hash" }
     $vhd = Join-Path $out "windows.vhdx"
     $sparse = Join-Path $out "windows-sparse.vhdx"
     $marker = Join-Path $out "windows-startup.ok"
-    if ((Test-Path $vhd) -and (Test-Path $marker)) { return $vhd }
+    if ((Test-Path $vhd) -and (Test-Path $marker)) {
+        $saved = ([System.IO.File]::ReadAllText($marker)).Trim()
+        if ($saved -eq $ProbeHash) { return $vhd }
+    }
     if (-not (Test-Path $sparse)) {
         if ((Test-Path $vhd) -and -not (Test-Path $marker)) {
             Move-Item -LiteralPath $vhd -Destination $sparse
@@ -305,7 +315,7 @@ function Install-StartupProbe {
         $startup = "${letter}:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
         New-Item -ItemType Directory -Force -Path $startup | Out-Null
         Copy-Item $Exe (Join-Path $startup "probe.exe") -Force
-        Set-Content -Path $marker -Value "ok" -Encoding ASCII
+        [System.IO.File]::WriteAllText($marker, $ProbeHash)
     }
     catch {
         if ($mounted) { throw }
@@ -317,7 +327,7 @@ function Install-StartupProbe {
             & python $writer $vhd $Exe *>&1 | ForEach-Object { Write-Host $_ }
         }
         if ($LASTEXITCODE -ne 0) { throw "startup probe was not installed" }
-        Set-Content -Path $marker -Value "ok" -Encoding ASCII
+        [System.IO.File]::WriteAllText($marker, $ProbeHash)
     }
     finally {
         if ($mounted) { Dismount-DiskImage -ImagePath $vhd | Out-Null }
@@ -332,14 +342,19 @@ if ($SkipWindows -and $SkipReactOS) { exit 0 }
 Assert-GuestsFree
 $windowsLog = Join-Path $out "windows.log"
 $reactosLog = Join-Path $out "reactos.log"
+$decision = & $probeStamp -SourceRoot $SourceRoot -Name 'graphics-diff' -PassThru
+$LASTEXITCODE = 0
+if (-not $decision.Reuse -and $SkipWindows) {
+    throw "The saved Windows log is not for this probe. $($decision.Detail)"
+}
 
-if (-not $SkipWindows) {
+if (-not $decision.Reuse) {
     if (-not (Test-Path $Disk)) { throw "No installed disk at $Disk" }
     if (-not (Test-Path $Qemu64)) { throw "QEMU was not found at $Qemu64" }
     if (Test-Path $windowsLog) { Remove-Item $windowsLog -Force }
     $winSink = Join-Path $out "windows-sink.img"
     New-SinkImage $winSink
-    $vhd = Install-StartupProbe $exe
+    $vhd = Install-StartupProbe $exe $decision.ProbeHash
     $codeFd = "C:\Program Files\qemu\share\edk2-x86_64-code.fd"
     $varsFd = Join-Path $out "ovmf-vars.fd"
     if (-not (Test-Path $varsFd)) {
@@ -359,6 +374,9 @@ if (-not $SkipWindows) {
     Wait-Probe $proc $windowsLog 2400 | Out-Null
     Stop-Qemu $proc
     Publish-Sink $winSink $windowsLog
+    if ((Test-Path $windowsLog) -and (Select-String -LiteralPath $windowsLog -Pattern "DIFF END OK" -Quiet)) {
+        & $probeStamp -SourceRoot $SourceRoot -Name 'graphics-diff' -Action Stamp
+    }
     Write-Host "Windows log $windowsLog"
 }
 
