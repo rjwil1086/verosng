@@ -384,23 +384,32 @@ if (-not $SkipWindows) {
     if (Test-Path $windowsLog) { Remove-Item $windowsLog -Force }
     $winSink = Join-Path $out "windows-sink.img"
     New-SinkImage $winSink
+    Add-SinkFile $winSink $exe "PROBE   EXE"
     $vhd = Install-StartupProbe $exe
     $codeFd = "C:\Program Files\qemu\share\edk2-x86_64-code.fd"
     $varsFd = Join-Path $out "ovmf-vars.fd"
     Copy-Item "C:\Program Files\qemu\share\edk2-i386-vars.fd" $varsFd -Force
     $script:MonitorPort = 4446
     $serial = ($windowsLog -replace '\\', '/')
-    $arg = "-accel tcg -snapshot -machine q35 -cpu max -m 8192 -smp 4 -display none -vga std " +
+    $arg = "-accel tcg -snapshot -machine q35 -cpu max -m 8192 -smp 4 -display none -vga qxl " +
+        "-spice port=5930,addr=127.0.0.1,disable-ticketing=on " +
+        "-device virtio-serial-pci -chardev spicevmc,id=vdagent,name=vdagent -device virtserialport,chardev=vdagent,name=com.redhat.spice.0 " +
         "-serial file:$serial " +
         "-monitor tcp:127.0.0.1:$($script:MonitorPort),server,nowait " +
         "-drive if=pflash,format=raw,readonly=on,file=`"$codeFd`" " +
         "-drive if=pflash,format=raw,file=`"$varsFd`" " +
         "-drive `"file=$vhd,format=vhdx,if=none,id=hd`" -device nvme,drive=hd,serial=nvme0,bootindex=1 " +
+        "-drive `"file=$iso,media=cdrom`" " +
         "-drive `"file=$winSink,format=raw,if=none,id=sink`" -device ich9-ahci,id=ahci -device ide-hd,bus=ahci.0,drive=sink"
     Write-Host "Booting Windows"
     $err = Join-Path $out "windows.err"
     $proc = Start-Qemu $Qemu64 $arg $err
-    $deadline = (Get-Date).AddSeconds(900)
+    $viewer = "C:\Program Files\VirtViewer v11.0-256\bin\remote-viewer.exe"
+    if (Test-Path $viewer) {
+        Start-Process -FilePath $viewer -ArgumentList @("--title", "Windows 10 22H2", "spice://127.0.0.1:5930")
+        Write-Host "Spice Viewer: Windows 10 22H2"
+    }
+    $deadline = (Get-Date).AddSeconds(1800)
     while ((Get-Date) -lt $deadline) {
         if (Test-DiffEnd $windowsLog) { break }
         if ($proc.HasExited) { break }

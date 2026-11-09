@@ -43,6 +43,34 @@ KeQueryActiveProcessors(VOID)
     return KeActiveProcessors;
 }
 
+/*
+ * One processor group. The maximum is the number the kernel can name,
+ * which stays constant for the boot. A group other than 0 is empty.
+ */
+ULONG
+NTAPI
+KeQueryMaximumProcessorCount(VOID)
+{
+#ifdef CONFIG_SMP
+    return KeMaximumProcessors;
+#else
+    return 1;
+#endif
+}
+
+ULONG
+NTAPI
+KeQueryMaximumProcessorCountEx(
+    _In_ USHORT GroupNumber)
+{
+    if (GroupNumber == ALL_PROCESSOR_GROUPS || GroupNumber == 0)
+    {
+        return KeQueryMaximumProcessorCount();
+    }
+
+    return 0;
+}
+
 /**
  * Retrieves the number of the current processor.
  *

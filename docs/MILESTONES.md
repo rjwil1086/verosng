@@ -4,28 +4,27 @@
 
 An application that Windows 10 22H2 x64 can run installs and runs here. That set is x64 programs and 32-bit programs on the amd64 boot. A driver, a graphics driver, more RAM, or more processors becomes the next pass when the application under test fails without it.
 
-Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. Milestone 8 is complete. Milestone 10 is complete. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
+Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. Milestone 8 is complete. Milestone 10 is complete. Milestone 11 is complete. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
 
 The open work follows this order. Finished milestones keep their numbers. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone.
 
 1. Milestone 9. Native i386 is unsupported.
-2. Milestone 11. One x64 application's installer completes and the program runs. This milestone has not started.
-3. Milestone 12. The install disk is NTFS, when an installer that has already started names a file operation the volume cannot complete. This waits until milestone 11.
-4. Milestone 13. One module compiles as Windows 10 22H2 when that installer's log names a prototype `0x502` hides. The installer then runs again.
-5. Milestone 14. Service numbers, when a program issues a direct call and the number disagrees with the name list. This can happen during milestone 11 or 15.
-6. Milestone 15. The next application, one at a time. Milestones 12 and 13 are the same interruption.
-7. Milestone 16. WoW64, after the first installed x64 program. Milestone 15 then includes 32-bit programs.
-8. Milestone 17. A retail driver, when the application needs that device.
-9. Milestone 18. One shared structure layout, when milestone 17, 11, or 15 names a wrong size or offset. The caller then runs again.
-10. Milestone 19. The remaining non-graphics drivers, after milestone 17, when the application needs that device. Milestones 20 through 23 do not wait for it.
-11. Milestone 20, when the application needs `opengl32` or `d3d11`.
-12. Milestone 21, when that application fails on the software rasterizer.
-13. Milestone 22, when that application still fails on virtio-gpu. AMD, Intel, and Nvidia firmware are separate installers.
-14. Milestone 23, when that application still fails on the DRM driver.
-15. Milestone 24. Physical memory above 8 GiB, when an application fails for lack of RAM. This finishes before milestone 25 when both are underway.
-16. Milestone 25. Logical processors, when an application needs them.
-17. Milestone 26. The Vista page-table software bits, after milestone 24, when a caller fails on the current write and dirty positions.
-18. Milestone 27. The root compile becomes Windows 10 22H2, after milestones 24, 13, and 18.
+2. Milestone 12. The install disk is NTFS, when an installer that has already started names a file operation the volume cannot complete.
+3. Milestone 13. One module compiles as Windows 10 22H2 when that installer's log names a prototype `0x502` hides. The installer then runs again.
+4. Milestone 14. Service numbers, when a program issues a direct call and the number disagrees with the name list. This can happen during milestone 15.
+5. Milestone 15. The next application, one at a time. Milestones 12 and 13 are the same interruption.
+6. Milestone 16. WoW64, after the first installed x64 program. Milestone 15 then includes 32-bit programs.
+7. Milestone 17. A retail driver, when the application needs that device.
+8. Milestone 18. One shared structure layout, when milestone 17 or 15 names a wrong size or offset. The caller then runs again.
+9. Milestone 19. The remaining non-graphics drivers, after milestone 17, when the application needs that device. Milestones 20 through 23 do not wait for it.
+10. Milestone 20, when the application needs `opengl32` or `d3d11`.
+11. Milestone 21, when that application fails on the software rasterizer.
+12. Milestone 22, when that application still fails on virtio-gpu. AMD, Intel, and Nvidia firmware are separate installers.
+13. Milestone 23, when that application still fails on the DRM driver.
+14. Milestone 24. Physical memory above 8 GiB, when an application fails for lack of RAM. This finishes before milestone 25 when both are underway.
+15. Milestone 25. Logical processors, when an application needs them.
+16. Milestone 26. The Vista page-table software bits, after milestone 24, when a caller fails on the current write and dirty positions.
+17. Milestone 27. The root compile becomes Windows 10 22H2, after milestones 24, 13, and 18.
 
 Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
 
@@ -308,7 +307,7 @@ What landed:
 
 Goal: One x64 application's installer completes, and the program it installed runs.
 
-This follows milestone 10. It has not started. The live CD's existing installer is the setup step. The result that matters is the application. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 10. It is complete. The first application is the official 7-Zip x64 installer. The live CD's existing installer is the setup step. The result that matters is the application. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -318,6 +317,15 @@ Tasks:
 - Add the one export or status fix the log names. Reach the desktop and run the installer again.
 - Repeat until the installer completes and the installed program starts.
 - Reboot from that disk. The program and the files it wrote are still there.
+
+What landed:
+
+- The live CD installer formatted the QEMU disk as FAT32, copied the system to `\Device\Harddisk0\Partition1\`, and installed the FAT32 boot code and the MBR. The boot-code status was `0x00000000`. The second-stage wizard then finished and the guest shut down.
+- The next boot from that disk uses `ReactOS (Debug)` and reports `PsGetVersion` and `SharedUserData` as 10.0.19045. It stops in the kernel debugger while loading `ucx01000.sys`. The assertion is `FALSE` at `sdk/lib/drivers/wdf/kmdf/src/core/fxbugcheckcallback.cpp` line 1070. That line runs when `KeQueryMaximumProcessorCountEx` and `KeQueryMaximumProcessorCount` are both missing and the recorded version is neither 5.x above 5.0 nor 6.0.
+- `ntoskrnl` now exports both routines. The installed multiprocessor kernel returns from `ucx01000`. That disk reached the desktop, and after a shutdown the same disk reached the desktop again.
+- The official 7-Zip 26.06 x64 installer was `D:\7z2606-x64.exe`. The loader found its Windows 10 manifest and activated the Win10 API sets. The installer completed. After a reboot, `C:\Program Files\7-Zip\7zFM.exe` started from the Start menu and opened normally.
+- On the live CD, `git --version` printed `git version 2.53.0.windows.1`, `python -c "print(1)"` printed `1`, 7-Zip opened `sample.zip`, and Notepad++ opened `note.txt`.
+- The milestone 8 probe was rerun against the saved Windows 10 log. Both sides end in `DIFF END OK`. The seven milestone 8 names still return the same statuses. 88 of 101 scored names match, and the dashboard score stays 87.1.
 
 Success criteria:
 
@@ -330,7 +338,7 @@ Success criteria:
 
 Goal: The disk an application installs onto is NTFS, and the files it writes are still there after reboot.
 
-This follows milestone 11, which has not started. Milestone 11 or 15 enters it when the log names an NTFS volume, or a file operation that volume cannot complete, and then returns to that installer. One missing operation is one pass. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 11, which is complete. Milestone 11 or 15 enters it when the log names an NTFS volume, or a file operation that volume cannot complete, and then returns to that installer. One missing operation is one pass. A task stays only when the amd64 live CD still reaches the desktop.
 
 The in-tree driver already mounts NTFS. Ordinary files can be read. Writes are present, and the hive enables them on every volume. That write path is still experimental. Compressed files, encrypted files, page files, byte-range locks, transactions, and the USN journal are unimplemented. An MFT bitmap above 32 bits turns writes off. `NtfsChkdsk` is a stub. FreeLoader can read an NTFS volume and skips a compressed file on it. Setup can format NTFS.
 

@@ -1,0 +1,37 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Can one x64 installer finish on the FAT install disk and still start after reboot?",
+  "allowedInputs": [
+    "docs/MILESTONES.md milestone 11",
+    "The public KeQueryMaximumProcessorCount contract: the value is constant and does not exceed 64 on x64, and the Ex form with all groups returns the system maximum",
+    "ntoskrnl/ke/processor.c already in this tree, where KeMaximumProcessors is the value KeQueryMaximumProcessorCount returns",
+    "sdk/lib/drivers/wdf/kmdf/src/core/fxbugcheckcallback.cpp already in this tree, which asserts when both processor-count exports are missing and the version is 10.0",
+    "The installed-disk serial logs under output/install: FAT32 boot-code status 0, the ucx01000 assert, the later desktop, and 7zFM.exe with a Windows 10 manifest",
+    "The user report that the 7-Zip 26.06 installer completed and 7zFM.exe opened from the Start menu after reboot",
+    "The user report that git, Python, 7-Zip, and Notepad++ started on the live CD",
+    "output/syscall-diff/windows.log and output/syscall-diff/reactos.log, both containing DIFF END OK",
+    "veros/dashboard/latest.json overall 87.1"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "amd64 installed FAT disk and live CD, 8192 MB, 4 CPUs, TCG, compared with the saved Windows 10 22H2 log",
+    "name": "syscall-diff",
+    "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
+  },
+  "cursor": {
+    "prompt": "Let's begin milestone 11. Then update the milestone label to complete before the commit.",
+    "model": "Grok 4.7",
+    "date": "2026-11-08"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "dashboard exact-match percent after the first installed application",
+    "before": 87.1,
+    "after": 87.1,
+    "note": "Both scores are the dashboard overall. 88 of 101 names match, and the seven milestone 8 names keep the same statuses. The installed disk reached the desktop after the processor-count exports, and 7zFM.exe started after reboot. Milestone 11 is complete once this commit says so."
+  }
+}
