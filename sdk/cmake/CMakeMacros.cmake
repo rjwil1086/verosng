@@ -298,9 +298,11 @@ function(add_cd_file)
     if(NOT __cd EQUAL -1)
         # whether or not we should put it in reactos.cab or directly on cd
         if(_CD_NO_CAB)
-            # directly on cd - replace the "reactos/" directory name by the current build architecture name
+            # Setup files stay out of the live system directory. A leading
+            # "VerOS/" becomes the architecture directory (amd64/ or i386/),
+            # which is where the text-mode installer expects its own smss.exe.
             # WARNING: CMake REGEXes are always case-sensitive!
-            string(REGEX REPLACE "^reactos([\\\\/]+|$)" "${ARCH}\\1" _CD_ARCH_DESTINATION "${_CD_DESTINATION}")
+            string(REGEX REPLACE "^VerOS([\\\\/]+|$)" "${ARCH}\\1" _CD_ARCH_DESTINATION "${_CD_DESTINATION}")
             foreach(item ${_CD_FILE})
                 if(_CD_NAME_ON_CD)
                     # rename it in the cd tree
@@ -354,9 +356,11 @@ function(add_cd_file)
     if(NOT __cd EQUAL -1)
         # whether or not we should put it in reactos.cab or directly on cd
         if(_CD_NO_CAB)
-            # directly on cd - replace the "reactos/" directory name by the current build architecture name
+            # Setup files stay out of the live system directory. A leading
+            # "VerOS/" becomes the architecture directory (amd64/ or i386/),
+            # which is where the text-mode installer expects its own smss.exe.
             # WARNING: CMake REGEXes are always case-sensitive!
-            string(REGEX REPLACE "^reactos([\\\\/]+|$)" "${ARCH}\\1" _CD_ARCH_DESTINATION "${_CD_DESTINATION}")
+            string(REGEX REPLACE "^VerOS([\\\\/]+|$)" "${ARCH}\\1" _CD_ARCH_DESTINATION "${_CD_DESTINATION}")
             foreach(item ${_CD_FILE})
                 if(_CD_NAME_ON_CD)
                     # rename it in the cd tree

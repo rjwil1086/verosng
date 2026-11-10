@@ -175,7 +175,7 @@ add_custom_target(bootcdregtest
 # Create the file list
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/livecd.cmake.lst "${CMAKE_CURRENT_BINARY_DIR}/empty\n")
 # Create TEMP directory
-file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/livecd.cmake.lst "reactos/TEMP=${CMAKE_CURRENT_BINARY_DIR}/empty\n")
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/livecd.cmake.lst "VerOS/TEMP=${CMAKE_CURRENT_BINARY_DIR}/empty\n")
 
 # Create user profile directories
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/livecd.cmake.lst "ProgramData/Microsoft/Windows/Start Menu/Programs/Startup=${CMAKE_CURRENT_BINARY_DIR}/empty\n")
