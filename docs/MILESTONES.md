@@ -6,7 +6,7 @@ An application that Windows 10 22H2 x64 can run installs and runs here. That set
 
 Milestones 0–3 are done. Milestone 5 is the in-tree driver foundation that landed. Milestone 6 made the amd64 live CD the daily boot. Milestone 7 is the x64 application surface that landed. Milestone 8 is complete. Milestone 10 is complete. Milestone 11 is complete. Milestone 12 is complete. A task stays in the tree only when that boot still reaches the desktop. A syscall task also reruns the probe. A Windows driver loads beside the current boot device before it becomes the boot device.
 
-The open work follows this order. Finished milestones keep their numbers. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone.
+The open work follows this order. Finished milestones keep their numbers. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone. A missing Windows GPU driver does not interrupt milestones 26 through 30.
 
 1. Milestone 9. Native i386 is unsupported.
 2. Milestone 13. In-place upgrade of an existing install from the boot menu, the CD welcome menu, or an unattended push. The installed disk then boots for the test.
@@ -18,16 +18,16 @@ The open work follows this order. Finished milestones keep their numbers. A late
 8. Milestone 19. A retail driver, when the application needs that device.
 9. Milestone 20. The driver catalog, on virtual hardware, while milestone 19 is the driver under test. Each finished row is published to the Tested Drivers page. A failing storage, network, or USB row returns to milestone 19.
 10. Milestone 21. One shared structure layout, when milestone 19, 20, or 16 names a wrong size or offset. The caller then runs again.
-11. Milestone 22. The remaining non-graphics drivers, after milestone 19, when the application needs that device. Milestones 23 through 26 do not wait for it.
+11. Milestone 22. The remaining non-graphics drivers, after milestone 19, when the application needs that device. Milestones 23 through 25, and milestone 31, do not wait for it.
 12. Milestone 23, when the application needs `opengl32` or `d3d11`.
 13. Milestone 24, when that application fails on the software rasterizer.
 14. Milestone 25, when that application still fails on virtio-gpu. AMD, Intel, and Nvidia firmware are separate installers.
-15. Milestone 26, when that application still fails on the DRM driver.
-16. Milestone 27. Physical memory above 8 GiB, when the daily development guest fails for lack of RAM. This finishes before milestone 28 when both are underway.
-17. Milestone 28. Logical processors, when the daily development guest needs them.
-18. Milestone 29. The daily development guest. Cursor and the toolchain build the amd64 boot CD on the installed disk, after milestones 27 and 28.
-19. Milestone 30. The Vista page-table software bits, after milestone 27, when a caller fails on the current write and dirty positions.
-20. Milestone 31. The root compile becomes Windows 10 22H2, after milestones 27, 14, and 21.
+15. Milestone 26. Physical memory above 8 GiB, when the daily development guest fails for lack of RAM. This finishes before milestone 27 when both are underway.
+16. Milestone 27. Logical processors, when the daily development guest needs them.
+17. Milestone 28. The daily development guest. Cursor and the toolchain build the amd64 boot CD on the installed disk, after milestones 26 and 27.
+18. Milestone 29. The Vista page-table software bits, after milestone 26, when a caller fails on the current write and dirty positions.
+19. Milestone 30. The root compile becomes Windows 10 22H2, after milestones 26, 14, and 21.
+20. Milestone 31, when an application still fails on the DRM driver. A missing Windows GPU driver does not interrupt milestones 26 through 30.
 
 Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
 
@@ -243,7 +243,7 @@ What landed:
 - `NtDeviceIoControlFile` and `NtCreateUserProcess` return `STATUS_INVALID_PARAMETER` on both.
 - The other top-100 names that already matched stayed matched.
 
-This milestone stays on the current boot. Physical memory above 8 GiB is milestone 27. Logical processors, Hyper-Threading, and AMD SMT are milestone 28. Both wait until the daily development guest in milestone 29 requires them. The root compile stays `_WIN32_WINNT=0x502` until milestone 31. Service numbers move in milestone 15. The page-table write and dirty bits move in milestone 30.
+This milestone stays on the current boot. Physical memory above 8 GiB is milestone 26. Logical processors, Hyper-Threading, and AMD SMT are milestone 27. Both wait until the daily development guest in milestone 28 requires them. The root compile stays `_WIN32_WINNT=0x502` until milestone 30. Service numbers move in milestone 15. The page-table write and dirty bits move in milestone 29.
 
 ## Milestone 9: Native i386 unsupported
 
@@ -274,7 +274,7 @@ What landed:
 
 Goal: The amd64 boot reports Windows 10 22H2 to an application.
 
-This follows milestone 8 and milestone 9. It does not wait for more processors or for the 6 TB ceiling. This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The root definitions move in milestone 31. The product version stays 0.4.x. In-tree images keep their existing PE version stamp. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 8 and milestone 9. It does not wait for more processors or for the 6 TB ceiling. This changes the runtime NT version only. The tree keeps compiling as `_WIN32_WINNT=0x502`. The root definitions move in milestone 30. The product version stays 0.4.x. In-tree images keep their existing PE version stamp. A task stays only when the amd64 live CD still reaches the desktop.
 
 Requirements:
 
@@ -420,7 +420,7 @@ Success criteria:
 
 Goal: A direct service call uses the number in `compat/reference/win10-22h2-syscalls.txt`.
 
-This follows milestone 8. Milestone 11 or 16 enters it when a program issues a direct call and the number disagrees with that list. The `NTDDI_VERSION` entries in `sysfuncs64.h` insert names in the middle of the table and renumber every later service, so those entries are not how a number is assigned. Milestone 31 freezes this table. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 8. Milestone 11 or 16 enters it when a program issues a direct call and the number disagrees with that list. The `NTDDI_VERSION` entries in `sysfuncs64.h` insert names in the middle of the table and renumber every later service, so those entries are not how a number is assigned. Milestone 30 freezes this table. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -570,7 +570,7 @@ Success criteria:
 
 Goal: A fixed set of Windows 10 22H2 drivers runs on virtual hardware, and each finished row appears on the Tested Drivers page.
 
-This follows milestone 19. It runs while milestone 19 is the driver under test. It does not wait for milestones 21 through 31. One driver is one pass. A failing or partial storage, network, or USB row is milestone 19, and the work then returns here to publish the new result. A failing or partial audio row is milestone 22. A structure whose size or offset is wrong is milestone 21. A prototype hidden by `_WIN32_WINNT=0x502` is milestone 14. Bluetooth, a printer, and a storage filter stay in milestone 22. A WDDM miniport stays in milestone 26. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 19. It runs while milestone 19 is the driver under test. It does not wait for milestones 21 through 31. One driver is one pass. A failing or partial storage, network, or USB row is milestone 19, and the work then returns here to publish the new result. A failing or partial audio row is milestone 22. A structure whose size or offset is wrong is milestone 21. A prototype hidden by `_WIN32_WINNT=0x502` is milestone 14. Bluetooth, a printer, and a storage filter stay in milestone 22. A WDDM miniport stays in milestone 31. A task stays only when the amd64 live CD still reaches the desktop.
 
 The suite boots the amd64 live CD. Each driver gets its own QEMU device and its own snapshot. The kept disks stay unchanged. VirtIO packages come from `downloads/virtio-win-0.1.271.iso`. Inbox drivers are copied from the Windows 10 22H2 guest for that run. The driver files stay out of git. QEMU stays in `tools/qemu`. The suite records the file name and the SHA-256. The page records the result. It does not host the driver.
 
@@ -634,7 +634,7 @@ Success criteria:
 
 Goal: One structure that `ntoskrnl` shares with a caller has the Windows 10 22H2 size and offsets.
 
-This follows milestone 14. Milestone 19, 20, 11, or 16 enters it when a log names one wrong size or offset, and then returns to that caller. One structure is one pass. The page-table write and dirty bits stay for milestone 30. The service-table order stays for milestone 15. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 14. Milestone 19, 20, 11, or 16 enters it when a log names one wrong size or offset, and then returns to that caller. One structure is one pass. The page-table write and dirty bits stay for milestone 29. The service-table order stays for milestone 15. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -652,7 +652,7 @@ Success criteria:
 
 Goal: Extend the same bar past boot and network hardware when the application under test needs that device.
 
-Run the milestone 19 task loop for each device below. The device stays off the boot path. Milestones 23 through 26 do not wait for this milestone.
+Run the milestone 19 task loop for each device below. The device stays off the boot path. Milestones 23 through 25, and milestone 31, do not wait for this milestone.
 
 Tasks:
 
@@ -762,47 +762,7 @@ Success criteria:
 - Selecting the DRM driver does not change the application or the DLL exports.
 - A start failure leaves the previous display driver selected.
 
-## Milestone 26: WDDM 2.0
-
-Goal: The same DLLs render through a WDDM 2.0 miniport for an application that still fails on the DRM driver.
-
-```text
-opengl32
-d3d11
-dxgi
-
-↓
-
-Windows user-mode driver
-
-↓
-
-D3DKMT
-dxgkrnl
-dxgmms2
-
-↓
-
-WDDM 2.0 miniport
-```
-
-This follows milestone 25. The vendor package matches the same PCI id and ranks above the inbox DRM driver. The inbox driver stays installed. The AMD, Intel, and Nvidia firmware installers stay separate packages. A task stays only when the amd64 live CD still reaches the desktop. The current display driver stays the boot display until this miniport has presented a frame.
-
-Tasks:
-
-- Add the WDDM display path and keep the current display driver when it cannot start. Boot to the desktop.
-- Make one `D3DKMT` query return the Windows status for the probe's arguments.
-- Present the milestone 23 frame through this path inside QEMU.
-- Install one unmodified Windows GPU driver through PnP while the previous display driver is still selected.
-- Present a frame with that driver, then make the WDDM path the selected display.
-
-Success criteria:
-
-- The milestone 23 program draws a frame through this path.
-- An unmodified Windows GPU driver is the last step, after the path's own entry points return.
-- Removing that driver, or a start failure, leaves the inbox display driver selected.
-
-## Milestone 27: amd64 physical memory
+## Milestone 26: amd64 physical memory
 
 Goal: The amd64 boot keeps physical RAM up to the Windows 10 22H2 maximum of 6 TB.
 
@@ -810,7 +770,7 @@ Windows 10 22H2 documents 128 GB for Home, 2 TB for Pro and Education, and 6 TB 
 
 FreeLoader keeps its own 1 GiB map. The kernel receives every firmware range up to 6 TB. The PFN database is followed immediately by nonpaged pool, and that pool ends before the HAL. A 4 KB page frame holds 36 bits, so a page above 1 TB can be named. The write and dirty bits stay where they are. The nonpaged pool ceiling stays 128 GB.
 
-This follows the application milestones. The daily development guest in milestone 29 is the application that starts this milestone, when that guest fails for lack of RAM. It finishes before milestone 28 when both are underway, so the page tables are settled on one processor. The write and dirty bits stay where they are until milestone 30. Milestone 31 follows this milestone. A task stays only when the amd64 live CD still reaches the desktop.
+This follows the application milestones. The daily development guest in milestone 28 is the application that starts this milestone, when that guest fails for lack of RAM. It finishes before milestone 27 when both are underway, so the page tables are settled on one processor. The write and dirty bits stay where they are until milestone 29. Milestone 30 follows this milestone. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -826,11 +786,11 @@ Success criteria:
 - A guest larger than 6 TB boots with the first 6 TB.
 - The milestone 8 statuses do not regress.
 
-## Milestone 28: amd64 logical processors
+## Milestone 27: amd64 logical processors
 
 Goal: The amd64 boot starts every logical processor, and Hyper-Threading and AMD SMT behave as they do on Windows 10 22H2 for a machine that fits in one processor group.
 
-This follows milestone 27 when both are underway. The daily development guest in milestone 29 is the application that needs these processors. Milestone 29 starts once this milestone and milestone 27 have landed. It does not wait for the 6 TB ceiling on its own. If milestone 27 has already widened the page frames, the TLB shootdown uses that layout. Milestone 30 does not land in the middle of this work.
+This follows milestone 26 when both are underway. The daily development guest in milestone 28 is the application that needs these processors. Milestone 28 starts once this milestone and milestone 26 have landed. It does not wait for the 6 TB ceiling on its own. If milestone 26 has already widened the page frames, the TLB shootdown uses that layout. Milestone 29 does not land in the middle of this work.
 
 One group holds at most 64 logical processors. The KTHREAD and KPRCB layouts stay. Processor groups, multi-node NUMA, hybrid efficiency classes, and core parking stay out. A machine with more than 64 logical processors keeps the first 64.
 
@@ -854,11 +814,11 @@ Success criteria:
 - The desktop still appears, and the milestone 8 statuses do not regress.
 - `ONECPU` still boots on the boot processor.
 
-## Milestone 29: Daily development guest
+## Milestone 28: Daily development guest
 
 Goal: Cursor and the toolchain run on the installed disk, and a full amd64 bootcd build completes there.
 
-This follows milestones 27 and 28. Those milestones start for this guest. This milestone starts only after both have landed. The toolchain is the one in `docs/LOCAL_BUILD.md`: RosBE, Clang 18.1.8, CMake, and Ninja, building `ARCH=amd64` target `bootcd`. Cursor is installed on the guest and is not added to the tree. An NTFS operation the checkout or the build names is one pass in milestone 12, and the work then returns here. The network stack is the fix the log names. If Electron will not draw on framebuf, milestones 23 and 24 are entered and the work then returns here. A physical GPU stays in milestones 25 and 26. The page-table bits stay in milestone 30. The root header change stays in milestone 31. The guest is updated in place by milestone 13. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestones 26 and 27. Those milestones start for this guest. This milestone starts only after both have landed. The toolchain is the one in `docs/LOCAL_BUILD.md`: RosBE, Clang 18.1.8, CMake, and Ninja, building `ARCH=amd64` target `bootcd`. Cursor is installed on the guest and is not added to the tree. An NTFS operation the checkout or the build names is one pass in milestone 12, and the work then returns here. The network stack is the fix the log names. If Electron will not draw on framebuf, milestones 23 and 24 are entered and the work then returns here. A physical GPU stays in milestone 25. A Windows GPU driver stays in milestone 31. The page-table bits stay in milestone 29. The root header change stays in milestone 30. The guest is updated in place by milestone 13. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -873,11 +833,11 @@ Success criteria:
 - The milestone 7 programs still start.
 - The milestone 8 statuses do not regress.
 
-## Milestone 30: Vista page-table software bits
+## Milestone 29: Vista page-table software bits
 
 Goal: The amd64 page-table entry uses `Dirty1` at bit 1 and `Write` at bit 11.
 
-This follows milestone 27, so a frame above 1 TB already fits. Start it when a caller fails because those bits are still in the Server 2003 positions. Milestone 31 does not move them. Milestone 28 is finished before this starts when both are underway. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 26, so a frame above 1 TB already fits. Start it when a caller fails because those bits are still in the Server 2003 positions. Milestone 30 does not move them. Milestone 27 is finished before this starts when both are underway. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -891,11 +851,11 @@ Success criteria:
 - A frame above 1 TB still round-trips.
 - The desktop still appears, and the milestone 8 statuses stay matched.
 
-## Milestone 31: The tree compiles as Windows 10 22H2
+## Milestone 30: The tree compiles as Windows 10 22H2
 
 Goal: The root build uses `_WIN32_WINNT=0x0A00` and `NTDDI_VERSION=0x0A00000B`.
 
-This follows milestones 27, 10, 9, 14, and 21. Milestone 27 has already widened the page frame. Every shared layout a caller has already required is in the tree. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestones 26, 10, 9, 14, and 21. Milestone 26 has already widened the page frame. Every shared layout a caller has already required is in the tree. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
@@ -909,9 +869,49 @@ Success criteria:
 
 - The amd64 tree builds at that header level and reaches the desktop.
 - The milestone 7 programs still start, and the milestone 8 statuses stay matched.
-- A page-table entry still has the write and dirty bits where milestone 27 left them.
+- A page-table entry still has the write and dirty bits where milestone 26 left them.
 - Service numbers are the same as they were before the root change.
 - The product version stays 0.4.x, and in-tree PE stamps stay as they are.
+
+## Milestone 31: WDDM 2.0
+
+Goal: The same DLLs render through a WDDM 2.0 miniport for an application that still fails on the DRM driver.
+
+```text
+opengl32
+d3d11
+dxgi
+
+↓
+
+Windows user-mode driver
+
+↓
+
+D3DKMT
+dxgkrnl
+dxgmms2
+
+↓
+
+WDDM 2.0 miniport
+```
+
+This follows milestone 30. Start it when an application still fails on the DRM driver. A missing Windows GPU driver during milestones 26 through 30 is recorded, and the work stays on the current milestone. That application keeps the DRM driver until this milestone. The vendor package matches the same PCI id and ranks above the inbox DRM driver. The inbox driver stays installed. The AMD, Intel, and Nvidia firmware installers stay separate packages. A task stays only when the amd64 live CD still reaches the desktop. The current display driver stays the boot display until this miniport has presented a frame.
+
+Tasks:
+
+- Add the WDDM display path and keep the current display driver when it cannot start. Boot to the desktop.
+- Make one `D3DKMT` query return the Windows status for the probe's arguments.
+- Present the milestone 23 frame through this path inside QEMU.
+- Install one unmodified Windows GPU driver through PnP while the previous display driver is still selected.
+- Present a frame with that driver, then make the WDDM path the selected display.
+
+Success criteria:
+
+- The milestone 23 program draws a frame through this path.
+- An unmodified Windows GPU driver is the last step, after the path's own entry points return.
+- Removing that driver, or a start failure, leaves the inbox display driver selected.
 
 ## What should the compatibility dashboard look like?
 

@@ -1,0 +1,31 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Should WDDM 2.0 move after the root compile, and should the empty milestone number be closed?",
+  "allowedInputs": [
+    "docs/MILESTONES.md",
+    "README.md",
+    "The user request to renumber WDDM 2.0 to after the root compile and then shift the later milestones up"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Can't we shift them all up since milestone 26 doesn't exist now?",
+    "model": "Grok 4.7",
+    "date": "2026-11-10"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "WDDM milestone number",
+    "before": 26,
+    "after": 31,
+    "note": "Physical memory through the root compile moved from 27 through 31 to 26 through 30. No boot was run."
+  }
+}
