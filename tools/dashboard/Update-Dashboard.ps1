@@ -403,12 +403,13 @@ if (-not $WebsitePath) { $WebsitePath = Join-Path $SourceRoot "veros\dashboard\l
 if (-not $DriverLog) { $DriverLog = Join-Path $SourceRoot "output\driver\load.log" }
 if (-not $AppCatalog) { $AppCatalog = Join-Path $SourceRoot "compat\catalog\apps.json" }
 
+$differential = Join-Path (Split-Path -Parent $SourceRoot) "differential-tests"
 if ($sections -contains "Syscalls") {
-    & (Join-Path $SourceRoot "tools\syscall-diff\Publish-Dashboard.ps1") -SourceRoot $SourceRoot -OutputPath $WebsitePath
+    & (Join-Path $differential "syscall-diff\Publish-Dashboard.ps1") -SourceRoot $SourceRoot -OutputPath $WebsitePath
 }
 
 if ($sections -contains "KernelAbi") {
-    & (Join-Path $SourceRoot "tools\kernel-abi\Compare-KernelAbi.ps1") -SourceRoot $SourceRoot -WebsitePath $WebsitePath
+    & (Join-Path $differential "kernel-abi\Compare-KernelAbi.ps1") -SourceRoot $SourceRoot -WebsitePath $WebsitePath
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 

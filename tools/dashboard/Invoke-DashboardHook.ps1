@@ -34,7 +34,6 @@ function Test-PathHit {
 $syscallPaths = @(
     "ntoskrnl/ke/",
     "dll/ntdll/",
-    "tools/syscall-diff/",
     "compat/reference/win10-22h2-syscalls.txt"
 )
 $kernelPaths = @(
@@ -43,8 +42,7 @@ $kernelPaths = @(
     "sdk/lib/drivers/wdf/",
     "tools/qemu-harness/",
     "compat/reference/win10-22h2-ntoskrnl.txt",
-    "compat/reference/win10-22h2-hal.txt",
-    "tools/kernel-abi/"
+    "compat/reference/win10-22h2-hal.txt"
 )
 $appPaths = @(
     "base/applications/",
@@ -82,7 +80,6 @@ $graphicsPaths = @(
     "win32ss/",
     "dll/directx/",
     "compat/catalog/graphics.json",
-    "tools/graphics-diff/",
     "compat/reference/win10-22h2-graphics.txt"
 )
 

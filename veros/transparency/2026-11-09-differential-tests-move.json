@@ -1,0 +1,30 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Where do the graphics, syscall, and kernel ABI differential system tests live?",
+  "allowedInputs": [
+    "The tree, including tools/syscall-diff, tools/graphics-diff, tools/kernel-abi, and tools/probe-stamp before the move",
+    "The user request to move those tests out of source into a project-root folder for differential system tests"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "syscall, graphics, and kernel ABI compare fixtures, plus the probe-stamp self-test",
+    "traceOrReplayId": "no guest log; the fixtures do not boot Windows or VerOS"
+  },
+  "cursor": {
+    "prompt": "Can we move these out of the source and into a new folder just for differential system tests in the root of the project?",
+    "model": "Grok 4.7",
+    "date": "2026-11-09"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "Windows and VerOS differential scores",
+    "before": null,
+    "after": null,
+    "note": "The move does not change a guest result. Probe stamp labels stay tools/<probe>/probe.c so an existing windows.probe still matches the same source bytes."
+  }
+}
