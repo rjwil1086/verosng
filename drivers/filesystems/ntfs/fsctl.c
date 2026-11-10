@@ -33,6 +33,69 @@ C_ASSERT(FIELD_OFFSET(NTFS_EXTENDED_VOLUME_DATA, BytesPerPhysicalSector) == 8);
 /* FUNCTIONS ****************************************************************/
 
 /*
+ * A resident value or a non-resident mapping pair that runs past its
+ * attribute makes the record unusable. Mount must not accept it.
+ */
+static
+NTSTATUS
+NtfsFileRecordIsConsistent(PDEVICE_EXTENSION DeviceExt,
+                           PFILE_RECORD_HEADER Record)
+{
+    PUCHAR Start = (PUCHAR)Record;
+    ULONG RecBytes = DeviceExt->NtfsInfo.BytesPerFileRecord;
+    ULONG Used = Record->BytesInUse;
+    ULONG Off = Record->AttributeOffset;
+
+    if (Record->Ntfs.Type != NRH_FILE_TYPE ||
+        Off < sizeof(FILE_RECORD_HEADER) ||
+        Used > RecBytes ||
+        Off > Used)
+    {
+        return STATUS_FILE_CORRUPT_ERROR;
+    }
+
+    while (Off + sizeof(ULONG) * 2 <= Used)
+    {
+        PNTFS_ATTR_RECORD Attr = (PNTFS_ATTR_RECORD)(Start + Off);
+
+        if (Attr->Type == AttributeEnd)
+            return STATUS_SUCCESS;
+
+        if (Attr->Length < 24 ||
+            (Attr->Length & 7) ||
+            Off + Attr->Length > Used)
+        {
+            return STATUS_FILE_CORRUPT_ERROR;
+        }
+
+        if (Attr->IsNonResident == 0)
+        {
+            if (Attr->Resident.ValueLength > Attr->Length ||
+                Attr->Resident.ValueOffset > Attr->Length - Attr->Resident.ValueLength)
+            {
+                return STATUS_FILE_CORRUPT_ERROR;
+            }
+        }
+        else if (Attr->IsNonResident == 1)
+        {
+            if (Attr->NonResident.MappingPairsOffset < 0x40 ||
+                Attr->NonResident.MappingPairsOffset > Attr->Length)
+            {
+                return STATUS_FILE_CORRUPT_ERROR;
+            }
+        }
+        else
+        {
+            return STATUS_FILE_CORRUPT_ERROR;
+        }
+
+        Off += Attr->Length;
+    }
+
+    return STATUS_SUCCESS;
+}
+
+/*
  * FUNCTION: Tests if the device contains a filesystem that can be mounted
  *           by this fsd.
  */
@@ -209,6 +272,7 @@ NtfsGetVolumeData(PDEVICE_OBJECT DeviceObject,
     PNTFS_ATTR_RECORD Attribute;
     PNTFS_FCB VolumeFcb;
     PWSTR VolumeNameU;
+    PFILE_RECORD_HEADER MirrorRecord;
 
     DPRINT("NtfsGetVolumeData() called\n");
 
@@ -302,10 +366,50 @@ NtfsGetVolumeData(PDEVICE_OBJECT DeviceObject,
         return Status;
     }
 
+    /*
+     * $MFTMirr stores the same first file record. A one-byte change in
+     * either copy means the volume cannot be trusted.
+     */
+    MirrorRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+    if (MirrorRecord == NULL)
+    {
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
+        ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    Status = NtfsReadSectors(DeviceObject,
+                             NtfsInfo->MftMirrStart.u.LowPart * NtfsInfo->SectorsPerCluster,
+                             NtfsInfo->BytesPerFileRecord / NtfsInfo->BytesPerSector,
+                             NtfsInfo->BytesPerSector,
+                             (PVOID)MirrorRecord,
+                             TRUE);
+    if (!NT_SUCCESS(Status) ||
+        RtlCompareMemory(MirrorRecord,
+                         DeviceExt->MasterFileTable,
+                         NtfsInfo->BytesPerFileRecord) != NtfsInfo->BytesPerFileRecord)
+    {
+        DPRINT1("MFT mirror does not match the first file record (Status %lx)\n", Status);
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, MirrorRecord);
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
+        ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+        return NT_SUCCESS(Status) ? STATUS_FILE_CORRUPT_ERROR : Status;
+    }
+    ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, MirrorRecord);
+
     Status = FixupUpdateSequenceArray(DeviceExt, &DeviceExt->MasterFileTable->Ntfs);
     if (!NT_SUCCESS(Status))
     {
         DPRINT1("MFT record failed its update sequence (Status %lx)\n", Status);
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
+        ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+        return Status;
+    }
+
+    Status = NtfsFileRecordIsConsistent(DeviceExt, DeviceExt->MasterFileTable);
+    if (!NT_SUCCESS(Status))
+    {
+        DPRINT1("MFT record attributes are inconsistent (Status %lx)\n", Status);
         ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
         ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
         return Status;

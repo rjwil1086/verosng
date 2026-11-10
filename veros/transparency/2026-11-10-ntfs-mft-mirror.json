@@ -1,0 +1,33 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why did the NTFS fuzz guest mount a corrupt first file record, and what must mount reject so that row goes green?",
+  "allowedInputs": [
+    "drivers/filesystems/ntfs/fsctl.c and ntfs.h already in this tree",
+    "unittests/ntfs/host/ntfs_fuzz.c and ntfs_check.c",
+    "The fuzz guest result logs and the host checker output for images 5 and 6"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "amd64 live CD, QEMU TCG, fuzz disk",
+    "name": "Invoke-NtfsSuite.ps1 -Phase fuzz -Count 8",
+    "traceOrReplayId": "unittests/ntfs/out/share-fuzz-5/result.log"
+  },
+  "cursor": {
+    "prompt": "The fuzz test needs to be green. figure out why it is red, fix it, then run it again.",
+    "model": "Grok 4.7",
+    "date": "2026-11-10"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "NTFS 3.1 fuzz row",
+    "before": "red: mounted image 5 is corrupt",
+    "after": "green",
+    "note": "The red score is from the 25-image run that stopped on image 5. The green score is the later run of the eight distinct mutations. All eight guests printed FuzzImage rejected."
+  },
+  "commit": null,
+  "note": "Image 5 lengthened a resident value past its attribute. Image 6 changed one timestamp byte. Both left $MFTMirr unchanged, and the host checker treats that disagreement as corrupt."
+}
