@@ -506,6 +506,8 @@ NtfsMakeFCBFromDirEntry(PNTFS_VCB Vcb,
     {
         rcFCB->Entry.FileAttributes |= StdInfo->FileAttribute;
     }
+    if (rcFCB->Entry.FileAttributes & NTFS_FILE_TYPE_ENCRYPTED)
+        NtfsLoadFileKey(Vcb, Record, rcFCB);
 
     NtfsFCBInitializeCache(Vcb, rcFCB);
     rcFCB->RefCount = 1;

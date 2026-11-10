@@ -114,8 +114,109 @@ NtfsStoreAttribute(PDEVICE_EXTENSION Vcb,
     return STATUS_NOT_FOUND;
 }
 
-/* Insert a view-index entry into a resident $INDEX_ROOT, growing it when the
- * file record has room. The key is compared as an unsigned byte string. */
+/* Put one view-index entry into a leaf INDX block of a large index. */
+static
+NTSTATUS
+NtfsInsertIndexBlock(PDEVICE_EXTENSION Vcb,
+                     PFILE_RECORD_HEADER Record,
+                     PCWSTR IndexName,
+                     PINDEX_ROOT_ATTRIBUTE Root,
+                     const UCHAR *Key,
+                     USHORT KeyLength,
+                     const UCHAR *Data,
+                     USHORT DataLength)
+{
+    PNTFS_ATTR_CONTEXT Allocation = NULL;
+    PINDEX_BUFFER Block;
+    PUCHAR Entries;
+    PUCHAR End;
+    PUCHAR Cursor;
+    ULONGLONG Size;
+    ULONGLONG Offset;
+    ULONG BlockSize;
+    ULONG EntryLength;
+    ULONG Written;
+    NTSTATUS Status;
+
+    BlockSize = Root->SizeOfEntry;
+    if (BlockSize < 512 || BlockSize > 65536)
+        return STATUS_NOT_IMPLEMENTED;
+
+    Status = FindAttribute(Vcb, Record, AttributeIndexAllocation, IndexName,
+                           (ULONG)wcslen(IndexName), &Allocation, NULL);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Block = ExAllocatePoolWithTag(NonPagedPool, BlockSize, TAG_NTFS);
+    if (Block == NULL)
+    {
+        ReleaseAttributeContext(Allocation);
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    EntryLength = ALIGN_UP_BY(16 + KeyLength + DataLength, 8);
+    Size = AttributeDataLength(Allocation->pRecord);
+    Status = STATUS_DISK_FULL;
+    for (Offset = 0; Offset + BlockSize <= Size; Offset += BlockSize)
+    {
+        if (ReadAttribute(Vcb, Allocation, Offset, (PCHAR)Block, BlockSize) != BlockSize)
+            continue;
+        if (FixupUpdateSequenceArray(Vcb, &Block->Ntfs) != STATUS_SUCCESS)
+            continue;
+        if (Block->Ntfs.Type != NRH_INDX_TYPE)
+            continue;
+        if (Block->Header.Flags & 1)
+            continue;
+        if (Block->Header.TotalSizeOfEntries + EntryLength > Block->Header.AllocatedSize)
+            continue;
+
+        Entries = (PUCHAR)&Block->Header + Block->Header.FirstEntryOffset;
+        End = (PUCHAR)&Block->Header + Block->Header.TotalSizeOfEntries;
+        Cursor = Entries;
+        while (Cursor + 16 <= End)
+        {
+            USHORT Length = *(PUSHORT)(Cursor + 8);
+            USHORT ThisKey = *(PUSHORT)(Cursor + 10);
+            USHORT Flags = *(PUSHORT)(Cursor + 12);
+            int Compare;
+
+            if (Length < 16 || Cursor + Length > End)
+                break;
+            if (Flags & NTFS_INDEX_ENTRY_END)
+                break;
+            Compare = memcmp(Key, Cursor + 16, min(KeyLength, ThisKey));
+            if (Compare == 0 && KeyLength == ThisKey)
+            {
+                Status = STATUS_SUCCESS;
+                goto Done;
+            }
+            if (Compare < 0 || (Compare == 0 && KeyLength < ThisKey))
+                break;
+            Cursor += Length;
+        }
+
+        RtlMoveMemory(Cursor + EntryLength, Cursor, (ULONG)(End - Cursor));
+        RtlZeroMemory(Cursor, EntryLength);
+        *(PUSHORT)Cursor = (USHORT)ALIGN_UP_BY(16 + KeyLength, 8);
+        *(PUSHORT)(Cursor + 2) = DataLength;
+        *(PUSHORT)(Cursor + 8) = (USHORT)EntryLength;
+        *(PUSHORT)(Cursor + 10) = KeyLength;
+        RtlCopyMemory(Cursor + 16, Key, KeyLength);
+        RtlCopyMemory(Cursor + *(PUSHORT)Cursor, Data, DataLength);
+        Block->Header.TotalSizeOfEntries += EntryLength;
+        AddFixupArray(Vcb, &Block->Ntfs);
+        Status = WriteAttribute(Vcb, Allocation, Offset, (PCHAR)Block, BlockSize, &Written, Record);
+        goto Done;
+    }
+
+Done:
+    ExFreePoolWithTag(Block, TAG_NTFS);
+    ReleaseAttributeContext(Allocation);
+    return Status;
+}
+
+/* Insert a view-index entry. A small index grows inside the file record when
+ * the record still has spare bytes. A large index takes a free leaf block. */
 static
 NTSTATUS
 NtfsInsertRootEntry(PDEVICE_EXTENSION Vcb,
@@ -128,12 +229,12 @@ NtfsInsertRootEntry(PDEVICE_EXTENSION Vcb,
 {
     PFILE_RECORD_HEADER Record;
     PNTFS_ATTR_CONTEXT Context = NULL;
+    PNTFS_ATTR_RECORD Slot;
     PINDEX_ROOT_ATTRIBUTE Root;
     PUCHAR Entries;
     PUCHAR End;
     PUCHAR Cursor;
     ULONG EntryLength;
-    ULONG Need;
     NTSTATUS Status;
 
     Status = NtfsReadRecord(Vcb, Directory, &Record);
@@ -154,21 +255,54 @@ NtfsInsertRootEntry(PDEVICE_EXTENSION Vcb,
         return STATUS_NOT_IMPLEMENTED;
     }
 
-    Root = (PINDEX_ROOT_ATTRIBUTE)((PUCHAR)Context->pRecord + Context->pRecord->Resident.ValueOffset);
-    if (Root->Header.Flags != INDEX_ROOT_SMALL)
+    Slot = (PNTFS_ATTR_RECORD)((PUCHAR)Record + Record->AttributeOffset);
+    while (Slot->Type != AttributeEnd && Slot->Length != 0 &&
+           Slot->Instance != Context->pRecord->Instance)
+        Slot = (PNTFS_ATTR_RECORD)((PUCHAR)Slot + Slot->Length);
+    if (Slot->Type == AttributeEnd || Slot->Length == 0)
     {
         ReleaseAttributeContext(Context);
         NtfsFreeRecord(Vcb, Record);
-        return STATUS_NOT_IMPLEMENTED;
+        return STATUS_NOT_FOUND;
+    }
+
+    Root = (PINDEX_ROOT_ATTRIBUTE)((PUCHAR)Slot + Slot->Resident.ValueOffset);
+    if (Root->Header.Flags != INDEX_ROOT_SMALL)
+    {
+        Status = NtfsInsertIndexBlock(Vcb, Record, IndexName, Root, Key, KeyLength, Data, DataLength);
+        ReleaseAttributeContext(Context);
+        NtfsFreeRecord(Vcb, Record);
+        return Status;
     }
 
     EntryLength = ALIGN_UP_BY(16 + KeyLength + DataLength, 8);
-    Need = EntryLength;
-    if (Root->Header.TotalSizeOfEntries + Need > Root->Header.AllocatedSize)
+    if (Root->Header.TotalSizeOfEntries + EntryLength > Root->Header.AllocatedSize)
     {
-        ReleaseAttributeContext(Context);
-        NtfsFreeRecord(Vcb, Record);
-        return STATUS_DISK_FULL;
+        ULONG Extra = Root->Header.TotalSizeOfEntries + EntryLength - Root->Header.AllocatedSize;
+        ULONG ValueEnd = Slot->Resident.ValueOffset + Slot->Resident.ValueLength;
+        ULONG Slack = (Slot->Length > ValueEnd) ? Slot->Length - ValueEnd : 0;
+        ULONG FromRecord = (Extra > Slack) ? ALIGN_UP_BY(Extra - Slack, 8) : 0;
+        ULONG Spare = Record->BytesAllocated - Record->BytesInUse;
+
+        Extra = ALIGN_UP_BY(Extra, 8);
+        if (FromRecord > Spare)
+        {
+            ReleaseAttributeContext(Context);
+            NtfsFreeRecord(Vcb, Record);
+            return STATUS_DISK_FULL;
+        }
+        if (FromRecord != 0)
+        {
+            PUCHAR Next = (PUCHAR)Slot + Slot->Length;
+            ULONG Tail = Record->BytesInUse - (ULONG)(Next - (PUCHAR)Record);
+
+            RtlMoveMemory(Next + FromRecord, Next, Tail);
+            Slot->Length += FromRecord;
+            Record->BytesInUse += FromRecord;
+        }
+        RtlZeroMemory((PUCHAR)Slot + Slot->Resident.ValueOffset + Slot->Resident.ValueLength, Extra);
+        Slot->Resident.ValueLength += Extra;
+        Root->Header.AllocatedSize += Extra;
     }
 
     Entries = (PUCHAR)&Root->Header + Root->Header.FirstEntryOffset;
@@ -208,23 +342,114 @@ NtfsInsertRootEntry(PDEVICE_EXTENSION Vcb,
     RtlCopyMemory(Cursor + *(PUSHORT)Cursor, Data, DataLength);
     Root->Header.TotalSizeOfEntries += EntryLength;
 
-    {
-        PNTFS_ATTR_RECORD Slot = (PNTFS_ATTR_RECORD)((PUCHAR)Record + Record->AttributeOffset);
-        while (Slot->Type != AttributeEnd && Slot->Length != 0)
-        {
-            if (Slot->Instance == Context->pRecord->Instance && Slot->Length == Context->pRecord->Length)
-            {
-                RtlCopyMemory(Slot, Context->pRecord, Slot->Length);
-                break;
-            }
-            Slot = (PNTFS_ATTR_RECORD)((PUCHAR)Slot + Slot->Length);
-        }
-    }
-
     Status = UpdateFileRecord(Vcb, Directory, Record);
     ReleaseAttributeContext(Context);
     NtfsFreeRecord(Vcb, Record);
     return Status;
+}
+
+static
+NTSTATUS
+NtfsClearVolumeDirty(PDEVICE_EXTENSION Vcb)
+{
+    PFILE_RECORD_HEADER Volume;
+    PNTFS_ATTR_RECORD Slot;
+    PVOLINFO_ATTRIBUTE VolInfo;
+    NTSTATUS Status;
+
+    Status = NtfsReadRecord(Vcb, NTFS_FILE_VOLUME, &Volume);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Slot = (PNTFS_ATTR_RECORD)((PUCHAR)Volume + Volume->AttributeOffset);
+    while (Slot->Type != AttributeEnd && Slot->Length != 0)
+    {
+        if (Slot->Type == AttributeVolumeInformation && !Slot->IsNonResident)
+        {
+            VolInfo = (PVOLINFO_ATTRIBUTE)((PUCHAR)Slot + Slot->Resident.ValueOffset);
+            VolInfo->Flags &= ~NTFS_VOLUME_DIRTY;
+            break;
+        }
+        Slot = (PNTFS_ATTR_RECORD)((PUCHAR)Slot + Slot->Length);
+    }
+
+    Status = UpdateFileRecord(Vcb, NTFS_FILE_VOLUME, Volume);
+    NtfsFreeRecord(Vcb, Volume);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Vcb->Flags &= ~VCB_VOLUME_READ_ONLY;
+    Vcb->NtfsInfo.Flags &= ~NTFS_VOLUME_DIRTY;
+    return STATUS_SUCCESS;
+}
+
+/* A Windows restart page uses the same 'RSTR' magic. Nothing is replayed
+ * unless every in-use client has an empty restart LSN. Outstanding records
+ * stay read-only instead of being applied halfway. */
+static
+NTSTATUS
+NtfsReplayWindowsLog(PDEVICE_EXTENSION Vcb, PNTFS_ATTR_CONTEXT Data, PUCHAR Page)
+{
+    ULONG PageSize;
+    ULONG Seen = 0;
+    USHORT RestartOff;
+    USHORT ClientOff;
+    USHORT Client;
+    BOOLEAN Pending = FALSE;
+    NTSTATUS Status;
+
+    Status = FixupUpdateSequenceArray(Vcb, (PNTFS_RECORD_HEADER)Page);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    PageSize = *(PULONG)(Page + 0x10);
+    if (PageSize == NTFS_LOG_PAGE)
+    {
+        PUCHAR Other = ExAllocatePoolWithTag(NonPagedPool, PageSize, TAG_NTFS);
+        if (Other != NULL &&
+            ReadAttribute(Vcb, Data, PageSize, (PCHAR)Other, PageSize) == PageSize &&
+            *(PULONG)Other == NTFS_LOG_FILE_MAGIC &&
+            NT_SUCCESS(FixupUpdateSequenceArray(Vcb, (PNTFS_RECORD_HEADER)Other)))
+        {
+            USHORT OtherOff = *(PUSHORT)(Other + 0x18);
+            USHORT FirstOff = *(PUSHORT)(Page + 0x18);
+            if (OtherOff + 8 < PageSize && FirstOff + 8 < PageSize &&
+                *(PULONGLONG)(Other + OtherOff) > *(PULONGLONG)(Page + FirstOff))
+                RtlCopyMemory(Page, Other, PageSize);
+        }
+        if (Other != NULL)
+            ExFreePoolWithTag(Other, TAG_NTFS);
+    }
+
+    RestartOff = *(PUSHORT)(Page + 0x18);
+    if (RestartOff < 0x30 || RestartOff + 0x40 > NTFS_LOG_PAGE)
+        return STATUS_DISK_CORRUPT_ERROR;
+
+    ClientOff = *(PUSHORT)(Page + RestartOff + 0x16);
+    Client = *(PUSHORT)(Page + RestartOff + 0x0C);
+    while (Client != 0xFFFF)
+    {
+        ULONG At = RestartOff + ClientOff + (ULONG)Client * 0x60;
+        ULONGLONG RestartLsn;
+
+        if (ClientOff < 0x18 || At + 0x14 > NTFS_LOG_PAGE)
+            return STATUS_DISK_CORRUPT_ERROR;
+        RestartLsn = *(PULONGLONG)(Page + At + 8);
+        if (RestartLsn != 0)
+            Pending = TRUE;
+        Client = *(PUSHORT)(Page + At + 0x12);
+        Seen++;
+        if (Seen > 16)
+            return STATUS_DISK_CORRUPT_ERROR;
+    }
+
+    if (Pending)
+    {
+        DPRINT1("Windows log has records to replay; the volume stays read-only\n");
+        return STATUS_SUCCESS;
+    }
+
+    return NtfsClearVolumeDirty(Vcb);
 }
 
 NTSTATUS
@@ -264,10 +489,16 @@ NtfsReplayLog(PDEVICE_EXTENSION Vcb)
         goto Done;
     }
 
-    /* An uninitialized log, or one we did not write, is not replayed. */
+    /* An uninitialized log is not replayed. A Windows restart page has an
+     * update sequence; the log this driver writes does not. */
     if (*(PULONG)Page != NTFS_LOG_FILE_MAGIC)
     {
         Status = STATUS_DISK_CORRUPT_ERROR;
+        goto Done;
+    }
+    if (((PNTFS_RECORD_HEADER)Page)->UsaCount >= 2)
+    {
+        Status = NtfsReplayWindowsLog(Vcb, Data, Page);
         goto Done;
     }
 
@@ -325,30 +556,7 @@ NtfsReplayLog(PDEVICE_EXTENSION Vcb)
     }
 
     /* The records we wrote are back. Drop the dirty bit and allow writes. */
-    {
-        PFILE_RECORD_HEADER Volume;
-        PNTFS_ATTR_CONTEXT Info = NULL;
-        PVOLINFO_ATTRIBUTE VolInfo;
-
-        Status = NtfsReadRecord(Vcb, NTFS_FILE_VOLUME, &Volume);
-        if (!NT_SUCCESS(Status))
-            goto Done;
-        Status = FindAttribute(Vcb, Volume, AttributeVolumeInformation, L"", 0, &Info, NULL);
-        if (NT_SUCCESS(Status))
-        {
-            VolInfo = (PVOLINFO_ATTRIBUTE)((PUCHAR)Info->pRecord + Info->pRecord->Resident.ValueOffset);
-            VolInfo->Flags &= ~NTFS_VOLUME_DIRTY;
-            Status = UpdateFileRecord(Vcb, NTFS_FILE_VOLUME, Volume);
-            ReleaseAttributeContext(Info);
-        }
-        NtfsFreeRecord(Vcb, Volume);
-        if (!NT_SUCCESS(Status))
-            goto Done;
-    }
-
-    Vcb->Flags &= ~VCB_VOLUME_READ_ONLY;
-    Vcb->NtfsInfo.Flags &= ~NTFS_VOLUME_DIRTY;
-    Status = STATUS_SUCCESS;
+    Status = NtfsClearVolumeDirty(Vcb);
     UNREFERENCED_PARAMETER(Applied);
 
 Done:
@@ -1091,6 +1299,95 @@ NtfsUpdateQuotaLimits(PDEVICE_EXTENSION Vcb,
     return Status;
 }
 
+static
+NTSTATUS
+NtfsNextQuotaOwner(PDEVICE_EXTENSION Vcb, ULONGLONG QuotaFile, PULONG OwnerId)
+{
+    PFILE_RECORD_HEADER Record;
+    PNTFS_ATTR_CONTEXT Context;
+    PINDEX_ROOT_ATTRIBUTE Root;
+    PUCHAR Cursor;
+    PUCHAR End;
+    ULONG Next = 0x101;
+    NTSTATUS Status;
+
+    Status = NtfsOpenResidentIndex(Vcb, QuotaFile, L"$Q", &Record, &Context, &Root);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Cursor = (PUCHAR)&Root->Header + Root->Header.FirstEntryOffset;
+    End = (PUCHAR)&Root->Header + Root->Header.TotalSizeOfEntries;
+    while (Cursor + 16 <= End)
+    {
+        USHORT Length = *(PUSHORT)(Cursor + 8);
+        USHORT KeyLength = *(PUSHORT)(Cursor + 10);
+        USHORT Flags = *(PUSHORT)(Cursor + 12);
+        ULONG Id;
+
+        if (Length < 16 || Cursor + Length > End)
+            break;
+        if (Flags & NTFS_INDEX_ENTRY_END)
+            break;
+        if (KeyLength == sizeof(ULONG))
+        {
+            Id = *(PULONG)(Cursor + 16);
+            if (Id >= Next)
+                Next = Id + 1;
+        }
+        Cursor += Length;
+    }
+
+    ReleaseAttributeContext(Context);
+    NtfsFreeRecord(Vcb, Record);
+    *OwnerId = Next;
+    return STATUS_SUCCESS;
+}
+
+static
+NTSTATUS
+NtfsAddQuotaOwner(PDEVICE_EXTENSION Vcb,
+                  ULONGLONG QuotaFile,
+                  const UCHAR *Sid,
+                  USHORT SidLength,
+                  LONGLONG ChangeTime,
+                  LONGLONG Threshold,
+                  LONGLONG Limit,
+                  PULONG OwnerId)
+{
+    UCHAR Control[160];
+    UCHAR Key[4];
+    ULONG Next;
+    NTSTATUS Status;
+
+    if ((ULONG)SidLength + NTFS_QUOTA_CONTROL_SIZE > sizeof(Control))
+        return STATUS_INVALID_PARAMETER;
+
+    Status = NtfsNextQuotaOwner(Vcb, QuotaFile, &Next);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    RtlZeroMemory(Control, sizeof(Control));
+    *(PULONG)Control = 2;
+    *(PULONG)(Control + 4) = 1;
+    *(PLONGLONG)(Control + NTFS_QUOTA_CHANGE_OFFSET) = ChangeTime;
+    *(PLONGLONG)(Control + NTFS_QUOTA_THRESHOLD_OFFSET) = Threshold;
+    *(PLONGLONG)(Control + NTFS_QUOTA_LIMIT_OFFSET) = Limit;
+    RtlCopyMemory(Control + NTFS_QUOTA_CONTROL_SIZE, Sid, SidLength);
+
+    *(PULONG)Key = Next;
+    Status = NtfsInsertRootEntry(Vcb, QuotaFile, L"$Q", Key, sizeof(Key),
+                                 Control, (USHORT)(NTFS_QUOTA_CONTROL_SIZE + SidLength));
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Status = NtfsInsertRootEntry(Vcb, QuotaFile, L"$O", Sid, SidLength, Key, sizeof(Key));
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    *OwnerId = Next;
+    return STATUS_SUCCESS;
+}
+
 NTSTATUS
 NtfsSetQuota(PDEVICE_EXTENSION Vcb, PVOID Buffer, ULONG Length)
 {
@@ -1123,6 +1420,17 @@ NtfsSetQuota(PDEVICE_EXTENSION Vcb, PVOID Buffer, ULONG Length)
                                           (const UCHAR *)&Entry->Sid,
                                           (USHORT)Entry->SidLength,
                                           &OwnerId);
+            if (Status == STATUS_NOT_FOUND)
+            {
+                Status = NtfsAddQuotaOwner(Vcb,
+                                           QuotaFile,
+                                           (const UCHAR *)&Entry->Sid,
+                                           (USHORT)Entry->SidLength,
+                                           Entry->ChangeTime.QuadPart,
+                                           Entry->QuotaThreshold.QuadPart,
+                                           Entry->QuotaLimit.QuadPart,
+                                           &OwnerId);
+            }
             if (!NT_SUCCESS(Status))
                 return Status;
         }
@@ -2169,6 +2477,37 @@ NtfsCryptFile(PDEVICE_EXTENSION Vcb,
     return Status;
 }
 
+VOID
+NtfsLoadFileKey(PDEVICE_EXTENSION Vcb, PFILE_RECORD_HEADER Record, PNTFS_FCB Fcb)
+{
+    PNTFS_ATTR_CONTEXT Context = NULL;
+    PUCHAR Value;
+    ULONG Length;
+    ULONG Offset;
+
+    if (!NT_SUCCESS(FindAttribute(Vcb, Record, AttributeLoggedUtilityStream, L"$EFS", 4, &Context, NULL)))
+        return;
+    if (Context->pRecord->IsNonResident)
+    {
+        ReleaseAttributeContext(Context);
+        return;
+    }
+
+    Value = (PUCHAR)Context->pRecord + Context->pRecord->Resident.ValueOffset;
+    Length = Context->pRecord->Resident.ValueLength;
+    for (Offset = 0; Offset + 36 <= Length; Offset++)
+    {
+        if (*(PULONG)(Value + Offset) == 0x314B4546)
+        {
+            RtlCopyMemory(Fcb->FileKey, Value + Offset + 4, 32);
+            Fcb->FileKeyLength = 32;
+            Fcb->HasFileKey = TRUE;
+            break;
+        }
+    }
+    ReleaseAttributeContext(Context);
+}
+
 NTSTATUS
 NtfsReadEncrypted(PDEVICE_EXTENSION Vcb, PNTFS_FCB Fcb, PUCHAR Buffer, ULONG Length, ULONGLONG Offset, PULONG LengthRead)
 {
@@ -2179,6 +2518,40 @@ NTSTATUS
 NtfsWriteEncrypted(PDEVICE_EXTENSION Vcb, PNTFS_FCB Fcb, const PUCHAR Buffer, ULONG Length, ULONGLONG Offset, PULONG LengthWritten)
 {
     return NtfsCryptFile(Vcb, Fcb, (PUCHAR)Buffer, Length, Offset, LengthWritten, TRUE);
+}
+
+static
+NTSTATUS
+NtfsTransferPlain(PDEVICE_EXTENSION Vcb,
+                  PNTFS_FCB Fcb,
+                  PUCHAR Buffer,
+                  ULONG Length,
+                  ULONGLONG Offset,
+                  BOOLEAN Write)
+{
+    PFILE_RECORD_HEADER Record;
+    PNTFS_ATTR_CONTEXT Context = NULL;
+    PCWSTR Stream;
+    ULONG Done = 0;
+    NTSTATUS Status;
+
+    Stream = Fcb->Stream;
+    Status = NtfsReadRecord(Vcb, Fcb->MFTIndex, &Record);
+    if (!NT_SUCCESS(Status))
+        return Status;
+    Status = FindAttribute(Vcb, Record, AttributeData, Stream, (ULONG)wcslen(Stream), &Context, NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        NtfsFreeRecord(Vcb, Record);
+        return Status;
+    }
+    if (Write)
+        Status = WriteAttribute(Vcb, Context, Offset, (const PUCHAR)Buffer, Length, &Done, Record);
+    else if (ReadAttribute(Vcb, Context, Offset, (PCHAR)Buffer, Length) != Length)
+        Status = STATUS_END_OF_FILE;
+    ReleaseAttributeContext(Context);
+    NtfsFreeRecord(Vcb, Record);
+    return Status;
 }
 
 NTSTATUS
@@ -2197,7 +2570,9 @@ NtfsSetEncryption(PDEVICE_EXTENSION Vcb, PFILE_OBJECT FileObject, PVOID Buffer, 
     Blob = Request->Private;
     BlobLength = Length - FIELD_OFFSET(ENCRYPTION_BUFFER, Private);
     /* The service passes the $EFS stream. A 32-byte FEK after it is the
-     * unwrapped key. The key is not written into the attribute. */
+     * unwrapped key. The key is stored after an 'FEK1' mark so a later open
+     * can load it. A Windows $EFS stream has no such mark; its FEK is wrapped
+     * with the user's key and stays unreadable here. */
     if (BlobLength > 32)
         BlobLength -= 32;
 
@@ -2208,12 +2583,47 @@ NtfsSetEncryption(PDEVICE_EXTENSION Vcb, PFILE_OBJECT FileObject, PVOID Buffer, 
     if (Request->EncryptionOperation == FILE_CLEAR_ENCRYPTION ||
         Request->EncryptionOperation == STREAM_CLEAR_ENCRYPTION)
     {
+        if (Fcb->HasFileKey &&
+            (Fcb->RFCB.FileSize.QuadPart % NTFS_EFS_BLOCK) == 0 &&
+            Fcb->RFCB.FileSize.QuadPart != 0)
+        {
+            ULONGLONG Offset;
+            ULONG Done;
+            for (Offset = 0; Offset < (ULONGLONG)Fcb->RFCB.FileSize.QuadPart; Offset += NTFS_EFS_BLOCK)
+            {
+                UCHAR Plain[NTFS_EFS_BLOCK];
+                if (!NT_SUCCESS(NtfsReadEncrypted(Vcb, Fcb, Plain, NTFS_EFS_BLOCK, Offset, &Done)))
+                    break;
+                NtfsTransferPlain(Vcb, Fcb, Plain, NTFS_EFS_BLOCK, Offset, TRUE);
+            }
+        }
         Fcb->HasFileKey = FALSE;
         Fcb->FileKeyLength = 0;
         Fcb->Entry.FileAttributes &= ~NTFS_FILE_TYPE_ENCRYPTED;
     }
     else
     {
+        UCHAR Stored[288];
+        ULONG StoredLength = BlobLength;
+        const UCHAR *Key = NULL;
+
+        if (Length >= FIELD_OFFSET(ENCRYPTION_BUFFER, Private) + BlobLength + 32)
+            Key = Request->Private + BlobLength;
+        if (Key != NULL)
+        {
+            if (StoredLength + 36 > sizeof(Stored))
+            {
+                NtfsFreeRecord(Vcb, Record);
+                return STATUS_INVALID_PARAMETER;
+            }
+            RtlCopyMemory(Stored, Blob, BlobLength);
+            *(PULONG)(Stored + StoredLength) = 0x314B4546; /* 'FEK1' */
+            RtlCopyMemory(Stored + StoredLength + 4, Key, 32);
+            StoredLength += 36;
+            Blob = Stored;
+            BlobLength = StoredLength;
+        }
+
         Status = NtfsAddResidentAttribute(Vcb, Record, AttributeLoggedUtilityStream, L"$EFS", 4, Blob, BlobLength);
         if (NT_SUCCESS(Status))
         {
@@ -2223,13 +2633,27 @@ NtfsSetEncryption(PDEVICE_EXTENSION Vcb, PFILE_OBJECT FileObject, PVOID Buffer, 
             if (Info != NULL)
                 Info->FileAttribute |= NTFS_FILE_TYPE_ENCRYPTED;
             Fcb->Entry.FileAttributes |= NTFS_FILE_TYPE_ENCRYPTED;
-            if (Length >= FIELD_OFFSET(ENCRYPTION_BUFFER, Private) + BlobLength + 32)
+            if (Key != NULL)
             {
-                RtlCopyMemory(Fcb->FileKey, Request->Private + BlobLength, 32);
+                RtlCopyMemory(Fcb->FileKey, Key, 32);
                 Fcb->FileKeyLength = 32;
                 Fcb->HasFileKey = TRUE;
             }
             Status = UpdateFileRecord(Vcb, Fcb->MFTIndex, Record);
+            if (NT_SUCCESS(Status) && Fcb->HasFileKey &&
+                (Fcb->RFCB.FileSize.QuadPart % NTFS_EFS_BLOCK) == 0 &&
+                Fcb->RFCB.FileSize.QuadPart != 0)
+            {
+                ULONGLONG Offset;
+                ULONG Done;
+                for (Offset = 0; Offset < (ULONGLONG)Fcb->RFCB.FileSize.QuadPart; Offset += NTFS_EFS_BLOCK)
+                {
+                    UCHAR Plain[NTFS_EFS_BLOCK];
+                    if (!NT_SUCCESS(NtfsTransferPlain(Vcb, Fcb, Plain, NTFS_EFS_BLOCK, Offset, FALSE)))
+                        break;
+                    NtfsWriteEncrypted(Vcb, Fcb, Plain, NTFS_EFS_BLOCK, Offset, &Done);
+                }
+            }
         }
     }
 

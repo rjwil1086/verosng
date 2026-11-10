@@ -1654,6 +1654,11 @@ NTSTATUS
 NtfsReplayLog(PDEVICE_EXTENSION Vcb);
 
 VOID
+NtfsLoadFileKey(PDEVICE_EXTENSION Vcb,
+                PFILE_RECORD_HEADER Record,
+                PNTFS_FCB Fcb);
+
+VOID
 NtfsLogFileRecord(PDEVICE_EXTENSION Vcb,
                   ULONGLONG MftIndex,
                   PFILE_RECORD_HEADER FileRecord);
