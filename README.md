@@ -1,4 +1,4 @@
-# VerOS NT
+# VerOS NT™
 
 VerOS NT is Ryan Wilson's hobby project: a one-person fork of [ReactOS](https://github.com/reactos/reactos). The goal is a general-purpose operating system that can install and run any application Windows 10 22H2 can install and run. That set is x64 programs and, later, 32-bit programs on the amd64 boot.
 
@@ -6,7 +6,7 @@ These are alpha builds for the harness, experiments, and watching compatibility 
 
 Cursor and Grok write most of the patches. Ryan reviews them before they land. Each generated change ships with a public note under [`veros/transparency/`](veros/transparency/). A prompt may use QEMU harness traces, public documentation, this tree under GPL-2.0, and Wine code under the license already on the file. Leaked or proprietary Windows source, and decompiled or disassembled Microsoft binaries, stay out of the notes and out of the prompts.
 
-Windows is a registered trademark of Microsoft Corporation. Microsoft and the ReactOS Project have not licensed or endorsed this fork.
+VerOS NT is a trademark of Ryan Wilson. Windows is a registered trademark of Microsoft Corporation. Microsoft and the ReactOS Project have not licensed or endorsed this fork.
 
 ## Plan
 

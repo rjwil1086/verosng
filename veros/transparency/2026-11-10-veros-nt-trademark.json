@@ -1,0 +1,30 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Where should the VerOS NT name carry a trademark mark?",
+  "allowedInputs": [
+    "README.md, the public introduction of this tree",
+    "The user instruction to add the TM mark where appropriate for VerOS NT"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Can you add the TM mark where appropriate for VerOS NT?",
+    "model": "Grok 4.7",
+    "date": "2026-11-10"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "README title",
+    "before": "VerOS NT",
+    "after": "VerOS NT™",
+    "note": "The title carries the mark. The following sentence states that VerOS NT is a trademark of Ryan Wilson. Boot identifiers and license notices were left unchanged."
+  }
+}
