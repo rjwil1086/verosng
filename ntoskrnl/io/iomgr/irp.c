@@ -1,12 +1,14 @@
 /*
  * PROJECT:         ReactOS Kernel
- * LICENSE:         GPL - See COPYING in the top level directory
+ * LICENSE:         GNU General Public License, version 2 or later (GPL-2.0-or-later)
  * FILE:            ntoskrnl/io/iomgr/irp.c
  * PURPOSE:         IRP Handling Functions
+ * COPYRIGHT:       Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
  *                  Gunnar Dalsnes
  *                  Filip Navara (navaraf@reactos.org)
  *                  Pierre Schweitzer (pierre@reactos.org)
+ *                  Ryan Wilson
  */
 
 /* INCLUDES ****************************************************************/
@@ -878,15 +880,21 @@ IoBuildAsynchronousFsdRequest(IN ULONG MajorFunction,
         /* Check if this is a read */
         if (MajorFunction == IRP_MJ_READ)
         {
-            /* Set the parameters for a read */
+            /* Set the parameters for a read. A missing offset stays zero. */
             StackPtr->Parameters.Read.Length = Length;
-            StackPtr->Parameters.Read.ByteOffset = *StartingOffset;
+            if (StartingOffset != NULL)
+            {
+                StackPtr->Parameters.Read.ByteOffset = *StartingOffset;
+            }
         }
         else if (MajorFunction == IRP_MJ_WRITE)
         {
-            /* Otherwise, set write parameters */
+            /* Otherwise, set write parameters. A missing offset stays zero. */
             StackPtr->Parameters.Write.Length = Length;
-            StackPtr->Parameters.Write.ByteOffset = *StartingOffset;
+            if (StartingOffset != NULL)
+            {
+                StackPtr->Parameters.Write.ByteOffset = *StartingOffset;
+            }
         }
     }
 

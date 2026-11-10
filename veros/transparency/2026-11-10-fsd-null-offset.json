@@ -1,0 +1,33 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why did the VerOS kernel ABI guest stop in the debugger after IoCallDriver, and what must a read or write IRP do with a null offset?",
+  "allowedInputs": [
+    "ntoskrnl/io/iomgr/irp.c already in this tree",
+    "The optional StartingOffset parameter on IoBuildSynchronousFsdRequest in sdk/include/xdk/iofuncs.h",
+    "The Windows 10 22H2 kernel ABI log, which recorded IoBuildSynchronousFsdRequest RETURNED",
+    "The VerOS kernel debugger log for the page fault at address 0 after IoCallDriver"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "VerOS NT amd64 live CD and Windows 10 22H2, QEMU TCG",
+    "name": "Invoke-KernelAbi.ps1 -RunGuests",
+    "traceOrReplayId": "source/output/kernel-abi/reactos.log"
+  },
+  "cursor": {
+    "prompt": "I suppose we need to debug this issue and fix it",
+    "model": "Grok 4.7",
+    "date": "2026-11-10"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": true
+  },
+  "measuredEffect": {
+    "metric": "kernelAbi",
+    "before": null,
+    "after": 95.2,
+    "note": "Before was null because an earlier probe did not finish. After is 59 of 62 names. The Windows log is older than this IRP edit; that guest already returned an IRP for the null offset. The VerOS log is from the rebuilt boot CD."
+  },
+  "commit": null
+}
