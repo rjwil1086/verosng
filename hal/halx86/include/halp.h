@@ -1,5 +1,10 @@
 /*
- *
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        hal/halx86/include/halp.h
+ * PURPOSE:     Private declarations for the x86 HAL
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 #pragma once
@@ -267,6 +272,11 @@ CODE_SEG("INIT") VOID HalpInitDma (VOID);
 
 /* Non-generic initialization */
 VOID HalpInitPhase0 (PLOADER_PARAMETER_BLOCK LoaderBlock);
+
+CODE_SEG("INIT")
+VOID
+NTAPI
+HalpReleaseUsbLegacyOwnership(VOID);
 VOID HalpInitPhase1(VOID);
 
 VOID

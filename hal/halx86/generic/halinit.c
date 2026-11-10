@@ -1,9 +1,11 @@
 /*
  * PROJECT:         ReactOS HAL
- * LICENSE:         GPL - See COPYING in the top level directory
+ * LICENSE:         GNU General Public License, version 2 or later (GPL-2.0-or-later)
  * FILE:            hal/halx86/generic/halinit.c
  * PURPOSE:         HAL Entrypoint and Initialization
+ * COPYRIGHT:       Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
+ *                  Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/
@@ -122,7 +124,16 @@ HalInitSystem(
             KeBugCheckEx(MISMATCHED_HAL, 2, Prcb->BuildType, HalpBuildType, 0);
         }
 
+        /*
+         * Drop BIOS ownership of USB before ACPI, the PICs, or the clock.
+         * A legacy SMI from the controller that booted us resets the machine
+         * once those are reprogrammed.
+         */
+        HalDisplayString("HAL: USB legacy handoff\r\n");
+        HalpReleaseUsbLegacyOwnership();
+
         /* Initialize ACPI */
+        HalDisplayString("HAL: ACPI phase 0\r\n");
         Status = HalpSetupAcpiPhase0(LoaderBlock);
         if (!NT_SUCCESS(Status))
         {
@@ -130,6 +141,7 @@ HalInitSystem(
         }
 
         /* Initialize the PICs */
+        HalDisplayString("HAL: PICs\r\n");
         HalpInitializePICs(TRUE);
 
         /* Initialize CMOS lock */
@@ -156,6 +168,7 @@ HalInitSystem(
         HalpCalibrateStallExecution();
 
         /* Initialize the clock */
+        HalDisplayString("HAL: clock\r\n");
         HalpInitializeClock();
 
         /*
@@ -168,6 +181,7 @@ HalInitSystem(
         HalpInitPhase0(LoaderBlock);
 
         /* Initialize Phase 0 of the x86 emulator */
+        HalDisplayString("HAL: BIOS phase 0\r\n");
         HalInitializeBios(0, LoaderBlock);
     }
     else if (BootPhase == 1)

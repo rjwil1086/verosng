@@ -14,6 +14,7 @@ list(APPEND HAL_GENERIC_SOURCE
     generic/reboot.c
     generic/sysinfo.c
     generic/usage.c
+    generic/usbhandoff.c
     generic/x86bios.c)
 
 if(ARCH STREQUAL "i386")
