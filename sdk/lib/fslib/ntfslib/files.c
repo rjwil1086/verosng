@@ -50,6 +50,7 @@
 #define MREC_TXFLOG     30   /* $RmMetadata/$TxfLog */
 #define MREC_TXF        31   /* $RmMetadata/$Txf */
 #define MREC_TOPS       32   /* $TxfLog/$Tops */
+#define MREC_USN        23   /* $Extend/$UsnJrnl */
 #define MREC_TXFBLF     33   /* $TxfLog/$TxfLog.blf */
 #define MREC_CONT1      34   /* $TxfLog/$TxfLogContainer...0001 */
 #define MREC_CONT2      35   /* $TxfLog/$TxfLogContainer...0002 */
@@ -1340,12 +1341,23 @@ WriteMetafiles(VOID)
             MkFinalize(&Rec);
         }
 
+        /* Record 23: $UsnJrnl. The compliance suite opens this file by name
+         * before it asks to create the journal. */
+        MkInit(&Rec, REC_BUF(MREC_USN), MREC_USN, MFT_RECORD_IN_USE);
+        MkStdInfo(Val, FA_HIDDEN | FA_SYSTEM, Now, 0x101);
+        MkAddResident(&Rec, AttributeStandardInformation, NULL, 0, 0, Val, 72);
+        Len = MkFileName(Val, MFT_REFERENCE(MREC_EXTEND), FA_HIDDEN | FA_SYSTEM,
+                         0, 0, Now, L"$UsnJrnl", FILE_NAME_POSIX);
+        MkAddResident(&Rec, AttributeFileName, NULL, 0, RA_INDEXED, Val, Len);
+        MkAddResident(&Rec, AttributeData, NULL, 0, 0, NULL, 0);
+        MkFinalize(&Rec);
+
         /* Record 11: $Extend directory, indexing all children (collation order
-         * $Deleted < $ObjId < $Quota < $Reparse < $RmMetadata). The directory
-         * bit is set in FILE_NAME but not in STD_INFO. */
+         * $Deleted < $ObjId < $Quota < $Reparse < $RmMetadata < $UsnJrnl). The
+         * directory bit is set in FILE_NAME but not in STD_INFO. */
         {
             static const ULONG ExtendOrder[] =
-                { MREC_DELETED, MREC_OBJID, MREC_QUOTA, MREC_REPARSE, MREC_RMMETA };
+                { MREC_DELETED, MREC_OBJID, MREC_QUOTA, MREC_REPARSE, MREC_RMMETA, MREC_USN };
 
             MkInit(&Rec, REC_BUF(MREC_EXTEND), MREC_EXTEND, MFT_RECORD_IN_USE | MFT_RECORD_IS_DIRECTORY);
             MkStdInfo(Val, FA_HIDDEN | FA_SYSTEM, Now, 0x101);
@@ -1465,13 +1477,14 @@ WriteMetafiles(VOID)
         if (!NT_SUCCESS(Status)) { DPRINT1("ERROR: write $SDH (Status %lx)\n", Status); goto done; }
     }
 
-    /* $MFT:$BITMAP - records 0..15 and 24..35 in use. */
+    /* $MFT:$BITMAP - records 0..15, 23 ($UsnJrnl) and 24..35 in use. */
     {
         ULONG Size = LAYOUT.MftBitmapClusters * BYTES_PER_CLUSTER;
         PBYTE Buf = RtlAllocateHeap(RtlGetProcessHeap(), 0, Size);
         if (!Buf) { Status = STATUS_INSUFFICIENT_RESOURCES; goto done; }
         RtlZeroMemory(Buf, Size);
         Buf[0] = 0xFF; Buf[1] = 0xFF;   /* records 0..15  */
+        Buf[2] = 0x80;                  /* record 23      */
         Buf[3] = 0xFF; Buf[4] = 0x0F;   /* records 24..35 */
         Status = WriteAt(LAYOUT.MftBitmapLcn, Buf, Size);
         FREE(Buf);

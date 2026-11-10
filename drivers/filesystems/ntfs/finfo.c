@@ -904,6 +904,18 @@ NtfsSetBasicInformation(PDEVICE_EXTENSION DeviceExt,
         DPRINT1("Failed to refresh the duplicated information for %wS (Status %lx)\n",
                 Fcb->ObjectName, Status);
     }
+    else
+    {
+        /* Queries read this cached $FILE_NAME, not the record just written. */
+        if (BasicInfo->CreationTime.QuadPart > 0)
+            Fcb->Entry.CreationTime = BasicInfo->CreationTime.QuadPart;
+        if (BasicInfo->LastAccessTime.QuadPart > 0)
+            Fcb->Entry.LastAccessTime = BasicInfo->LastAccessTime.QuadPart;
+        if (BasicInfo->LastWriteTime.QuadPart > 0)
+            Fcb->Entry.LastWriteTime = BasicInfo->LastWriteTime.QuadPart;
+        if (BasicInfo->ChangeTime.QuadPart > 0)
+            Fcb->Entry.ChangeTime = BasicInfo->ChangeTime.QuadPart;
+    }
 
     ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
 
@@ -1748,6 +1760,219 @@ Quit:
     return Status;
 }
 
+/* Add another $FILE_NAME for an existing file and index it. The new name is
+ * a hard link, so LinkCount grows by one. */
+static
+NTSTATUS
+NtfsSetLinkInformation(PDEVICE_EXTENSION DeviceExt,
+                       PNTFS_FCB Fcb,
+                       PFILE_LINK_INFORMATION LinkInfo,
+                       ULONG BufferLength,
+                       BOOLEAN CaseSensitive)
+{
+    PFILE_RECORD_HEADER FileRecord;
+    PFILENAME_ATTRIBUTE Existing;
+    PFILENAME_ATTRIBUTE NewName;
+    PNTFS_ATTR_RECORD Attribute;
+    PNTFS_ATTR_RECORD InsertAt;
+    UNICODE_STRING FullName;
+    UNICODE_STRING Current;
+    UNICODE_STRING Remaining;
+    UNICODE_STRING FinalName;
+    WCHAR NameBuffer[MAX_PATH];
+    ULONGLONG ParentIndex;
+    ULONGLONG FileReference;
+    ULONG ValueLength;
+    ULONG AttributeLength;
+    ULONG ResidentHeader;
+    ULONG InsertOffset;
+    ULONG Tail;
+    ULONG FirstEntry;
+    NTSTATUS Status;
+
+    if (LinkInfo->RootDirectory != NULL)
+        return STATUS_INVALID_PARAMETER;
+
+    if (BufferLength < FIELD_OFFSET(FILE_LINK_INFORMATION, FileName) ||
+        LinkInfo->FileNameLength > BufferLength - FIELD_OFFSET(FILE_LINK_INFORMATION, FileName) ||
+        LinkInfo->FileNameLength > (MAX_PATH - 1) * sizeof(WCHAR) ||
+        (LinkInfo->FileNameLength % sizeof(WCHAR)) != 0)
+    {
+        return STATUS_INFO_LENGTH_MISMATCH;
+    }
+
+    RtlCopyMemory(NameBuffer, LinkInfo->FileName, LinkInfo->FileNameLength);
+    NameBuffer[LinkInfo->FileNameLength / sizeof(WCHAR)] = UNICODE_NULL;
+    RtlInitUnicodeString(&FullName, NameBuffer);
+
+    /* RtlDosPathNameToNtPathName_U produces \??\X:\dir\file. */
+    if (FullName.Length >= 6 * sizeof(WCHAR) &&
+        FullName.Buffer[0] == L'\\' &&
+        FullName.Buffer[1] == L'?' &&
+        FullName.Buffer[2] == L'?' &&
+        FullName.Buffer[3] == L'\\' &&
+        FullName.Buffer[5] == L':')
+    {
+        FullName.Buffer += 6;
+        FullName.Length -= 6 * sizeof(WCHAR);
+        FullName.MaximumLength -= 6 * sizeof(WCHAR);
+    }
+
+    if (FullName.Length == 0 || FullName.Buffer[0] != L'\\')
+        return STATUS_OBJECT_PATH_NOT_FOUND;
+
+    ParentIndex = NTFS_FILE_ROOT;
+    FsRtlDissectName(FullName, &Current, &Remaining);
+    while (Remaining.Length != 0)
+    {
+        FirstEntry = 0;
+        Status = NtfsFindMftRecord(DeviceExt,
+                                   ParentIndex,
+                                   &Current,
+                                   &FirstEntry,
+                                   FALSE,
+                                   CaseSensitive,
+                                   &ParentIndex);
+        if (!NT_SUCCESS(Status))
+            return Status;
+
+        ParentIndex &= NTFS_MFT_MASK;
+        FsRtlDissectName(Remaining, &Current, &Remaining);
+    }
+
+    FinalName = Current;
+    if (FinalName.Length == 0 || FinalName.Length > NTFS_MAX_NAME_LENGTH * sizeof(WCHAR))
+        return STATUS_OBJECT_NAME_INVALID;
+
+    FirstEntry = 0;
+    Status = NtfsFindMftRecord(DeviceExt,
+                               ParentIndex,
+                               &FinalName,
+                               &FirstEntry,
+                               FALSE,
+                               CaseSensitive,
+                               &FileReference);
+    if (NT_SUCCESS(Status))
+    {
+        if (!LinkInfo->ReplaceIfExists)
+            return STATUS_OBJECT_NAME_COLLISION;
+
+        return STATUS_NOT_IMPLEMENTED;
+    }
+
+    FileRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+    if (FileRecord == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    Status = ReadFileRecord(DeviceExt, Fcb->MFTIndex & NTFS_MFT_MASK, FileRecord);
+    if (!NT_SUCCESS(Status))
+    {
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+        return Status;
+    }
+
+    Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0)
+    {
+        if (Attribute->Type == AttributeAttributeList)
+        {
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+            return STATUS_NOT_IMPLEMENTED;
+        }
+
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+    }
+
+    if (FileRecord->LinkCount == MAXUSHORT)
+    {
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+        return STATUS_TOO_MANY_LINKS;
+    }
+
+    Existing = GetBestFileNameFromRecord(DeviceExt, FileRecord);
+    if (Existing == NULL)
+    {
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+        return STATUS_OBJECT_NAME_NOT_FOUND;
+    }
+
+    ResidentHeader = FIELD_OFFSET(NTFS_ATTR_RECORD, Resident.Reserved) + sizeof(UCHAR);
+    ValueLength = FIELD_OFFSET(FILENAME_ATTRIBUTE, Name) + FinalName.Length;
+    AttributeLength = ALIGN_UP_BY(ResidentHeader + ValueLength, ATTR_RECORD_ALIGNMENT);
+    if (FileRecord->BytesInUse + AttributeLength > FileRecord->BytesAllocated)
+    {
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+        return STATUS_DISK_FULL;
+    }
+
+    InsertAt = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
+    Attribute = InsertAt;
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0)
+    {
+        if (Attribute->Type == AttributeFileName)
+            InsertAt = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+    }
+
+    InsertOffset = (ULONG)((ULONG_PTR)InsertAt - (ULONG_PTR)FileRecord);
+    Tail = FileRecord->BytesInUse - InsertOffset;
+    RtlMoveMemory((PUCHAR)FileRecord + InsertOffset + AttributeLength,
+                  (PUCHAR)FileRecord + InsertOffset,
+                  Tail);
+
+    Attribute = (PNTFS_ATTR_RECORD)((PUCHAR)FileRecord + InsertOffset);
+    RtlZeroMemory(Attribute, AttributeLength);
+    Attribute->Type = AttributeFileName;
+    Attribute->Length = AttributeLength;
+    Attribute->Instance = FileRecord->NextAttributeNumber++;
+    Attribute->Resident.ValueLength = ValueLength;
+    Attribute->Resident.ValueOffset = (USHORT)ResidentHeader;
+    Attribute->Resident.Flags = RA_INDEXED;
+
+    NewName = (PFILENAME_ATTRIBUTE)((PUCHAR)Attribute + ResidentHeader);
+    NewName->DirectoryFileReferenceNumber = ParentIndex;
+    if (ParentIndex == NTFS_FILE_ROOT)
+        NewName->DirectoryFileReferenceNumber |= (ULONGLONG)NTFS_FILE_ROOT << 48;
+    else
+        NewName->DirectoryFileReferenceNumber |= (ULONGLONG)FileRecord->SequenceNumber << 48;
+
+    NewName->CreationTime = Existing->CreationTime;
+    NewName->LastWriteTime = Existing->LastWriteTime;
+    NewName->ChangeTime = Existing->ChangeTime;
+    NewName->LastAccessTime = Existing->LastAccessTime;
+    NewName->AllocatedSize = Existing->AllocatedSize;
+    NewName->DataSize = Existing->DataSize;
+    NewName->FileAttributes = Existing->FileAttributes;
+    NewName->NameLength = (UCHAR)(FinalName.Length / sizeof(WCHAR));
+    if (!CaseSensitive && RtlIsNameLegalDOS8Dot3(&FinalName, NULL, NULL))
+        NewName->NameType = NTFS_FILE_NAME_WIN32_AND_DOS;
+    else
+        NewName->NameType = NTFS_FILE_NAME_POSIX;
+
+    RtlCopyMemory(NewName->Name, FinalName.Buffer, FinalName.Length);
+    FileRecord->LinkCount++;
+    FileRecord->BytesInUse += AttributeLength;
+
+    FileReference = (Fcb->MFTIndex & NTFS_MFT_MASK) |
+                    ((ULONGLONG)FileRecord->SequenceNumber << 48);
+
+    Status = UpdateFileRecord(DeviceExt, Fcb->MFTIndex & NTFS_MFT_MASK, FileRecord);
+    if (NT_SUCCESS(Status))
+    {
+        Status = NtfsAddFilenameToDirectory(DeviceExt,
+                                            ParentIndex,
+                                            FileReference,
+                                            NewName,
+                                            CaseSensitive);
+        if (NT_SUCCESS(Status))
+            Fcb->LinkCount = FileRecord->LinkCount;
+    }
+
+    ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+    return Status;
+}
+
 NTSTATUS
 NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
 {
@@ -1761,6 +1986,7 @@ NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
     PIRP Irp;
     PDEVICE_OBJECT DeviceObject;
     NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+    BOOLEAN NeedDir;
 
     DPRINT("NtfsSetInformation(%p)\n", IrpContext);
 
@@ -1775,9 +2001,11 @@ NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
     SystemBuffer = Irp->AssociatedIrp.SystemBuffer;
     BufferLength = Stack->Parameters.QueryFile.Length;
 
-    /* A rename changes two directories and the FCB table, which creates rely
-     * on under DirResource. Take it first, the same order create does. */
-    if (FileInformationClass == FileRenameInformation &&
+    /* A rename or hard link changes a directory and the FCB table, which
+     * creates rely on under DirResource. Take it first, the same order create does. */
+    NeedDir = (FileInformationClass == FileRenameInformation ||
+               FileInformationClass == FileLinkInformation);
+    if (NeedDir &&
         !ExAcquireResourceExclusiveLite(&DeviceExt->DirResource,
                                         BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT)))
     {
@@ -1789,7 +2017,7 @@ NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
     if (!ExAcquireResourceExclusiveLite(&Fcb->MainResource,
                                         BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT)))
     {
-        if (FileInformationClass == FileRenameInformation)
+        if (NeedDir)
             ExReleaseResourceLite(&DeviceExt->DirResource);
 
         return NtfsMarkIrpContextForQueue(IrpContext);
@@ -1873,6 +2101,14 @@ NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
                                               BufferLength);
             break;
 
+        case FileLinkInformation:
+            Status = NtfsSetLinkInformation(DeviceExt,
+                                            Fcb,
+                                            (PFILE_LINK_INFORMATION)SystemBuffer,
+                                            BufferLength,
+                                            BooleanFlagOn(Stack->Flags, SL_CASE_SENSITIVE));
+            break;
+
         // TODO: all other information classes
 
         default:
@@ -1882,7 +2118,7 @@ NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
 
     ExReleaseResourceLite(&Fcb->MainResource);
 
-    if (FileInformationClass == FileRenameInformation)
+    if (NeedDir)
         ExReleaseResourceLite(&DeviceExt->DirResource);
 
     if (NT_SUCCESS(Status))

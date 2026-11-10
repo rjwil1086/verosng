@@ -344,6 +344,208 @@ AddFileName(PFILE_RECORD_HEADER FileRecord,
     return Status;
 }
 
+/* Skip characters that cannot appear in an 8.3 name. The dot is the separator
+ * and is handled by the caller. */
+static
+BOOLEAN
+NtfsDosChar(WCHAR Char)
+{
+    if (Char < 32 || Char == L' ' || Char == L'.')
+        return FALSE;
+
+    switch (Char)
+    {
+        case L'"':
+        case L'*':
+        case L'+':
+        case L',':
+        case L'/':
+        case L':':
+        case L';':
+        case L'<':
+        case L'=':
+        case L'>':
+        case L'?':
+        case L'\\':
+        case L'|':
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Build BASE~N.EXT from a long name. BASE is at most six characters so the
+ * tilde and digit fit in eight. The caller picks N. */
+static
+VOID
+NtfsBuildShortName(PCUNICODE_STRING LongName,
+                   USHORT Generation,
+                   PWCHAR ShortName,
+                   PUSHORT ShortChars)
+{
+    WCHAR Base[6];
+    WCHAR Ext[3];
+    ULONG BaseChars = 0;
+    ULONG ExtChars = 0;
+    ULONG Chars;
+    ULONG Dot;
+    ULONG Index;
+    ULONG Out;
+    PCWSTR Source;
+
+    Chars = LongName->Length / sizeof(WCHAR);
+    Source = LongName->Buffer;
+    Dot = Chars;
+
+    for (Index = 0; Index < Chars; Index++)
+    {
+        if (Source[Index] == L'.')
+            Dot = Index;
+    }
+
+    for (Index = 0; Index < Dot && BaseChars < 6; Index++)
+    {
+        WCHAR Upper = RtlUpcaseUnicodeChar(Source[Index]);
+        if (NtfsDosChar(Upper))
+            Base[BaseChars++] = Upper;
+    }
+
+    if (BaseChars == 0)
+    {
+        Base[0] = L'F';
+        BaseChars = 1;
+    }
+
+    if (Dot < Chars)
+    {
+        for (Index = Dot + 1; Index < Chars && ExtChars < 3; Index++)
+        {
+            WCHAR Upper = RtlUpcaseUnicodeChar(Source[Index]);
+            if (NtfsDosChar(Upper))
+                Ext[ExtChars++] = Upper;
+        }
+    }
+
+    Out = 0;
+    for (Index = 0; Index < BaseChars; Index++)
+        ShortName[Out++] = Base[Index];
+
+    ShortName[Out++] = L'~';
+    ShortName[Out++] = (WCHAR)(L'0' + Generation);
+
+    if (ExtChars != 0)
+    {
+        ShortName[Out++] = L'.';
+        for (Index = 0; Index < ExtChars; Index++)
+            ShortName[Out++] = Ext[Index];
+    }
+
+    *ShortChars = (USHORT)Out;
+}
+
+/**
+* @name AddDosFileName
+*
+* Stores a DOS $FILE_NAME beside a long name that is not itself a legal 8.3
+* name. The short name is not another hard link, so LinkCount stays as it is.
+* AttributeAddress must be the end marker, which is where a new file's
+* $FILE_NAME sits before $DATA.
+*/
+NTSTATUS
+AddDosFileName(PFILE_RECORD_HEADER FileRecord,
+               PNTFS_ATTR_RECORD AttributeAddress,
+               PDEVICE_EXTENSION DeviceExt,
+               PFILENAME_ATTRIBUTE LongName,
+               ULONGLONG ParentMftIndex,
+               BOOLEAN CaseSensitive)
+{
+    ULONG ResidentHeaderLength = FIELD_OFFSET(NTFS_ATTR_RECORD, Resident.Reserved) + sizeof(UCHAR);
+    PFILENAME_ATTRIBUTE ShortAttribute;
+    UNICODE_STRING LongString;
+    UNICODE_STRING ShortString;
+    WCHAR ShortName[12];
+    USHORT ShortChars;
+    USHORT Generation;
+    ULONG FileRecordEnd;
+    ULONG ValueLength;
+    ULONG AttributeLength;
+
+    if (AttributeAddress->Type != AttributeEnd)
+    {
+        DPRINT1("FIXME: Can only add a DOS name at the end of a file record.\n");
+        return STATUS_NOT_IMPLEMENTED;
+    }
+
+    LongString.Buffer = LongName->Name;
+    LongString.Length = LongName->NameLength * sizeof(WCHAR);
+    LongString.MaximumLength = LongString.Length;
+
+    for (Generation = 1; Generation <= 9; Generation++)
+    {
+        ULONG FirstEntry = 0;
+        ULONGLONG Existing;
+        NTSTATUS Status;
+
+        NtfsBuildShortName(&LongString, Generation, ShortName, &ShortChars);
+        ShortString.Buffer = ShortName;
+        ShortString.Length = ShortChars * sizeof(WCHAR);
+        ShortString.MaximumLength = sizeof(ShortName);
+
+        Status = NtfsFindMftRecord(DeviceExt,
+                                   ParentMftIndex,
+                                   &ShortString,
+                                   &FirstEntry,
+                                   FALSE,
+                                   CaseSensitive,
+                                   &Existing);
+        if (!NT_SUCCESS(Status))
+            break;
+    }
+
+    if (Generation > 9)
+    {
+        DPRINT1("No free 8.3 name for '%.*S'\n", LongName->NameLength, LongName->Name);
+        return STATUS_OBJECT_NAME_COLLISION;
+    }
+
+    ValueLength = FIELD_OFFSET(FILENAME_ATTRIBUTE, Name) + (ShortChars * sizeof(WCHAR));
+    AttributeLength = ALIGN_UP_BY(ResidentHeaderLength + ValueLength, ATTR_RECORD_ALIGNMENT);
+
+    if (FileRecord->BytesInUse + AttributeLength > FileRecord->BytesAllocated)
+    {
+        DPRINT1("No room for a DOS name in the file record.\n");
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    FileRecordEnd = AttributeAddress->Length;
+    RtlZeroMemory(AttributeAddress, AttributeLength);
+
+    AttributeAddress->Type = AttributeFileName;
+    AttributeAddress->Instance = FileRecord->NextAttributeNumber++;
+    AttributeAddress->Length = AttributeLength;
+    AttributeAddress->Resident.ValueLength = ValueLength;
+    AttributeAddress->Resident.ValueOffset = (USHORT)ResidentHeaderLength;
+    AttributeAddress->Resident.Flags = RA_INDEXED;
+
+    ShortAttribute = (PFILENAME_ATTRIBUTE)((ULONG_PTR)AttributeAddress + ResidentHeaderLength);
+    ShortAttribute->DirectoryFileReferenceNumber = LongName->DirectoryFileReferenceNumber;
+    ShortAttribute->CreationTime = LongName->CreationTime;
+    ShortAttribute->LastWriteTime = LongName->LastWriteTime;
+    ShortAttribute->ChangeTime = LongName->ChangeTime;
+    ShortAttribute->LastAccessTime = LongName->LastAccessTime;
+    ShortAttribute->AllocatedSize = LongName->AllocatedSize;
+    ShortAttribute->DataSize = LongName->DataSize;
+    ShortAttribute->FileAttributes = LongName->FileAttributes;
+    ShortAttribute->NameLength = (UCHAR)ShortChars;
+    ShortAttribute->NameType = NTFS_FILE_NAME_DOS;
+    RtlCopyMemory(ShortAttribute->Name, ShortName, ShortChars * sizeof(WCHAR));
+
+    AttributeAddress = (PNTFS_ATTR_RECORD)((ULONG_PTR)AttributeAddress + AttributeLength);
+    SetFileRecordEnd(FileRecord, AttributeAddress, FileRecordEnd);
+
+    return STATUS_SUCCESS;
+}
+
 /**
 * @name AddIndexAllocation
 * @implemented
@@ -2113,6 +2315,297 @@ GetBestFileNameFromRecord(PDEVICE_EXTENSION Vcb,
     }
 
     return FileName;
+}
+
+C_ASSERT(FIELD_OFFSET(NTFS_ATTRIBUTE_LIST_ITEM, StartingVCN) == 8);
+C_ASSERT(FIELD_OFFSET(NTFS_ATTRIBUTE_LIST_ITEM, MFTIndex) == 16);
+C_ASSERT(FIELD_OFFSET(NTFS_ATTRIBUTE_LIST_ITEM, Instance) == 24);
+
+/* One attribute-list entry. The name, if any, follows the 26-byte header and
+ * the whole entry is padded to eight bytes. A trailing zero entry stops the
+ * walk, which treats a length of zero as the end. */
+static
+ULONG
+NtfsWriteListItem(PUCHAR Dest,
+                  ULONG Type,
+                  USHORT Instance,
+                  ULONGLONG FileReference,
+                  PCWSTR Name,
+                  UCHAR NameLength)
+{
+    ULONG NameBytes = NameLength * sizeof(WCHAR);
+    ULONG Length = ALIGN_UP_BY(26 + NameBytes, ATTR_RECORD_ALIGNMENT);
+
+    RtlZeroMemory(Dest, Length);
+    *(PULONG)Dest = Type;
+    *(PUSHORT)(Dest + 4) = (USHORT)Length;
+    Dest[6] = NameLength;
+    Dest[7] = 26;
+    *(PULONGLONG)(Dest + 16) = FileReference;
+    *(PUSHORT)(Dest + 24) = Instance;
+
+    if (NameBytes != 0)
+        RtlCopyMemory(Dest + 26, Name, NameBytes);
+
+    return Length;
+}
+
+static
+BOOLEAN
+NtfsRecordHasAttributeList(PFILE_RECORD_HEADER FileRecord)
+{
+    PNTFS_ATTR_RECORD Attribute;
+
+    Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0)
+    {
+        if (Attribute->Type == AttributeAttributeList)
+            return TRUE;
+
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+    }
+
+    return FALSE;
+}
+
+/* Resident $ATTRIBUTE_LIST describing the attributes already in this record.
+ * The list attribute itself is included. Attributes added afterwards stay in
+ * this record and are found by the base-record walk. */
+static
+NTSTATUS
+NtfsInsertAttributeList(PFILE_RECORD_HEADER FileRecord)
+{
+    PUCHAR ListBuffer;
+    ULONG ListLength = 0;
+    ULONG ListCapacity;
+    ULONG ResidentHeader;
+    ULONG ValueOffset;
+    ULONG AttributeLength;
+    USHORT ListInstance;
+    ULONGLONG FileReference;
+    PNTFS_ATTR_RECORD Attribute;
+    PNTFS_ATTR_RECORD InsertAt;
+    ULONG InsertOffset;
+    ULONG Tail;
+
+    if (NtfsRecordHasAttributeList(FileRecord))
+        return STATUS_SUCCESS;
+
+    ListCapacity = FileRecord->BytesAllocated;
+    ListBuffer = ExAllocatePoolWithTag(NonPagedPool, ListCapacity, TAG_NTFS);
+    if (ListBuffer == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    FileReference = ((ULONGLONG)FileRecord->MFTRecordNumber) |
+                    ((ULONGLONG)FileRecord->SequenceNumber << 48);
+    ListInstance = FileRecord->NextAttributeNumber;
+
+    Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
+    InsertAt = Attribute;
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0 &&
+           Attribute->Type < AttributeAttributeList)
+    {
+        PCWSTR Name = NULL;
+
+        if (Attribute->NameLength != 0)
+            Name = (PCWSTR)((ULONG_PTR)Attribute + Attribute->NameOffset);
+
+        if (ListLength + 64 > ListCapacity)
+        {
+            ExFreePoolWithTag(ListBuffer, TAG_NTFS);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        ListLength += NtfsWriteListItem(ListBuffer + ListLength,
+                                        Attribute->Type,
+                                        Attribute->Instance,
+                                        FileReference,
+                                        Name,
+                                        Attribute->NameLength);
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+        InsertAt = Attribute;
+    }
+
+    if (ListLength + 64 > ListCapacity)
+    {
+        ExFreePoolWithTag(ListBuffer, TAG_NTFS);
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    ListLength += NtfsWriteListItem(ListBuffer + ListLength,
+                                    AttributeAttributeList,
+                                    ListInstance,
+                                    FileReference,
+                                    NULL,
+                                    0);
+
+    Attribute = InsertAt;
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0)
+    {
+        PCWSTR Name = NULL;
+
+        if (Attribute->NameLength != 0)
+            Name = (PCWSTR)((ULONG_PTR)Attribute + Attribute->NameOffset);
+
+        if (ListLength + 64 > ListCapacity)
+        {
+            ExFreePoolWithTag(ListBuffer, TAG_NTFS);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        ListLength += NtfsWriteListItem(ListBuffer + ListLength,
+                                        Attribute->Type,
+                                        Attribute->Instance,
+                                        FileReference,
+                                        Name,
+                                        Attribute->NameLength);
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+    }
+
+    RtlZeroMemory(ListBuffer + ListLength, sizeof(ULONGLONG));
+    ListLength += sizeof(ULONGLONG);
+
+    ResidentHeader = FIELD_OFFSET(NTFS_ATTR_RECORD, Resident.Reserved) + sizeof(UCHAR);
+    ValueOffset = ALIGN_UP_BY(ResidentHeader, VALUE_OFFSET_ALIGNMENT);
+    AttributeLength = ALIGN_UP_BY(ValueOffset + ListLength, ATTR_RECORD_ALIGNMENT);
+
+    if (FileRecord->BytesInUse + AttributeLength > FileRecord->BytesAllocated)
+    {
+        ExFreePoolWithTag(ListBuffer, TAG_NTFS);
+        return STATUS_DISK_FULL;
+    }
+
+    InsertOffset = (ULONG)((ULONG_PTR)InsertAt - (ULONG_PTR)FileRecord);
+    Tail = FileRecord->BytesInUse - InsertOffset;
+    RtlMoveMemory((PUCHAR)FileRecord + InsertOffset + AttributeLength,
+                  (PUCHAR)FileRecord + InsertOffset,
+                  Tail);
+
+    Attribute = (PNTFS_ATTR_RECORD)((PUCHAR)FileRecord + InsertOffset);
+    RtlZeroMemory(Attribute, AttributeLength);
+    Attribute->Type = AttributeAttributeList;
+    Attribute->Length = AttributeLength;
+    Attribute->NameLength = 0;
+    Attribute->NameOffset = (USHORT)ResidentHeader;
+    Attribute->Instance = FileRecord->NextAttributeNumber++;
+    Attribute->Resident.ValueLength = ListLength;
+    Attribute->Resident.ValueOffset = (USHORT)ValueOffset;
+    RtlCopyMemory((PUCHAR)Attribute + ValueOffset, ListBuffer, ListLength);
+
+    FileRecord->BytesInUse += AttributeLength;
+
+    ExFreePoolWithTag(ListBuffer, TAG_NTFS);
+    return STATUS_SUCCESS;
+}
+
+static
+NTSTATUS
+NtfsAppendNamedData(PFILE_RECORD_HEADER FileRecord,
+                    PCWSTR StreamName,
+                    ULONG NameLength)
+{
+    PNTFS_ATTR_RECORD Attribute;
+    ULONG ResidentHeader;
+    ULONG ValueOffset;
+    ULONG AttributeLength;
+    ULONG EndMarker;
+
+    ResidentHeader = FIELD_OFFSET(NTFS_ATTR_RECORD, Resident.Reserved) + sizeof(UCHAR);
+    ValueOffset = ALIGN_UP_BY(ResidentHeader + (NameLength * sizeof(WCHAR)), VALUE_OFFSET_ALIGNMENT);
+    AttributeLength = ALIGN_UP_BY(ValueOffset, ATTR_RECORD_ALIGNMENT);
+
+    if (FileRecord->BytesInUse + AttributeLength > FileRecord->BytesAllocated)
+        return STATUS_DISK_FULL;
+
+    Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0)
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+
+    if (Attribute->Type != AttributeEnd)
+        return STATUS_FILE_CORRUPT_ERROR;
+
+    EndMarker = Attribute->Length;
+    RtlZeroMemory(Attribute, AttributeLength);
+    Attribute->Type = AttributeData;
+    Attribute->Length = AttributeLength;
+    Attribute->NameLength = (UCHAR)NameLength;
+    Attribute->NameOffset = (USHORT)ResidentHeader;
+    Attribute->Instance = FileRecord->NextAttributeNumber++;
+    Attribute->Resident.ValueLength = 0;
+    Attribute->Resident.ValueOffset = (USHORT)ValueOffset;
+    RtlCopyMemory((PUCHAR)Attribute + ResidentHeader, StreamName, NameLength * sizeof(WCHAR));
+
+    Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + AttributeLength);
+    SetFileRecordEnd(FileRecord, Attribute, EndMarker);
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+NtfsAddNamedData(PDEVICE_EXTENSION DeviceExt,
+                 ULONGLONG MftIndex,
+                 PCWSTR StreamName)
+{
+    PFILE_RECORD_HEADER FileRecord;
+    PNTFS_ATTR_CONTEXT Context = NULL;
+    NTSTATUS Status;
+    ULONG NameLength;
+    BOOLEAN AddedList = FALSE;
+
+    if (StreamName == NULL || StreamName[0] == UNICODE_NULL)
+        return STATUS_OBJECT_NAME_INVALID;
+
+    NameLength = (ULONG)wcslen(StreamName);
+    if (NameLength == 0 || NameLength > 255)
+        return STATUS_OBJECT_NAME_INVALID;
+
+    FileRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+    if (FileRecord == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    Status = ReadFileRecord(DeviceExt, MftIndex & NTFS_MFT_MASK, FileRecord);
+    if (!NT_SUCCESS(Status))
+    {
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+        return Status;
+    }
+
+    Status = FindAttribute(DeviceExt,
+                           FileRecord,
+                           AttributeData,
+                           StreamName,
+                           NameLength,
+                           &Context,
+                           NULL);
+    if (NT_SUCCESS(Status))
+    {
+        ReleaseAttributeContext(Context);
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+        return STATUS_SUCCESS;
+    }
+
+    if (!NtfsRecordHasAttributeList(FileRecord))
+    {
+        Status = NtfsInsertAttributeList(FileRecord);
+        if (!NT_SUCCESS(Status))
+        {
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+            return Status;
+        }
+        AddedList = TRUE;
+    }
+
+    Status = NtfsAppendNamedData(FileRecord, StreamName, NameLength);
+    if (NT_SUCCESS(Status) || AddedList)
+    {
+        NTSTATUS Written;
+
+        Written = UpdateFileRecord(DeviceExt, MftIndex & NTFS_MFT_MASK, FileRecord);
+        if (!NT_SUCCESS(Written))
+            Status = Written;
+    }
+
+    ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+    return Status;
 }
 
 /* EOF */

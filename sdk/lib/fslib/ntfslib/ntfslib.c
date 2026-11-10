@@ -9,6 +9,7 @@
 /* INCLUDES ******************************************************************/
 
 #include "ntfslib.h"
+#include "refdata.h"
 
 #define NDEBUG
 #include <debug.h>
@@ -198,8 +199,18 @@ ComputeLayout(IN ULONG ClusterSize)
     // Root directory $I30 index: one INDX block.
     LAYOUT.RootIdxClusters = (ULONG)CEIL_DIV((ULONGLONG)INDEX_RECORD_SIZE, (ULONGLONG)C);
 
-    // $Secure:$SDS: the 8 default descriptors plus their mirror 256 KiB later.
-    LAYOUT.SdsClusters = (ULONG)CEIL_DIV((ULONGLONG)NTFS_SDS_MIRROR + C, (ULONGLONG)C);
+    // $Secure:$SDS: the default descriptors, plus the same bytes again 256 KiB
+    // later. One extra cluster is not enough for that copy on a 512-byte
+    // cluster volume; the mirror write then runs off the end of the buffer.
+    {
+        ULONG SdsBytes = 0;
+        ULONG SdIndex;
+
+        for (SdIndex = 0; SdIndex < NTFS_DEFAULT_SD_COUNT; SdIndex++)
+            SdsBytes = ALIGN_UP_BY(SdsBytes + 0x14 + DefaultSdLen[SdIndex], 16);
+        LAYOUT.SdsClusters = (ULONG)CEIL_DIV((ULONGLONG)NTFS_SDS_MIRROR + SdsBytes,
+                                             (ULONGLONG)C);
+    }
 
     // $Secure:$SDH: one INDX block (large view index).
     LAYOUT.SdhIdxClusters = (ULONG)CEIL_DIV((ULONGLONG)INDEX_RECORD_SIZE, (ULONGLONG)C);

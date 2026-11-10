@@ -495,6 +495,132 @@ NtfsOpenTargetDirectory(
 static
 NTSTATUS
 NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
+               PNTFS_IRP_CONTEXT IrpContext);
+
+/* A name such as \ads.txt:stream is the stream "stream" on \ads.txt.
+ * Create the base file when it is missing, store the named $DATA, then open
+ * that stream. *Handled stays FALSE when the name has no stream. */
+static
+NTSTATUS
+NtfsCreateNamedStream(PDEVICE_OBJECT DeviceObject,
+                      PNTFS_IRP_CONTEXT IrpContext,
+                      PDEVICE_EXTENSION DeviceExt,
+                      PFILE_OBJECT FileObject,
+                      PIO_STACK_LOCATION Stack,
+                      PIRP Irp,
+                      ULONG RequestedOptions,
+                      PBOOLEAN Handled)
+{
+    PWSTR Colon = NULL;
+    ULONG NameChars;
+    ULONG Index;
+    WCHAR Saved;
+    USHORT SavedLength;
+    PNTFS_FCB BaseFcb = NULL;
+    PNTFS_FCB ParentFcb = NULL;
+    BOOLEAN CaseSensitive;
+    NTSTATUS Status;
+
+    *Handled = FALSE;
+
+    if (FileObject->FileName.Buffer == NULL ||
+        FileObject->FileName.Length < sizeof(WCHAR))
+    {
+        return STATUS_SUCCESS;
+    }
+
+    NameChars = FileObject->FileName.Length / sizeof(WCHAR);
+    for (Index = 0; Index < NameChars; Index++)
+    {
+        if (FileObject->FileName.Buffer[Index] == L':')
+            Colon = &FileObject->FileName.Buffer[Index];
+    }
+
+    if (Colon == NULL || Colon[1] == UNICODE_NULL)
+        return STATUS_SUCCESS;
+
+    if (_wcsicmp(Colon + 1, L"$DATA") == 0)
+        return STATUS_SUCCESS;
+
+    if (RequestedOptions & FILE_DIRECTORY_FILE)
+    {
+        *Handled = TRUE;
+        return STATUS_NOT_A_DIRECTORY;
+    }
+
+    *Handled = TRUE;
+    CaseSensitive = BooleanFlagOn(Stack->Flags, SL_CASE_SENSITIVE);
+    Saved = *Colon;
+    SavedLength = FileObject->FileName.Length;
+    *Colon = UNICODE_NULL;
+    FileObject->FileName.Length =
+        (USHORT)((PUCHAR)Colon - (PUCHAR)FileObject->FileName.Buffer);
+
+    Status = NtfsGetFCBForFile(DeviceExt,
+                               &ParentFcb,
+                               &BaseFcb,
+                               FileObject->FileName.Buffer,
+                               CaseSensitive);
+    if (!NT_SUCCESS(Status))
+    {
+        if (BaseFcb != NULL)
+            NtfsReleaseFCB(DeviceExt, BaseFcb);
+        if (ParentFcb != NULL)
+            NtfsReleaseFCB(DeviceExt, ParentFcb);
+        BaseFcb = NULL;
+        ParentFcb = NULL;
+
+        Status = NtfsCreateFileRecord(DeviceExt,
+                                      FileObject,
+                                      CaseSensitive,
+                                      BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT));
+        if (NT_SUCCESS(Status))
+        {
+            Status = NtfsGetFCBForFile(DeviceExt,
+                                       &ParentFcb,
+                                       &BaseFcb,
+                                       FileObject->FileName.Buffer,
+                                       CaseSensitive);
+        }
+    }
+
+    if (NT_SUCCESS(Status) && BaseFcb != NULL)
+    {
+        ULONGLONG MftIndex = BaseFcb->MFTIndex;
+
+        NtfsReleaseFCB(DeviceExt, BaseFcb);
+        BaseFcb = NULL;
+        if (ParentFcb != NULL)
+        {
+            NtfsReleaseFCB(DeviceExt, ParentFcb);
+            ParentFcb = NULL;
+        }
+
+        Status = NtfsAddNamedData(DeviceExt, MftIndex, Colon + 1);
+    }
+
+    if (BaseFcb != NULL)
+        NtfsReleaseFCB(DeviceExt, BaseFcb);
+    if (ParentFcb != NULL)
+        NtfsReleaseFCB(DeviceExt, ParentFcb);
+
+    *Colon = Saved;
+    FileObject->FileName.Length = SavedLength;
+
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Stack->Parameters.Create.Options = ((ULONG)FILE_OPEN << 24) | RequestedOptions;
+    Status = NtfsCreateFile(DeviceObject, IrpContext);
+    if (NT_SUCCESS(Status))
+        Irp->IoStatus.Information = FILE_CREATED;
+
+    return Status;
+}
+
+static
+NTSTATUS
+NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
                PNTFS_IRP_CONTEXT IrpContext)
 {
     PDEVICE_EXTENSION DeviceExt;
@@ -598,7 +724,21 @@ NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
             return STATUS_NOT_A_DIRECTORY;
         }
 
-        NtfsAttachFCBToFileObject(DeviceExt, DeviceExt->VolumeFcb, FileObject);
+        Status = NtfsAttachFCBToFileObject(DeviceExt, DeviceExt->VolumeFcb, FileObject);
+        if (!NT_SUCCESS(Status))
+            return Status;
+
+        /* The volume handle counts. Locking the volume requires this to be
+         * the only open, and close drops the same count. */
+        Status = NtfsGrantShareAccess(DeviceExt, DeviceExt->VolumeFcb, FileObject, Stack);
+        if (!NT_SUCCESS(Status))
+        {
+            ExFreePool(FileObject->FsContext2);
+            FileObject->FsContext2 = NULL;
+            FileObject->FsContext = NULL;
+            return Status;
+        }
+
         DeviceExt->VolumeFcb->RefCount++;
 
         Irp->IoStatus.Information = FILE_OPENED;
@@ -756,6 +896,21 @@ NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
                 DPRINT1("NTFS write-support is EXPERIMENTAL and is disabled by default!\n");
                 NtfsCloseFile(DeviceExt, FileObject);
                 return STATUS_ACCESS_DENIED;
+            }
+
+            {
+                BOOLEAN Handled = FALSE;
+
+                Status = NtfsCreateNamedStream(DeviceObject,
+                                               IrpContext,
+                                               DeviceExt,
+                                               FileObject,
+                                               Stack,
+                                               Irp,
+                                               RequestedOptions,
+                                               &Handled);
+                if (Handled)
+                    return Status;
             }
 
             // Was the user trying to create a directory?
@@ -1103,6 +1258,7 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
     PFILE_RECORD_HEADER FileRecord;
     PNTFS_ATTR_RECORD NextAttribute;
     PFILENAME_ATTRIBUTE FilenameAttribute;
+    PFILENAME_ATTRIBUTE DosAttribute = NULL;
     ULONGLONG ParentMftIndex;
     ULONGLONG FileMftIndex;
 
@@ -1147,6 +1303,30 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
     // advance NextAttribute pointer to the next attribute
     NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)NextAttribute + (ULONG_PTR)NextAttribute->Length);
 
+    /* A long name also gets an 8.3 name so FindFirstFile can report it. */
+    if (FilenameAttribute->NameType == NTFS_FILE_NAME_POSIX)
+    {
+        Status = AddDosFileName(FileRecord,
+                                NextAttribute,
+                                DeviceExt,
+                                FilenameAttribute,
+                                ParentMftIndex,
+                                CaseSensitive);
+        if (NT_SUCCESS(Status))
+        {
+            DosAttribute = (PFILENAME_ATTRIBUTE)((ULONG_PTR)NextAttribute +
+                                                 NextAttribute->Resident.ValueOffset);
+            NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)NextAttribute +
+                                               (ULONG_PTR)NextAttribute->Length);
+        }
+        else
+        {
+            DPRINT1("DOS name not stored for '%wZ' (Status %lx)\n",
+                    &FileObject->FileName, Status);
+            Status = STATUS_SUCCESS;
+        }
+    }
+
     // add the $DATA attribute
     AddData(FileRecord, NextAttribute);
 
@@ -1173,6 +1353,14 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
                                             FileMftIndex,
                                             FilenameAttribute,
                                             CaseSensitive);
+        if (NT_SUCCESS(Status) && DosAttribute != NULL)
+        {
+            Status = NtfsAddFilenameToDirectory(DeviceExt,
+                                                ParentMftIndex,
+                                                FileMftIndex,
+                                                DosAttribute,
+                                                CaseSensitive);
+        }
     }
 
     ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);

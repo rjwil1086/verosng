@@ -3995,7 +3995,10 @@ BrowseSubNodeIndexEntries(PNTFS_VCB Vcb,
             break;
 
         // If we've found a file whose index is greater than or equal to StartEntry that matches the search criteria
-        if ((IndexEntry->Data.Directory.IndexedFile & NTFS_MFT_MASK) >= NTFS_FILE_FIRST_USER_FILE &&
+        /* An exact lookup can name a system file such as $Extend. A wildcard
+         * listing still starts at the first user file. */
+        if ((!DirSearch ||
+             (IndexEntry->Data.Directory.IndexedFile & NTFS_MFT_MASK) >= NTFS_FILE_FIRST_USER_FILE) &&
             *CurrentEntry >= *StartEntry &&
             IndexEntry->FileName.NameType != NTFS_FILE_NAME_DOS &&
             CompareFileName(Vcb, FileName, IndexEntry, DirSearch, CaseSensitive))
@@ -4156,7 +4159,10 @@ BrowseIndexEntries(PDEVICE_EXTENSION Vcb,
             break;
 
         // If we've found a file whose index is greater than or equal to StartEntry that matches the search criteria
-        if ((IndexEntry->Data.Directory.IndexedFile & NTFS_MFT_MASK) >= NTFS_FILE_FIRST_USER_FILE &&
+        /* An exact lookup can name a system file such as $Extend. A wildcard
+         * listing still starts at the first user file. */
+        if ((!DirSearch ||
+             (IndexEntry->Data.Directory.IndexedFile & NTFS_MFT_MASK) >= NTFS_FILE_FIRST_USER_FILE) &&
             *CurrentEntry >= *StartEntry &&
             IndexEntry->FileName.NameType != NTFS_FILE_NAME_DOS &&
             CompareFileName(Vcb, FileName, IndexEntry, DirSearch, CaseSensitive))

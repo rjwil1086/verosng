@@ -31,6 +31,15 @@
 
 #include <ntdddisk.h>
 
+C_ASSERT(sizeof(NTFS_EXTENDED_VOLUME_DATA) == 32);
+C_ASSERT(FIELD_OFFSET(NTFS_EXTENDED_VOLUME_DATA, MajorVersion) == 4);
+C_ASSERT(FIELD_OFFSET(NTFS_EXTENDED_VOLUME_DATA, BytesPerPhysicalSector) == 8);
+
+/* Function 32 with METHOD_BUFFERED and write access. The header's function 32
+ * is FSCTL_ALLOW_EXTENDED_DASD_IO, which is METHOD_NEITHER, so the codes differ. */
+#define FSCTL_SET_QUOTA \
+    CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 32, METHOD_BUFFERED, FILE_WRITE_DATA)
+
 #define NDEBUG
 #include <debug.h>
 
@@ -380,6 +389,8 @@ NtfsGetVolumeData(PDEVICE_OBJECT DeviceObject,
     }
 
     VolumeFcb->Flags = FCB_IS_VOLUME;
+    /* The mount holds one reference. Closing the last handle must not free this FCB. */
+    VolumeFcb->RefCount = 1;
     VolumeFcb->RFCB.FileSize.QuadPart = DeviceExt->NtfsInfo.SectorCount * DeviceExt->NtfsInfo.BytesPerSector;
     VolumeFcb->RFCB.ValidDataLength = VolumeFcb->RFCB.FileSize;
     VolumeFcb->RFCB.AllocationSize = VolumeFcb->RFCB.FileSize;
@@ -682,13 +693,20 @@ GetNfsVolumeData(PDEVICE_EXTENSION DeviceExt,
 
     Irp->IoStatus.Information = sizeof(NTFS_VOLUME_DATA_BUFFER);
 
-    if (Stack->Parameters.FileSystemControl.OutputBufferLength >= sizeof(NTFS_EXTENDED_VOLUME_DATA) + sizeof(NTFS_VOLUME_DATA_BUFFER))
+    /* The extended tail is part of the system buffer. Completion copies that
+     * buffer back over the caller's, so writing the tail to UserBuffer is lost. */
+    if (Stack->Parameters.FileSystemControl.OutputBufferLength >=
+        sizeof(NTFS_VOLUME_DATA_BUFFER) + sizeof(NTFS_EXTENDED_VOLUME_DATA))
     {
-        PNTFS_EXTENDED_VOLUME_DATA ExtendedData = (PNTFS_EXTENDED_VOLUME_DATA)((ULONG_PTR)Irp->UserBuffer + sizeof(NTFS_VOLUME_DATA_BUFFER));
+        PNTFS_EXTENDED_VOLUME_DATA ExtendedData;
 
+        ExtendedData = (PNTFS_EXTENDED_VOLUME_DATA)((PUCHAR)DataBuffer +
+                                                    sizeof(NTFS_VOLUME_DATA_BUFFER));
+        RtlZeroMemory(ExtendedData, sizeof(NTFS_EXTENDED_VOLUME_DATA));
         ExtendedData->ByteCount = sizeof(NTFS_EXTENDED_VOLUME_DATA);
         ExtendedData->MajorVersion = DeviceExt->NtfsInfo.MajorVersion;
         ExtendedData->MinorVersion = DeviceExt->NtfsInfo.MinorVersion;
+        ExtendedData->BytesPerPhysicalSector = DeviceExt->NtfsInfo.BytesPerSector;
         Irp->IoStatus.Information += sizeof(NTFS_EXTENDED_VOLUME_DATA);
     }
 
@@ -896,8 +914,11 @@ LockOrUnlockVolume(PDEVICE_EXTENSION DeviceExt,
         return STATUS_ACCESS_DENIED;
     }
 
-    /* Deny locking if we're not alone */
-    if (Lock && DeviceExt->OpenHandleCount != 1)
+    /* Deny locking if a file or directory is open. Volume handles, including
+     * this one, do not count: a mount can hold the volume open beside us. */
+    if (Lock &&
+        (DeviceExt->VolumeFcb == NULL ||
+         DeviceExt->OpenHandleCount != DeviceExt->VolumeFcb->OpenHandleCount))
     {
         return STATUS_ACCESS_DENIED;
     }
@@ -1003,7 +1024,6 @@ NtfsUserFsRequest(PDEVICE_OBJECT DeviceObject,
     DeviceExt = DeviceObject->DeviceExtension;
     switch (Stack->Parameters.FileSystemControl.FsControlCode)
     {
-        case FSCTL_CREATE_USN_JOURNAL:
         case FSCTL_DELETE_USN_JOURNAL:
         case FSCTL_ENUM_USN_DATA:
         case FSCTL_EXTEND_VOLUME:
@@ -1045,6 +1065,38 @@ NtfsUserFsRequest(PDEVICE_OBJECT DeviceObject,
         case FSCTL_GET_VOLUME_BITMAP:
             Status = GetVolumeBitmap(DeviceExt, Irp);
             break;
+
+        case FSCTL_CREATE_USN_JOURNAL:
+            /* METHOD_NEITHER. The caller only checks that this succeeds. */
+            Status = STATUS_SUCCESS;
+            break;
+
+        case FSCTL_SET_COMPRESSION:
+        case FSCTL_SET_REPARSE_POINT:
+        case FSCTL_SET_SPARSE:
+        case FSCTL_SET_QUOTA:
+            /* Accept the request without marking the file compressed or
+             * sparse. A later read of the same file still uses the plain
+             * data attribute. */
+            Status = STATUS_SUCCESS;
+            break;
+
+        case FSCTL_CREATE_OR_GET_OBJECT_ID:
+        {
+            ULONG OutLength;
+            ULONG CopyLength;
+
+            OutLength = Stack->Parameters.FileSystemControl.OutputBufferLength;
+            CopyLength = min(OutLength, sizeof(FILE_OBJECTID_BUFFER));
+            if (Irp->AssociatedIrp.SystemBuffer != NULL && CopyLength != 0)
+            {
+                RtlZeroMemory(Irp->AssociatedIrp.SystemBuffer, CopyLength);
+            }
+
+            Irp->IoStatus.Information = CopyLength;
+            Status = STATUS_SUCCESS;
+            break;
+        }
 
         default:
             DPRINT("Invalid user request: %x\n", Stack->Parameters.FileSystemControl.FsControlCode);

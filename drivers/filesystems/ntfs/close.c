@@ -60,9 +60,10 @@ NtfsCloseFile(PDEVICE_EXTENSION DeviceExt,
     FileObject->FsContext = NULL;
 
     /* SectionObjectPointer is deliberately left alone. Mm reaches the file's section object
-     * pointers through it for as long as a section exists, which outlasts the handle. */
+     * pointers through it for as long as a section exists, which outlasts the handle.
+     * OpenHandleCount was already dropped in cleanup. */
 
-    DeviceExt->OpenHandleCount--;
+    UNREFERENCED_PARAMETER(DeviceExt);
 
     if (FileObject->FileName.Buffer)
     {

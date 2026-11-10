@@ -56,11 +56,14 @@ NtfsCleanupFile(PDEVICE_EXTENSION DeviceExt,
     if (Fcb->Flags & FCB_IS_VOLUME)
     {
         Fcb->OpenHandleCount--;
+        /* User handles end here. IRP_MJ_CLOSE can wait until the cache manager
+         * drops the file object, which is too late for a volume lock. */
+        DeviceExt->OpenHandleCount--;
 
-        if (Fcb->OpenHandleCount != 0)
-        {
-            // Remove share access when handled
-        }
+        if (Fcb->ShareAccess.OpenCount > 0)
+            IoRemoveShareAccess(FileObject, &Fcb->ShareAccess);
+
+        FileObject->Flags |= FO_CLEANUP_COMPLETE;
     }
     else
     {
@@ -70,6 +73,7 @@ NtfsCleanupFile(PDEVICE_EXTENSION DeviceExt,
         }
 
         Fcb->OpenHandleCount--;
+        DeviceExt->OpenHandleCount--;
 
         if (Fcb->ShareAccess.OpenCount > 0)
         {

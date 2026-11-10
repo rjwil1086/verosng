@@ -731,6 +731,19 @@ AddFileName(PFILE_RECORD_HEADER FileRecord,
             PULONGLONG ParentMftIndex);
 
 NTSTATUS
+AddDosFileName(PFILE_RECORD_HEADER FileRecord,
+               PNTFS_ATTR_RECORD AttributeAddress,
+               PDEVICE_EXTENSION DeviceExt,
+               PFILENAME_ATTRIBUTE LongName,
+               ULONGLONG ParentMftIndex,
+               BOOLEAN CaseSensitive);
+
+NTSTATUS
+NtfsAddNamedData(PDEVICE_EXTENSION DeviceExt,
+                 ULONGLONG MftIndex,
+                 PCWSTR StreamName);
+
+NTSTATUS
 AddStandardInformation(PDEVICE_EXTENSION Vcb,
                        PFILE_RECORD_HEADER FileRecord,
                        PNTFS_ATTR_RECORD AttributeAddress,
