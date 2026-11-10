@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+name: "VerOS NT CodeQL"
+
+# Upstream tests, sample apps, and vendored libraries. Alerts there are not
+# this fork's work, and the format query misreads the MSVC I64 print prefix.
+paths-ignore:
+  - modules/rostests/**
+  - modules/rosapps/**
+  - sdk/lib/3rdparty/**
+  - dll/3rdparty/**
+
+query-filters:
+  - exclude:
+      id: cpp/wrong-type-format-argument
