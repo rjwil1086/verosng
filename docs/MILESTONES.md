@@ -16,17 +16,18 @@ The open work follows this order. Finished milestones keep their numbers. A late
 6. Milestone 17. The application catalog, on the installed disk, while milestone 16 is the application under test. Each finished row is published to the Tested Applications page. A failing row returns to milestone 16.
 7. Milestone 18. WoW64, after the first installed x64 program. Milestone 16 then includes 32-bit programs.
 8. Milestone 19. A retail driver, when the application needs that device.
-9. Milestone 21. One shared structure layout, when milestone 19 or 16 names a wrong size or offset. The caller then runs again.
-10. Milestone 22. The remaining non-graphics drivers, after milestone 19, when the application needs that device. Milestones 23 through 26 do not wait for it.
-11. Milestone 23, when the application needs `opengl32` or `d3d11`.
-12. Milestone 24, when that application fails on the software rasterizer.
-13. Milestone 25, when that application still fails on virtio-gpu. AMD, Intel, and Nvidia firmware are separate installers.
-14. Milestone 26, when that application still fails on the DRM driver.
-15. Milestone 27. Physical memory above 8 GiB, when the daily development guest fails for lack of RAM. This finishes before milestone 28 when both are underway.
-16. Milestone 28. Logical processors, when the daily development guest needs them.
-17. Milestone 29. The daily development guest. Cursor and the toolchain build the amd64 boot CD on the installed disk, after milestones 27 and 28.
-18. Milestone 30. The Vista page-table software bits, after milestone 27, when a caller fails on the current write and dirty positions.
-19. Milestone 31. The root compile becomes Windows 10 22H2, after milestones 27, 14, and 21.
+9. Milestone 20. The driver catalog, on virtual hardware, while milestone 19 is the driver under test. Each finished row is published to the Tested Drivers page. A failing storage, network, or USB row returns to milestone 19.
+10. Milestone 21. One shared structure layout, when milestone 19, 20, or 16 names a wrong size or offset. The caller then runs again.
+11. Milestone 22. The remaining non-graphics drivers, after milestone 19, when the application needs that device. Milestones 23 through 26 do not wait for it.
+12. Milestone 23, when the application needs `opengl32` or `d3d11`.
+13. Milestone 24, when that application fails on the software rasterizer.
+14. Milestone 25, when that application still fails on virtio-gpu. AMD, Intel, and Nvidia firmware are separate installers.
+15. Milestone 26, when that application still fails on the DRM driver.
+16. Milestone 27. Physical memory above 8 GiB, when the daily development guest fails for lack of RAM. This finishes before milestone 28 when both are underway.
+17. Milestone 28. Logical processors, when the daily development guest needs them.
+18. Milestone 29. The daily development guest. Cursor and the toolchain build the amd64 boot CD on the installed disk, after milestones 27 and 28.
+19. Milestone 30. The Vista page-table software bits, after milestone 27, when a caller fails on the current write and dirty positions.
+20. Milestone 31. The root compile becomes Windows 10 22H2, after milestones 27, 14, and 21.
 
 Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
 
@@ -539,7 +540,7 @@ Success criteria:
 
 Goal: A retail Windows 10 22H2 driver for non-graphics hardware loads on the amd64 boot when the application under test needs that device.
 
-This follows milestone 10. A structure whose size or offset is wrong is milestone 21, then the driver loads again. A prototype hidden by `_WIN32_WINNT=0x502` is milestone 14. Run the task loop for one driver at a time. A disk driver attaches to a second disk. The live CD keeps booting from the in-tree driver until the boot task for that driver.
+This follows milestone 10. Milestone 20 publishes each finished driver to the Tested Drivers page. A failing catalog row for this set returns here. A structure whose size or offset is wrong is milestone 21, then the driver loads again. A prototype hidden by `_WIN32_WINNT=0x502` is milestone 14. Run the task loop for one driver at a time. A disk driver attaches to a second disk. The live CD keeps booting from the in-tree driver until the boot task for that driver.
 
 Order:
 
@@ -565,11 +566,75 @@ Success criteria:
 - A driver that rejects a version above 5 still runs under `KmWin2k3VersionLie`.
 - A driver that requires version 10 waits until milestone 10, then passes that check and still returns.
 
+## Milestone 20: Driver compatibility catalog
+
+Goal: A fixed set of Windows 10 22H2 drivers runs on virtual hardware, and each finished row appears on the Tested Drivers page.
+
+This follows milestone 19. It runs while milestone 19 is the driver under test. It does not wait for milestones 21 through 31. One driver is one pass. A failing or partial storage, network, or USB row is milestone 19, and the work then returns here to publish the new result. A failing or partial audio row is milestone 22. A structure whose size or offset is wrong is milestone 21. A prototype hidden by `_WIN32_WINNT=0x502` is milestone 14. Bluetooth, a printer, and a storage filter stay in milestone 22. A WDDM miniport stays in milestone 26. A task stays only when the amd64 live CD still reaches the desktop.
+
+The suite boots the amd64 live CD. Each driver gets its own QEMU device and its own snapshot. The kept disks stay unchanged. VirtIO packages come from `downloads/virtio-win-0.1.271.iso`. Inbox drivers are copied from the Windows 10 22H2 guest for that run. The driver files stay out of git. QEMU stays in `tools/qemu`. The suite records the file name and the SHA-256. The page records the result. It does not host the driver.
+
+Working means the device completed its ordinary operation. Partial means `DriverEntry` returned and that operation did not. Failing means a bugcheck, or `DriverEntry` did not return. A driver that has not been run stays off the page.
+
+Target:
+
+- VirtIO block, `viostor.sys`, on `virtio-blk-pci`. Read and write one file.
+- VirtIO SCSI, `vioscsi.sys`, on `virtio-scsi-pci`. Read and write one file.
+- Microsoft AHCI, `storahci.sys`, on `ich9-ahci`. Read and write one file.
+- Microsoft NVMe, `stornvme.sys`, on `nvme`. Read and write one file.
+- USB mass storage, `usbstor.sys`, on `usb-storage`. Read and write one file.
+- VirtIO network, `netkvm.sys`, on `virtio-net-pci`. Take a DHCP lease and exchange one packet.
+- Intel PRO/1000, `e1i65x64.sys`, on `e1000e`. Take a DHCP lease and exchange one packet.
+- USB 3 host, `usbxhci.sys`, on `qemu-xhci`. Enumerate one device.
+- USB 2 host, `usbehci.sys`, on `usb-ehci`. Enumerate one device.
+- USB composite, `usbccgp.sys`, on a composite USB device. Enumerate its functions.
+- USB HID, `hidusb.sys`, on `usb-tablet`. Receive one report.
+- PS/2, `i8042prt.sys`, on the PC machine keyboard port. Receive one packet.
+- QXL, `qxldod.sys`, on `-vga qxl`. Set one mode.
+- Basic Display, `BasicDisplay.sys`, on `-vga std`. Set one mode.
+- HD Audio, `hdaudbus.sys` and `hdaudio.sys`, on `ich9-intel-hda` and `hda-duplex`. Start one stream.
+- COM port, `serial.sys`, on ISA COM1. Send one byte and read it back.
+- VirtIO serial, `vioser.sys`, on `virtio-serial-pci`. Send one byte and read it back.
+- VirtIO balloon, `balloon.sys`, on `virtio-balloon-pci`. Change the balloon size and see the guest memory total move.
+
+Tasks:
+
+- Record the file name and the SHA-256. Change nothing in the first boot of a driver.
+- Boot the amd64 live CD with that one device. Load the driver beside the boot device. Record the first bugcheck, or the status `DriverEntry` returns, and whether the ordinary operation completed.
+- For PS/2, QXL, Basic Display, the COM port, VirtIO serial, or the balloon, make the one export named in that log return. Boot to the desktop and load the driver again. Repeat until the ordinary operation completes or the log names milestone 14 or milestone 21.
+- Write that row into `veros/dashboard/latest.json`. The Tested Drivers page reads `driverGroups` and `driversSummary` from that file. Each group has `category` and `drivers`. Each driver has `name` and `status`.
+- Count `driversSummary` from the rows this suite published. The syscall publisher keeps this section when the catalog did not run. The catalog publisher keeps the syscall sections the probe last wrote.
+- A row that has not been run stays off the page.
+- After milestone 19 or milestone 22 fixes a row, run that driver again and replace its published status. Rerun the milestone 8 probe before the next driver.
+
+Output:
+
+```json
+{
+  "category": "Storage",
+  "drivers": [
+    {
+      "name": "VirtIO block",
+      "status": "working"
+    }
+  ]
+}
+```
+
+Success criteria:
+
+- Each finished catalog row is on the Tested Drivers page with the status from its guest log.
+- `driversSummary` matches those rows.
+- The syscall score in the same snapshot stays the probe's last measurement.
+- The live CD still reaches the desktop.
+- The milestone 7 programs still start.
+- The milestone 8 statuses do not regress.
+
 ## Milestone 21: One shared layout
 
 Goal: One structure that `ntoskrnl` shares with a caller has the Windows 10 22H2 size and offsets.
 
-This follows milestone 14. Milestone 19, 11, or 16 enters it when a log names one wrong size or offset, and then returns to that caller. One structure is one pass. The page-table write and dirty bits stay for milestone 30. The service-table order stays for milestone 15. A task stays only when the amd64 live CD still reaches the desktop.
+This follows milestone 14. Milestone 19, 20, 11, or 16 enters it when a log names one wrong size or offset, and then returns to that caller. One structure is one pass. The page-table write and dirty bits stay for milestone 30. The service-table order stays for milestone 15. A task stays only when the amd64 live CD still reaches the desktop.
 
 Tasks:
 
