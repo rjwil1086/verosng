@@ -11,4 +11,4 @@ target_link_libraries(msvcrt40 msvcrt_static crtmath vcruntime chkstk wine ${PSE
 
 add_importlibs(msvcrt40 kernel32 kernel32_vista ntdll)
 add_delay_importlibs(msvcrt40 user32 advapi32)
-add_cd_file(TARGET msvcrt40 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET msvcrt40 DESTINATION VerOS/system32 FOR all)

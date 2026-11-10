@@ -271,10 +271,10 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_PROGRESS_INFO_START "ReactOS, aşağıdaki hizmeti başlatmaya çalışıyor:"
-    IDS_PROGRESS_INFO_STOP "ReactOS, aşağıdaki hizmeti durdurmaya çalışıyor:"
-    IDS_PROGRESS_INFO_PAUSE "ReactOS, aşağıdaki hizmeti duraklatmaya çalışıyor:"
-    IDS_PROGRESS_INFO_RESUME "ReactOS, aşağıdaki hizmeti devam ettirmeye çalışıyor:"
+    IDS_PROGRESS_INFO_START "VerOS NT, aşağıdaki hizmeti başlatmaya çalışıyor:"
+    IDS_PROGRESS_INFO_STOP "VerOS NT, aşağıdaki hizmeti durdurmaya çalışıyor:"
+    IDS_PROGRESS_INFO_PAUSE "VerOS NT, aşağıdaki hizmeti duraklatmaya çalışıyor:"
+    IDS_PROGRESS_INFO_RESUME "VerOS NT, aşağıdaki hizmeti devam ettirmeye çalışıyor:"
     IDS_CREATE_SUCCESS "Hizmet, başarıyla oluşturuldu."
     IDS_DELETE_SUCCESS "Hizmet, başarıyla silindi."
     IDS_CREATE_REQ "Yıldızla belirtilen\nyerler zorunludur."
@@ -322,7 +322,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_APPNAME "Hizmet Yöneticisi"
-    IDS_APPAUTHORS "Telif hakkı: 2005-2007, Ged Murphy (gedmurphy@reactos.org)"
+    IDS_APPAUTHORS "Telif hakkı: 2005-2007, Ged Murphy (gedmurphy@VerOS NT.org)"
 END
 
 STRINGTABLE

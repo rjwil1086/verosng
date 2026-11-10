@@ -29,6 +29,6 @@ set_module_type(regedit win32gui UNICODE)
 target_compile_definitions(regedit PRIVATE _CRT_NON_CONFORMING_SWPRINTFS)
 target_link_libraries(regedit uuid wine)
 add_importlibs(regedit user32 gdi32 advapi32 ole32 shell32 comctl32 comdlg32 shlwapi msvcrt kernel32 ntdll)
-add_cd_file(TARGET regedit DESTINATION reactos FOR all)
+add_cd_file(TARGET regedit DESTINATION VerOS FOR all)
 
 add_subdirectory(clb)

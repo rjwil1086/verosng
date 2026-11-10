@@ -6,7 +6,7 @@ This is the truth source for Windows 10 22H2 x64 call behavior. The traces are p
 
 - Install and capture use `C:\Program Files\qemu\qemu-system-x86_64.exe`.
 - `qemu-system-x86_64.exe` is the VerOS boot binary. The daily boot passes `-accel tcg`.
-- The x86_64 binary has WHPX and TCG. The guest is the powered-off VMware UEFI VM `D:\VMware\Windows 10 x64\Windows 10 x64.vmdk`. Capture opens that VMDK directly with OVMF, NVMe, and `-accel tcg -snapshot -m 8192 -smp 4`. The plugin instruments TCG only. The VerOS NG boot uses the same memory and CPU count.
+- The x86_64 binary has WHPX and TCG. The guest is the powered-off VMware UEFI VM `D:\VMware\Windows 10 x64\Windows 10 x64.vmdk`. Capture opens that VMDK directly with OVMF, NVMe, and `-accel tcg -snapshot -m 8192 -smp 4`. The plugin instruments TCG only. The VerOS NT boot uses the same memory and CPU count.
 
 ## Commands
 

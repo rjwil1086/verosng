@@ -709,7 +709,7 @@ LocaleDlgProc(
                         static WCHAR szMsg[RC_STRING_MAX_SIZE];
                         INT ret;
                         LoadStringW(GetModuleHandle(NULL), IDS_CANCEL_CONFIRM, szMsg, ARRAYSIZE(szMsg));
-                        ret = MessageBoxW(hwndDlg, szMsg, L"VerOS NG LiveCD", MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2);
+                        ret = MessageBoxW(hwndDlg, szMsg, L"VerOS NT LiveCD", MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2);
                         if (ret == IDOK || ret == IDYES)
                         {
                             pState->NextPage = DONE;
@@ -732,18 +732,26 @@ LocaleDlgProc(
 }
 
 static BOOL
-ProbeSinkPresent(VOID)
+ProbeMarker(PCWSTR Name)
 {
-    WCHAR Path[] = L"A:\\SINK.TXT";
+    WCHAR Path[32];
     WCHAR Letter;
 
-    for (Letter = L'A'; Letter <= L'G'; Letter++)
+    for (Letter = L'A'; Letter <= L'Z'; Letter++)
     {
-        Path[0] = Letter;
+        StringCchPrintfW(Path, _countof(Path), L"%c:\\%s", Letter, Name);
         if (GetFileAttributesW(Path) != INVALID_FILE_ATTRIBUTES)
             return TRUE;
     }
     return FALSE;
+}
+
+static BOOL
+ProbeSinkPresent(VOID)
+{
+    /* SINK.TXT is the trace harness. NTFS-SUITE.txt is the filesystem suite.
+     * Either one means this boot should enter the live session without asking. */
+    return ProbeMarker(L"SINK.TXT") || ProbeMarker(L"NTFS-SUITE.txt");
 }
 
 static VOID
@@ -872,7 +880,7 @@ StartDlgProc(
                             static WCHAR szMsg[RC_STRING_MAX_SIZE];
                             INT ret;
                             LoadStringW(GetModuleHandle(NULL), IDS_CANCEL_CONFIRM, szMsg, ARRAYSIZE(szMsg));
-                            ret = MessageBoxW(hwndDlg, szMsg, L"VerOS NG LiveCD", MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2);
+                            ret = MessageBoxW(hwndDlg, szMsg, L"VerOS NT LiveCD", MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2);
                             if (ret == IDOK || ret == IDYES)
                             {
                                 pState->NextPage = DONE;
@@ -910,7 +918,9 @@ ParseUnattend(
         return;
     }
 
-    if (_wcsicmp(Buffer, L"$ReactOS$") && _wcsicmp(Buffer, L"$Windows NT$"))
+    if (_wcsicmp(Buffer, L"$VerOS$") &&
+        _wcsicmp(Buffer, L"$ReactOS$") &&
+        _wcsicmp(Buffer, L"$Windows NT$"))
     {
         TRACE("Unknown signature: %S\n", Buffer);
         return;
@@ -1080,9 +1090,9 @@ RunLiveCD(
     if (!ExpandInstallerPath(L"reactos.exe", Installer, _countof(Installer)))
         *Installer = UNICODE_NULL;
     if (*Installer)
-        TRACE("ReactOS Installer: '%S'\n", Installer);
+        TRACE("VerOS NT Installer: '%S'\n", Installer);
     else
-        WARN("Could not find the ReactOS Installer\n");
+        WARN("Could not find the VerOS NT Installer\n");
 
     /* If the ReactOS Installer was located, use its path for the
      * unattended file; otherwise, use the current ReactOS directory. */

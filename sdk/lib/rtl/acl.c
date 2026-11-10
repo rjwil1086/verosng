@@ -996,12 +996,12 @@ RtlValidAcl(IN PACL Acl)
             }
             else if (Ace->AceType == ACCESS_ALLOWED_COMPOUND_ACE_TYPE)
             {
-                DPRINT1("Unsupported ACE in ReactOS, assuming valid\n");
+                DPRINT1("Unsupported ACE in VerOS NT, assuming valid\n");
             }
             else if ((Ace->AceType >= ACCESS_MIN_MS_OBJECT_ACE_TYPE) &&
                      (Ace->AceType <= ACCESS_MAX_MS_OBJECT_ACE_TYPE))
             {
-                DPRINT1("Unsupported ACE in ReactOS, assuming valid\n");
+                DPRINT1("Unsupported ACE in VerOS NT, assuming valid\n");
             }
             else
             {

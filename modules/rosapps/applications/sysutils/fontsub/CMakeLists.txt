@@ -14,4 +14,4 @@ add_importlibs(fontsubedit advapi32 comctl32 comdlg32 shell32 gdi32 user32 msvcr
 set_target_cpp_properties(fontsubedit WITH_EXCEPTIONS)
 set_target_properties(fontsubedit PROPERTIES
     OUTPUT_NAME "fontsub")
-add_cd_file(TARGET fontsubedit DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET fontsubedit DESTINATION VerOS/system32 FOR all)

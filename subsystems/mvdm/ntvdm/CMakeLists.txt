@@ -80,4 +80,4 @@ set_target_properties(ntvdm
 set_module_type(ntvdm win32cui UNICODE IMAGEBASE 0x0F000000)
 target_link_libraries(ntvdm fast486 ${PSEH_LIB})
 add_importlibs(ntvdm user32 gdi32 advapi32 comdlg32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET ntvdm DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET ntvdm DESTINATION VerOS/system32 FOR all)

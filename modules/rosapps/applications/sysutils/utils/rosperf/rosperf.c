@@ -318,7 +318,7 @@ PrintOSVersion(void)
   RosVersion = VersionInfo.szCSDVersion + wcslen(VersionInfo.szCSDVersion) + 1;
   RosVersionLen = sizeof(VersionInfo.szCSDVersion) / sizeof(VersionInfo.szCSDVersion[0]) -
                   (RosVersion - VersionInfo.szCSDVersion);
-  if (7 <= RosVersionLen && 0 == _wcsnicmp(RosVersion, L"ReactOS", 7))
+  if (7 <= RosVersionLen && 0 == _wcsnicmp(RosVersion, L"VerOS NT", 7))
     {
       wprintf(L"Running on %s\n", RosVersion);
       return;
@@ -672,7 +672,7 @@ CreatePerfWindows(HINSTANCE hInstance, PPERF_INFO PerfInfo)
     }
 
   MainWnd = CreateWindowW(L"RosPerfMain",
-                          L"ReactOS performance test",
+                          L"VerOS NT performance test",
                           WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                           0,
                           0,

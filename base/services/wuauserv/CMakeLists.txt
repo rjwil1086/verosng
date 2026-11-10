@@ -7,4 +7,4 @@ add_library(wuauserv MODULE
 
 set_module_type(wuauserv win32dll UNICODE)
 add_importlibs(wuauserv advapi32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET wuauserv DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET wuauserv DESTINATION VerOS/system32 FOR all)

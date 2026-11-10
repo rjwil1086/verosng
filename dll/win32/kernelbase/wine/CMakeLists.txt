@@ -38,7 +38,7 @@ if(NOT MSVC)
 endif()
 
 list(APPEND SOURCE_STATIC
-    #console.c #looks like ReactOS console.c is nothing like wine.
+    #console.c #looks like VerOS NT console.c is nothing like wine.
     locale.c
     path.c
     string.c

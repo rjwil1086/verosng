@@ -8,4 +8,4 @@ if(MSVC)
     target_link_libraries(touch oldnames)
 endif()
 
-add_cd_file(TARGET touch DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET touch DESTINATION VerOS/system32 FOR all)

@@ -70,7 +70,7 @@ $serialFwd = ($serial -replace '\\', '/')
 $bios = "C:\Program Files\qemu\share"
 $diskArg = "-drive `"file=$Disk,format=qcow2,if=ide,index=0,media=disk`""
 
-$argLine = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -no-reboot -display gtk -name `"VerOS NG`" -serial `"file:$serialFwd`" $diskArg"
+$argLine = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -no-reboot -display gtk -name `"VerOS NT`" -serial `"file:$serialFwd`" $diskArg"
 switch ($Mode) {
     "Live" {
         $argLine += " -cdrom `"$Iso`" -boot d"

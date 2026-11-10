@@ -21,4 +21,4 @@ if(MSVC)
     add_importlibs(ftp ntdll)
 endif()
 
-add_cd_file(TARGET ftp DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET ftp DESTINATION VerOS/system32 FOR all)

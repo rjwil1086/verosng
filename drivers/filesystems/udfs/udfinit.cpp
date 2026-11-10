@@ -117,7 +117,7 @@ DriverEntry(
                                 MajorVersion, MinorVersion, BuildNumber));
 */
 #ifdef __REACTOS__
-            UDFPrint(("UDF Init: OS should be ReactOS\n"));
+            UDFPrint(("UDF Init: OS should be VerOS NT\n"));
 #endif
 
             // initialize the global data structure

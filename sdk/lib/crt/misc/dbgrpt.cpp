@@ -189,7 +189,7 @@ static int _CrtDbgReportWindow(int reportType, const char_t *filename, int linen
         return (IsDebuggerPresent() ? IDRETRY : IDABORT);
 
     // TODO: If we are not interacive, add MB_SERVICE_NOTIFICATION
-    return messageBox(NULL, szCompleteMessage, L"ReactOS C++ Runtime Library",
+    return messageBox(NULL, szCompleteMessage, L"VerOS NT C++ Runtime Library",
                       MB_ABORTRETRYIGNORE | MB_ICONHAND | MB_SETFOREGROUND | MB_TASKMODAL);
 }
 

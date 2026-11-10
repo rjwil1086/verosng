@@ -1,6 +1,6 @@
 <SDB>
     <DATABASE>
-        <NAME>ReactOS driver compatibility database</NAME>
+        <NAME>VerOS NT driver compatibility database</NAME>
         <DATABASE_ID>{f9ab2228-3312-4a73-b6f9-936d70e112ef}</DATABASE_ID>
 
         <!-- Shims implemented by the Kernel Shim Engine (ntoskrnl/kse) -->

@@ -1,10 +1,10 @@
 [Version]
 Signature = "$WINDOWS NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile = layout.inf
 Class     = Image
 ClassGuid = {6bdd1fc6-810f-11d0-bec7-08002be2092f}
-Provider  = %ReactOS%
+Provider  = %VerOS NT%
 DriverVer=02/28/2010,1.00
 
 [DestinationDirs]

@@ -1,6 +1,9 @@
 /*
  *  FreeLoader
  *  Copyright (C) 1998-2003  Brian Palmer  <brianp@sginet.com>
+ *  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ *  PROGRAMMERS: Brian Palmer
+ *               Ryan Wilson
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -71,7 +74,7 @@ OSLoadingMethods[] =
     {"Windows"     , EditCustomBootNTOS, MenuNTOptions, LoadAndBootWindows},
     {"Windows2003" , EditCustomBootNTOS, MenuNTOptions, LoadAndBootWindows},
     {"WindowsVista", EditCustomBootNTOS, MenuNTOptions, LoadAndBootWindows},
-    {"ReactOSSetup", EditCustomBootReactOSSetup, MenuNTOptions, LoadReactOSSetup},
+    {"VerOSSetup", EditCustomBootReactOSSetup, MenuNTOptions, LoadReactOSSetup},
 };
 
 /* FUNCTIONS ******************************************************************/
@@ -102,8 +105,8 @@ WarnDeprecated(
         "\n"
         "%s\n"
         "\n"
-        "Should you need assistance, please contact ReactOS developers\n"
-        "on the official ReactOS Mattermost server <chat.reactos.org>.",
+        "Should you need assistance, please contact VerOS NT developers\n"
+        "on the official VerOS NT Mattermost server <chat.reactos.org>.",
         msgString);
 }
 #endif // HAS_DEPRECATED_OPTIONS

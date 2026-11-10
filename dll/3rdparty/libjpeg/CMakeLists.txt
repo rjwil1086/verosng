@@ -63,4 +63,4 @@ target_include_directories(libjpeg PUBLIC ${REACTOS_SOURCE_DIR}/sdk/include/reac
 
 set_module_type(libjpeg win32dll)
 add_importlibs(libjpeg msvcrt kernel32)
-add_cd_file(TARGET libjpeg DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET libjpeg DESTINATION VerOS/system32 FOR all)

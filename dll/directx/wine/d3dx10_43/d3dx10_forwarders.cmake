@@ -37,5 +37,5 @@ function(add_d3dx10_forwarder VERSION)
 
     add_importlibs(${_target} ${_forward_targets} msvcrt kernel32 ntdll)
     add_dependencies(${_target} wineheaders d3d_idl_headers)
-    add_cd_file(TARGET ${_target} DESTINATION reactos/system32 FOR all)
+    add_cd_file(TARGET ${_target} DESTINATION VerOS/system32 FOR all)
 endfunction()

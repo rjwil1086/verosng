@@ -11,4 +11,4 @@ add_importlibs(feclient user32 kernel32 ntdll)
 target_link_libraries(feclient wine)
 set_wine_module(feclient)
 
-add_cd_file(TARGET feclient DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET feclient DESTINATION VerOS/system32 FOR all)

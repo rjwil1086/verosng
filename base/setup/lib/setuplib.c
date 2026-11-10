@@ -1,11 +1,13 @@
 /*
  * COPYRIGHT:       See COPYING in the top level directory
+ *                  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROJECT:         ReactOS Setup Library
  * FILE:            base/setup/lib/setuplib.c
  * PURPOSE:         Setup Library - Main initialization helpers
  * PROGRAMMERS:     Casper S. Hornstrup (chorns@users.sourceforge.net)
  *                  Hermes Belusca-Maito (hermes.belusca@sfr.fr)
  *                  Whindmar Saksit <whindsaks@proton.me>
+ *                  Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/
@@ -25,7 +27,7 @@
 
 HANDLE ProcessHeap;
 BOOLEAN IsUnattendedSetup = FALSE;
-static PCWSTR InfUnattendSignature = L"$ReactOS$";
+static PCWSTR InfUnattendSignature = L"$VerOS$";
 
 /* FUNCTIONS ****************************************************************/
 
@@ -71,7 +73,9 @@ IsInfUnattendSetupEnabled(
         return Result;
 
     /* Verify supported inf 'Signature' key */
-    if (CompareInfFirstLineString(hInf, L"Unattend", L"Signature", InfUnattendSignature) != 0)
+    if (CompareInfFirstLineString(hInf, L"Unattend", L"Signature", InfUnattendSignature) != 0 &&
+        CompareInfFirstLineString(hInf, L"Unattend", L"Signature", L"$ReactOS$") != 0 &&
+        CompareInfFirstLineString(hInf, L"Unattend", L"Signature", L"$Windows NT$") != 0)
     {
         DPRINT("Signature not %ls\n", InfUnattendSignature);
         goto Quit;
@@ -581,10 +585,10 @@ GetSourcePaths(
      * can reference other symlinks. This is what happens, for example when
      * booting the installation from a removable hard-disk. We can have:
      *
-     *          \SystemRoot ---> \Device\Harddisk1\Partition1\ReactOS
+     *          \SystemRoot ---> \Device\Harddisk1\Partition1\VerOS
      * and:     \Device\Harddisk1\Partition1 ---> \Device\HarddiskVolume2
      * etc.
-     * and we wish to resolve \SystemRoot to: \Device\HarddiskVolume2\ReactOS
+     * and we wish to resolve \SystemRoot to: \Device\HarddiskVolume2\VerOS
      *
      * We then verify whether it prefixes the image file path obtained
      * from the step above, which is a fully reparsed path.
@@ -598,7 +602,7 @@ GetSourcePaths(
      *
      * - A call to NtQueryInformationFile(FileNameInformation) alone on
      *   the obtained handle would only retrieve the FS directory name,
-     *   i.e. \ReactOS , but not the whole NT path.
+     *   i.e. \VerOS , but not the whole NT path.
      *
      * - We therefore use NtQueryObject(), which allows retrieving the
      *   full resolved NT path (device name + FS directory name).

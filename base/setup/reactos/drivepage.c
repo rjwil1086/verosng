@@ -1669,7 +1669,7 @@ SelectInstallPartition(
         nRet = DisplayMessage(hwndDlg,
                               MB_ICONWARNING | MB_OKCANCEL,
                               L"Warning",
-                              L"The disk you have selected for installing ReactOS\n"
+                              L"The disk you have selected for installing VerOS NT\n"
                               L"is not visible by the firmware of your computer,\n"
                               L"and so may not be bootable.\n"
                               L"\nClick on OK to continue anyway."

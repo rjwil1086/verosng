@@ -13,5 +13,5 @@ add_library(bcrypt MODULE
 set_module_type(bcrypt win32dll)
 target_link_libraries(bcrypt wine symcrypt)
 add_importlibs(bcrypt mbedtls advapi32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET bcrypt DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET bcrypt DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(bcrypt) # CORE-5743: No ARRAY_SIZE macro

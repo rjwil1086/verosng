@@ -15,7 +15,7 @@ CAPTION "Nazwa komputera"
 FONT 8, "MS Shell Dlg"
 BEGIN
     ICON IDI_COMPNAME, IDC_STATIC, 4, 3, 26, 24, SS_ICON
-    LTEXT "ReactOS używa następujących informacji do identyfikacji komputera w sieci", IDC_STATIC, 40, 5, 204, 20
+    LTEXT "VerOS NT używa następujących informacji do identyfikacji komputera w sieci", IDC_STATIC, 40, 5, 204, 20
     LTEXT "Opis komputera:", IDC_STATIC, 7, 35, 77, 8
     EDITTEXT IDC_COMPDESC, 94, 33, 155, 12, WS_CHILD | WS_VISIBLE | WS_TABSTOP
     LTEXT "Pełna nazwa komputera:", IDC_STATIC, 7, 70, 80, 8
@@ -75,8 +75,8 @@ BEGIN
     4 "Zmiana nazwy komputera"
     5 "Grupa Robocza:"
     6 "Domena:"
-    7 "Nazwa domeny ""%1"" nie odpowiada internetowym specyfikacjom DNS (Domain Name Service), mimo że jest dozwoloną nazwą ReactOS. Musisz użyć serwera ReactOS DNS dla nazw niestandardowych."
-    8 "Nazwa domeny ""%1"" nie jest poprawnie sformatowana. Kropki (.) są używane do oddzielenia domen. Nazwa każdej domeny jest ograniczona do 63 znaków. Przykład: domena-1.reactos.org."
+    7 "Nazwa domeny ""%1"" nie odpowiada internetowym specyfikacjom DNS (Domain Name Service), mimo że jest dozwoloną nazwą VerOS NT. Musisz użyć serwera VerOS NT DNS dla nazw niestandardowych."
+    8 "Nazwa domeny ""%1"" nie jest poprawnie sformatowana. Kropki (.) są używane do oddzielenia domen. Nazwa każdej domeny jest ograniczona do 63 znaków. Przykład: domena-1.VerOS NT.org."
     10 "Nowa nazwa komputera ""%1"" jest za długa. Nazwa nie może być dłuższa niż 63 znaków."
     11 "Wprowadzona nowa nazwa komputera nie jest sformatowana poprawnie. Standardowe nazwy mogą zawierać litery (a-z, A-Z), cyfry (0-9), i łączniki (-), ale nie mogą zawierać spacji ani kropek (.). Nazwa nie może składać się wyłącznie z cyfr."
     22 "Witamy w grupie roboczej %1."
@@ -88,7 +88,7 @@ BEGIN
     1029 "Nowa nazwa komputera ""%1"" jest liczbą. Nazwa nie może być liczbą."
     1030 "Nowa nazwa komputera ""%1"" zawiera niedozwolone znaki. Do niedozwolonych znaków należą ` ~ ! @ # $ %% ^ & * ( ) = + [ ] { } \\ | ; : ' "" , < > / oraz ?"
     1031 "Pierwsza domena w nazwie domeny ""%1"" jest liczbą. Pierwsza domena nie może być liczbą."
-    1032 "Nazwa domeny ""%1"" zawiera niedozwolone znaki. Standardowe nazwy DNS mogą zawierać litery (a-z, A-Z), cyfry (0-9), i myślniki, ale bez spacji. Kropki (.) są używane do oddzielania domen. Przykład: domena-1.reactos.org."
+    1032 "Nazwa domeny ""%1"" zawiera niedozwolone znaki. Standardowe nazwy DNS mogą zawierać litery (a-z, A-Z), cyfry (0-9), i myślniki, ale bez spacji. Kropki (.) są używane do oddzielania domen. Przykład: domena-1.VerOS NT.org."
     3210 "&Szczegóły >>"
     3220 "<< &Szczegóły"
     4000 "Informacja"

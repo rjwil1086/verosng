@@ -41,7 +41,7 @@ list(APPEND UTF8_INF_FILES
 add_driver_inf(media_inf ${INF_FILES})
 
 foreach(item ${UTF8_INF_FILES})
-    add_cd_file(FILE "${CMAKE_CURRENT_SOURCE_DIR}/${item}" DESTINATION reactos/inf FOR all)
+    add_cd_file(FILE "${CMAKE_CURRENT_SOURCE_DIR}/${item}" DESTINATION VerOS/inf FOR all)
 endforeach(item)
 
-add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/syssetup.inf DESTINATION reactos/inf FOR all)
+add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/syssetup.inf DESTINATION VerOS/inf FOR all)

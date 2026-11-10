@@ -48,5 +48,5 @@ add_custom_target(
 add_cd_file(
     TARGET reactos_cab_inf
     FILE ${CMAKE_CURRENT_BINARY_DIR}/reactos.inf
-    DESTINATION reactos
+    DESTINATION VerOS
     NO_CAB FOR bootcd regtest)

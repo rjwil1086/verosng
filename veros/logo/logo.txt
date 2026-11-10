@@ -1,4 +1,6 @@
 SPDX-License-Identifier: GPL-2.0-or-later
 
-VerOS NG Logo.jpg is the source artwork for the VerOS NG mark used
-by the wallpaper and the live CD bitmaps.
+VerOS NT Logo.svg is the vector artwork for the VerOS NT mark. The
+wordmark is VerOS NT and the tagline is True NT. Open Core. VerOS NT
+Logo.jpg is a render of that file. The same drawing is the desktop
+wallpaper and the live CD logo.

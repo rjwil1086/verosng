@@ -7,4 +7,4 @@ add_library(ncpa MODULE
 
 set_module_type(ncpa cpl UNICODE)
 add_importlibs(ncpa user32 advapi32 shell32 msvcrt kernel32)
-add_cd_file(TARGET ncpa DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET ncpa DESTINATION VerOS/system32 FOR all)

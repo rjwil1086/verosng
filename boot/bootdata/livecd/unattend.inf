@@ -1,5 +1,5 @@
 [Unattend]
-Signature = "$ReactOS$"
+Signature = "$VerOS$"
 
 ; Set UnattendSetupEnabled to yes in order to immediately start the ReactOS installer.
 ; yes - unattend setup enabled

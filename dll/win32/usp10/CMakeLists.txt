@@ -25,5 +25,5 @@ set_module_type(usp10 win32dll)
 target_link_libraries(usp10 wine oldnames)
 add_importlibs(usp10 advapi32 user32 gdi32 msvcrt kernel32 ntdll)
 add_pch(usp10 precomp.h SOURCE)
-add_cd_file(TARGET usp10 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET usp10 DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(usp10) # CORE-5743: No ARRAY_SIZE macro

@@ -1,5 +1,0 @@
-SPDX-License-Identifier: GPL-2.0-or-later
-
-veros-ng.bmp is the VerOS NG desktop wallpaper, 3840x2160. The V
-mark from veros/logo/VerOS NG Logo.jpg is centered on that logo's slate
-field, and the desktop scales the picture to the display size.

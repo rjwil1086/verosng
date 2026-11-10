@@ -137,4 +137,4 @@ endif()
 
 add_importlibs(glu32 opengl32 gdi32 msvcrt kernel32 ntdll)
 add_pch(glu32 precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET glu32 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET glu32 DESTINATION VerOS/system32 FOR all)

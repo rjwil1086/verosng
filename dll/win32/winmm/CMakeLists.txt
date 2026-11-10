@@ -33,7 +33,7 @@ set_module_type(winmm win32dll)
 target_link_libraries(winmm wine ${PSEH_LIB} oldnames)
 add_importlibs(winmm userenv advapi32 user32 msvcrt kernel32 ntdll)
 add_pch(winmm winemm.h SOURCE)
-add_cd_file(TARGET winmm DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET winmm DESTINATION VerOS/system32 FOR all)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     target_compile_options(winmm PRIVATE -Wno-unused-but-set-variable)

@@ -87,4 +87,4 @@ add_dependencies(user32 asm)
 
 add_delay_importlibs(user32 usp10 libpng)
 add_importlibs(user32 gdi32 advapi32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET user32 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET user32 DESTINATION VerOS/system32 FOR all)

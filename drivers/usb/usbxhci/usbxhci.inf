@@ -4,7 +4,7 @@
 Signature="$Windows NT$"
 Class=USB
 ClassGUID={36FC9E60-C465-11CF-8056-444553540000}
-Provider=%ReactOS%
+Provider=%VerOS NT%
 DriverVer=02/15/2026,1.0
 
 [SourceDisksFiles]
@@ -88,7 +88,7 @@ HKR,, BootFlags,  0x00010001, 16 ;CM_SERVICE_USB3_DISK_BOOT_LOAD
 
 [Strings]
 ;Non-Localizable
-ReactOS = "ReactOS"
+VerOS NT = "VerOS NT"
 
 ;Localizable
 Generic.Mfg = "Generic USB xHCI Host Controller"

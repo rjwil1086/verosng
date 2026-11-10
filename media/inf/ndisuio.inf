@@ -4,17 +4,17 @@
 
 [Version]
 Signature  = "$Windows NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile = layout.inf
 Class      = NetTrans
 ClassGUID  = {4D36E975-E325-11CE-BFC1-08002BE10318}
-Provider   = %ReactOS%
+Provider   = %VerOS NT%
 DriverVer  = 04/12/2006,1.00
 
 [Manufacturer]
-%ReactOS% = ReactOS
+%VerOS NT% = VerOS NT
 
-[ReactOS]
+[VerOS NT]
 %NDISUIO_DisplayName% = Install, MS_NDISUIO
 
 ;--------------------------- NDISUIO DRIVER -----------------------------

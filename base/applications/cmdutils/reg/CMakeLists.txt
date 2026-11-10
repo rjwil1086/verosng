@@ -7,5 +7,5 @@ set_module_type(reg win32cui UNICODE)
 target_compile_definitions(reg PRIVATE _CRT_NON_CONFORMING_SWPRINTFS)
 target_link_libraries(reg wine oldnames)
 add_importlibs(reg advapi32 advapi32_vista user32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET reg DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET reg DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(reg) # CORE-5743: No ARRAY_SIZE macro

@@ -20,5 +20,5 @@ add_idl_reg_scripts(activeds registry activeds.idl)
 target_link_libraries(activeds wine wine_dll_register wine_dll_canunload uuid oldnames)
 add_importlibs(activeds ole32 oleaut32 advapi32 msvcrt kernel32 ntdll)
 add_pch(activeds precomp.h SOURCE)
-add_cd_file(TARGET activeds DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET activeds DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(activeds) # CORE-5743: No ARRAY_SIZE macro

@@ -9,4 +9,4 @@ list(APPEND SOURCE
 add_library(security MODULE ${SOURCE})
 set_module_type(security win32dll ENTRYPOINT 0 UNICODE)
 add_importlibs(security secur32)
-add_cd_file(TARGET security DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET security DESTINATION VerOS/system32 FOR all)

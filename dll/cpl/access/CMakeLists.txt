@@ -20,4 +20,4 @@ add_library(access MODULE
 set_module_type(access cpl UNICODE)
 add_importlibs(access user32 gdi32 advapi32 comctl32 msvcrt kernel32)
 add_pch(access access.h SOURCE)
-add_cd_file(TARGET access DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET access DESTINATION VerOS/system32 FOR all)

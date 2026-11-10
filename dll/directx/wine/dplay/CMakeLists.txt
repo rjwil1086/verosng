@@ -8,4 +8,4 @@ add_library(dplay MODULE
 
 set_module_type(dplay win32dll)
 add_importlibs(dplay dplayx msvcrt kernel32)
-add_cd_file(TARGET dplay DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET dplay DESTINATION VerOS/system32 FOR all)

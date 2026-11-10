@@ -9,5 +9,5 @@ list(APPEND SOURCE
 add_library(dpnaddr MODULE ${SOURCE})
 set_module_type(dpnaddr win32dll)
 add_importlibs(dpnaddr dpnet msvcrt kernel32 ntdll)
-add_cd_file(TARGET dpnaddr DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET dpnaddr DESTINATION VerOS/system32 FOR all)
 set_wine_module(dpnaddr)

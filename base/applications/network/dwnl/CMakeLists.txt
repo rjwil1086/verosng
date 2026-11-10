@@ -6,4 +6,4 @@ add_importlibs(dwnl urlmon wininet msvcrt kernel32)
 if(MSVC AND ARCH STREQUAL "i386")
     add_importlibs(dwnl ntdll) # For _allmul
 endif()
-add_cd_file(TARGET dwnl DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET dwnl DESTINATION VerOS/system32 FOR all)

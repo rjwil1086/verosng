@@ -4,6 +4,9 @@
  * PURPOSE:     Boot Stores Management functionality, with support for
  *              NT 5.x family (MS Windows <= 2003, and ReactOS) bootloaders.
  * COPYRIGHT:   Copyright 2017-2018 Hermes Belusca-Maito
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Hermes Belusca-Maito
+ *              Ryan Wilson
  */
 
 // TODO: Add support for NT 6.x family! (detection + BCD manipulation).
@@ -392,7 +395,7 @@ CreateCommonFreeLdrSections(
     IniSection = IniAddSection(BootStore->IniCache, L"Display");
 
     /* TitleText and MinimalUI */
-    IniAddKey(IniSection, L"TitleText", L"ReactOS Boot Manager");
+    IniAddKey(IniSection, L"TitleText", L"VerOS NT Boot Manager");
     IniAddKey(IniSection, L"MinimalUI", L"Yes");
 
     /*
@@ -1488,7 +1491,7 @@ FreeLdrEnumerateBootEntries(
             goto DoEnum;
         }
 
-        // TODO: What to do with "Windows" ; "WindowsNT40" ; "ReactOSSetup" ?
+        // TODO: What to do with "Windows" ; "WindowsNT40" ; "VerOSSetup" ?
         if ((_wcsicmp(KeyData, L"Windows2003")     == 0) ||
             (_wcsicmp(KeyData, L"\"Windows2003\"") == 0))
         {

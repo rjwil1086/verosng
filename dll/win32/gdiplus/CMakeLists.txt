@@ -52,11 +52,11 @@ target_link_libraries(gdiplus wine)
 add_delay_importlibs(gdiplus windowscodecs)
 add_importlibs(gdiplus mlang msvcrt shlwapi oleaut32 ole32 user32 gdi32 kernel32 kernel32_vista ntdll ntdll_vista)
 
-add_cd_file(TARGET gdiplus DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET gdiplus DESTINATION VerOS/system32 FOR all)
 
-add_cd_file(TARGET gdiplus DESTINATION reactos/winsxs/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.23038_none_deadbeef FOR all)
-add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.23038_none_deadbeef.manifest DESTINATION reactos/winsxs/manifests FOR all)
+add_cd_file(TARGET gdiplus DESTINATION VerOS/winsxs/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.23038_none_deadbeef FOR all)
+add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.23038_none_deadbeef.manifest DESTINATION VerOS/winsxs/manifests FOR all)
 
-add_cd_file(TARGET gdiplus DESTINATION reactos/winsxs/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.0.14393.0_none_deadbeef FOR all)
-add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.0.14393.0_none_deadbeef.manifest DESTINATION reactos/winsxs/manifests FOR all)
+add_cd_file(TARGET gdiplus DESTINATION VerOS/winsxs/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.0.14393.0_none_deadbeef FOR all)
+add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/${WINARCH}_microsoft.windows.gdiplus_6595b64144ccf1df_1.0.14393.0_none_deadbeef.manifest DESTINATION VerOS/winsxs/manifests FOR all)
 set_wine_module_FIXME(gdiplus) # CORE-5743: No ARRAY_SIZE macro

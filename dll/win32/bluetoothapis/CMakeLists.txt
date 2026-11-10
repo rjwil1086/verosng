@@ -16,5 +16,5 @@ endif()
 
 target_link_libraries(bluetoothapis wine wine_dll_canunload)
 add_importlibs(bluetoothapis setupapi msvcrt kernel32 ntdll)
-add_cd_file(TARGET bluetoothapis DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET bluetoothapis DESTINATION VerOS/system32 FOR all)
 set_wine_module(bluetoothapis)

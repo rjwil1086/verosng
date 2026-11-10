@@ -33,5 +33,5 @@ add_importlibs(qcap
     ole32 oleaut32 winmm user32 gdi32 advapi32
     kernel32_vista msvcrt kernel32 ntdll)
 add_dependencies(qcap wineheaders)
-add_cd_file(TARGET qcap DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET qcap DESTINATION VerOS/system32 FOR all)
 set_wine_module(qcap)

@@ -1397,7 +1397,7 @@ AppHelpCheckPackage(LPCWSTR szPackage)
             if (hsdb)
             {
                 BOOL bShim = SE_DynamicShim(szPackage, hsdb, QueryResult, "msi.dll", &dwToken);
-                ERR("ReactOS HACK(CORE-13283): Used SE_DynamicShim %d!\n", bShim);
+                ERR("VerOS NT HACK(CORE-13283): Used SE_DynamicShim %d!\n", bShim);
 
                 SdbReleaseDatabase(hsdb);
             }

@@ -53,4 +53,4 @@ endif()
 
 add_importlibs(ucrtbase kernel32 ntdll)
 
-add_cd_file(TARGET ucrtbase DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET ucrtbase DESTINATION VerOS/system32 FOR all)

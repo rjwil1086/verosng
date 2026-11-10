@@ -1,6 +1,6 @@
 
-option(ENABLE_ROSAPPS "Enable building the ReactOS extra applications" OFF)
-option(ENABLE_ROSTESTS "Enable building the ReactOS test suite" OFF)
+option(ENABLE_ROSAPPS "Enable building the VerOS NT extra applications" OFF)
+option(ENABLE_ROSTESTS "Enable building the VerOS NT test suite" OFF)
 option(ENABLE_WALLPAPERS "Integrate wallpapers into the built ISOs" OFF)
 
 if(ENABLE_ROSAPPS)
@@ -15,8 +15,8 @@ if(ENABLE_WALLPAPERS)
     add_subdirectory(wallpapers)
 endif()
 
-add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/wallpapers/veros-ng.bmp DESTINATION reactos/Web/Wallpaper FOR all)
-add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/wallpapers/veros-ng.txt DESTINATION reactos/Web/Wallpaper FOR all)
+add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/wallpapers/veros-nt.bmp DESTINATION VerOS/Web/Wallpaper FOR all)
+add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/wallpapers/veros-nt.txt DESTINATION VerOS/Web/Wallpaper FOR all)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/AHK_Tests/)
     add_subdirectory(AHK_Tests)
@@ -43,12 +43,12 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/)
     file(GLOB_RECURSE EXTRA_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/*)
     foreach(item ${EXTRA_FILES})
-        add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/${item} DESTINATION reactos/3rdParty NAME_ON_CD ${item} FOR bootcd)
+        add_cd_file(FILE ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/${item} DESTINATION VerOS/3rdParty NAME_ON_CD ${item} FOR bootcd)
     endforeach(item)
 endif()
 
 # Add font file DroidSansFallback.ttf for LiveCD
 # See also boot/bootdata/packages/reactos.dff.in
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/optional/DroidSansFallback.ttf)
-    add_cd_file(FILE "${CMAKE_CURRENT_SOURCE_DIR}/optional/DroidSansFallback.ttf" DESTINATION reactos/Fonts FOR livecd)
+    add_cd_file(FILE "${CMAKE_CURRENT_SOURCE_DIR}/optional/DroidSansFallback.ttf" DESTINATION VerOS/Fonts FOR livecd)
 endif()

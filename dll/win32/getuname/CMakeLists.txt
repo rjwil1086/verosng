@@ -8,4 +8,4 @@ add_library(getuname MODULE
 
 set_module_type(getuname win32dll UNICODE)
 add_importlibs(getuname user32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET getuname DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET getuname DESTINATION VerOS/system32 FOR all)

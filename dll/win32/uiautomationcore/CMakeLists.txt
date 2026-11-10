@@ -23,5 +23,5 @@ add_idl_reg_scripts(uiautomationcore regtypelib uia_classes_client.idl uia_class
 target_link_libraries(uiautomationcore wine wine_dll_register uuid)
 add_dependencies(uiautomationcore psdk uiautomationcore_idlheader)
 add_importlibs(uiautomationcore shlwapi oleaut32 ole32 oleacc combase user32 kernel32_vista ucrtbase kernel32 ntdll)
-add_cd_file(TARGET uiautomationcore DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET uiautomationcore DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(uiautomationcore)

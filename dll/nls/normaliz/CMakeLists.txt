@@ -14,4 +14,4 @@ list(APPEND SOURCE
 add_library(normaliz MODULE ${SOURCE})
 set_module_type(normaliz win32dll ENTRYPOINT 0)
 add_importlibs(normaliz msvcrt kernel32 ntdll)
-add_cd_file(TARGET normaliz DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET normaliz DESTINATION VerOS/system32 FOR all)

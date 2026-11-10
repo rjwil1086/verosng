@@ -5,9 +5,9 @@ alwaysApply: true
 
 # Interactive QEMU
 
-When a Windows or ReactOS test needs a QEMU window, launch the guest, then give numbered steps. The user clicks and types. Do not move the pointer, click, or type into the guest.
+When a Windows or VerOS NT test needs a QEMU window, launch the guest, then give numbered steps. The user clicks and types. Do not move the pointer, click, or type into the guest.
 
-Boot Windows 10 22H2 and VerOS NG with `-m 8192 -smp 4`. Keep `-accel tcg`. Keep `-snapshot` on the Windows disk. A multicore boot failure is fixed in this tree.
+Boot Windows 10 22H2 and VerOS NT with `-m 8192 -smp 4`. Keep `-accel tcg`. Keep `-snapshot` on the Windows disk. A multicore boot failure is fixed in this tree.
 
 Each handoff names the window, what ready looks like, the exact clicks or commands, and the moment to report back. Say which window to leave open until the capture log is confirmed.
 

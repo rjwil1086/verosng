@@ -9,4 +9,4 @@ list(APPEND SOURCE
 add_library(icmp MODULE ${SOURCE})
 set_module_type(icmp win32dll)
 add_importlibs(icmp iphlpapi msvcrt kernel32 ntdll)
-add_cd_file(TARGET icmp DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET icmp DESTINATION VerOS/system32 FOR all)

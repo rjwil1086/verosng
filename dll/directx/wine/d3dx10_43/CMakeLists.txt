@@ -37,4 +37,4 @@ add_importlibs(d3dx10_43
     kernel32_vista ntdll_vista msvcrt kernel32 ntdll)
 add_delay_importlibs(d3dx10_43 windowscodecs)
 add_dependencies(d3dx10_43 wineheaders d3d_idl_headers)
-add_cd_file(TARGET d3dx10_43 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET d3dx10_43 DESTINATION VerOS/system32 FOR all)

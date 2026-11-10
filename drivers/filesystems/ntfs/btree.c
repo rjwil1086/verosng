@@ -187,8 +187,15 @@ AllocateIndexNode(PDEVICE_EXTENSION DeviceExt,
 
     RtlZeroMemory(BitmapPtr, BytesNeeded);
 
-    // Read the existing bitmap data
+    /* A failed read must not be overwritten by the resize below. */
     Status = ReadAttribute(DeviceExt, BitmapCtx, 0, (PCHAR)BitmapPtr, BitmapLength);
+    if (!NT_SUCCESS(Status))
+    {
+        DPRINT1("ERROR: Failed to read the index bitmap (Status %lx)\n", Status);
+        ExFreePoolWithTag(BitmapMem, TAG_NTFS);
+        ReleaseAttributeContext(BitmapCtx);
+        return Status;
+    }
 
     // Initialize bitmap. It has to describe the node we are about to add, so
     // it needs NextNodeNumber + 1 bits, not NextNodeNumber.
@@ -1517,7 +1524,7 @@ DestroyBTreeKey(PB_TREE_KEY Key)
 VOID
 DestroyBTreeNode(PB_TREE_FILENAME_NODE Node)
 {
-    PB_TREE_KEY NextKey;
+    PB_TREE_KEY NextKey = NULL;
     PB_TREE_KEY CurrentKey = Node->FirstKey;
     ULONG i;
     for (i = 0; i < Node->KeyCount; i++)

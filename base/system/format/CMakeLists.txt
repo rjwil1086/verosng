@@ -9,4 +9,4 @@ if(MSVC AND ARCH STREQUAL "i386")
     add_importlibs(format ntdll) # For _allmul
 endif()
 set_target_properties(format PROPERTIES SUFFIX ".com")
-add_cd_file(TARGET format DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET format DESTINATION VerOS/system32 FOR all)

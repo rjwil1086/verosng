@@ -13,5 +13,5 @@ add_library(pdh MODULE ${SOURCE})
 set_module_type(pdh win32dll)
 target_link_libraries(pdh wine oldnames)
 add_importlibs(pdh msvcrt kernel32_vista kernel32 ntdll)
-add_cd_file(TARGET pdh DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET pdh DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(pdh) # CORE-5743: No ARRAY_SIZE macro

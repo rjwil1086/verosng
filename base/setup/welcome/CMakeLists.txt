@@ -27,7 +27,7 @@ if(ARCH STREQUAL "i386")
     endif()
 endif()
 
-add_cd_file(TARGET welcome DESTINATION reactos FOR all)
+add_cd_file(TARGET welcome DESTINATION VerOS FOR all)
 
 # welcome.exe renamed as setup.exe for the BootCD
 add_cd_file(TARGET welcome DESTINATION root NO_CAB NAME_ON_CD setup.exe FOR bootcd)

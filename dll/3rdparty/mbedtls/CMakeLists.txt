@@ -105,4 +105,4 @@ endif()
 set_module_type(mbedtls win32dll)
 add_importlibs(mbedtls advapi32 msvcrt kernel32 ntdll)
 
-add_cd_file(TARGET mbedtls DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET mbedtls DESTINATION VerOS/system32 FOR all)

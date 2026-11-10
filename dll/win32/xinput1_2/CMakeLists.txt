@@ -8,5 +8,5 @@ list(APPEND SOURCE
 add_library(xinput1_2 MODULE ${SOURCE} version.rc)
 set_module_type(xinput1_2 win32dll)
 add_importlibs(xinput1_2 xinput1_3 msvcrt kernel32)
-add_cd_file(TARGET xinput1_2 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET xinput1_2 DESTINATION VerOS/system32 FOR all)
 set_wine_module(xinput1_2)

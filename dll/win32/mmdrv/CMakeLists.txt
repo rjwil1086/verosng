@@ -18,4 +18,4 @@ add_library(mmdrv MODULE
 set_module_type(mmdrv win32dll UNICODE)
 add_importlibs(mmdrv winmm user32 msvcrt kernel32 ntdll)
 add_pch(mmdrv mmdrv.h SOURCE)
-add_cd_file(TARGET mmdrv DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET mmdrv DESTINATION VerOS/system32 FOR all)

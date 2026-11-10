@@ -1,10 +1,10 @@
 [Version]
 Signature  = "$Windows NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile = layout.inf
 Class      = Processor
 ClassGUID  = {50127DC3-0F36-415e-A6CC-4CB3BE910B65}
-Provider   = %ReactOS%
+Provider   = %VerOS NT%
 DriverVer  = 09/27/2007,1.00
 
 [ControlFlags]

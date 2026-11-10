@@ -29,5 +29,5 @@ target_link_libraries(hhctrl uuid wine wine_dll_register wine_dll_canunload oldn
 add_importlibs(hhctrl advapi32 comctl32 shlwapi ole32 oleaut32 user32 gdi32 msvcrt kernel32 ntdll)
 add_dependencies(hhctrl stdole2 wineheaders)
 add_pch(hhctrl precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET hhctrl DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET hhctrl DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(hhctrl) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

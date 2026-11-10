@@ -69,7 +69,7 @@ FatalError(char *pszFmt,...)
     strcat(szBuffer, "\nRebooting now!");
     MessageBoxA(NULL,
                 szBuffer,
-                "ReactOS Setup",
+                "VerOS NT Setup",
                 MB_OK);
 }
 
@@ -1219,7 +1219,7 @@ InstallLiveCD(VOID)
 error:
     MessageBoxW(NULL,
                 L"Failed to load LiveCD! You can shutdown your computer, or press ENTER to reboot.",
-                L"VerOS NG LiveCD",
+                L"VerOS NT LiveCD",
                 MB_OK);
     // HACK: This shouldn't be done here, but by the caller of InstallWindowsNt()
     /* Enable the shutdown privilege and reboot the machine */
@@ -1614,7 +1614,7 @@ InstallReactOS(VOID)
     WCHAR szBuffer[MAX_PATH];
 
     InitializeSetupActionLog(FALSE);
-    LogItem(NULL, L"Installing ReactOS");
+    LogItem(NULL, L"Installing VerOS NT");
 
     CreateTempDir(L"TEMP");
     CreateTempDir(L"TMP");
@@ -1708,7 +1708,7 @@ InstallReactOS(VOID)
     if (dwHotkeyThreadId)
         PostThreadMessage(dwHotkeyThreadId, WM_QUIT, 0, 0);
 
-    LogItem(NULL, L"Installing ReactOS done");
+    LogItem(NULL, L"Installing VerOS NT done");
     TerminateSetupActionLog();
 
     if (AdminInfo.Name != NULL)

@@ -35,10 +35,10 @@ STRINGTABLE
 {
 5000, "Black Shade"
 5001, "Style Visuel"
-5002, "Projet ReactOS"
+5002, "Projet VerOS NT"
 5003, "Images par David Quintana <gigaherz@gmail.com>"
 5004, "Images Distribué sous CC-BY-SA 4.0"
 5005, "https://reactos.org/"
 5006, "1.0"
-5007, "Style Visuel pour ReactOS"
+5007, "Style Visuel pour VerOS NT"
 }

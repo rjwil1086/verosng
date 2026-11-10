@@ -16,4 +16,4 @@ add_library(openglcfg MODULE
 set_module_type(openglcfg cpl UNICODE)
 add_importlibs(openglcfg user32 comctl32 advapi32 msvcrt kernel32)
 add_pch(openglcfg openglcfg.h SOURCE)
-add_cd_file(TARGET openglcfg DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET openglcfg DESTINATION VerOS/system32 FOR all)

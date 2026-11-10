@@ -39,5 +39,5 @@ add_idl_reg_scripts(avifil32 registry avifil32.idl)
 target_link_libraries(avifil32 wine wine_dll_register wine_dll_canunload ${PSEH_LIB})
 add_importlibs(avifil32 msacm32 msvfw32 winmm ole32 user32 advapi32 rpcrt4 ucrtbase kernel32 ntdll)
 add_pch(avifil32 precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET avifil32 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET avifil32 DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(avifil32) # CORE-5743: No ARRAY_SIZE nor CONST_VTABLE

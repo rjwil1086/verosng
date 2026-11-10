@@ -59,4 +59,4 @@ if(MSVC)
     add_importlibs(diskpart ntdll)
 endif()
 
-add_cd_file(TARGET diskpart DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET diskpart DESTINATION VerOS/system32 FOR all)

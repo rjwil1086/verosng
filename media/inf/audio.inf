@@ -4,11 +4,11 @@
 
 [Version]
 Signature  = "$Windows NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile = layout.inf
 Class      = MEDIA
 ClassGUID  = {4d36e96c-e325-11ce-bfc1-08002be10318}
-Provider   = %ReactOS%
+Provider   = %VerOS NT%
 DriverVer  = 10/19/1999,5.00.2157.1
 
 [DestinationDirs]

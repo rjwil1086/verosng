@@ -38,7 +38,7 @@ __crt_MessageBoxA (
     /* Display a message box */
     iResult = pMessageBoxA(NULL,
                            pszText,
-                           "ReactOS C Runtime Library",
+                           "VerOS NT C Runtime Library",
                            uType);
 
     FreeLibrary(hmodUser32);

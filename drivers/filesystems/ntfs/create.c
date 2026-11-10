@@ -44,9 +44,13 @@ NtfsMakeAbsoluteFilename(PFILE_OBJECT pFileObject,
     PWSTR rcName;
     PNTFS_FCB Fcb;
 
-    DPRINT("try related for %S\n", pRelativeFileName);
     Fcb = pFileObject->FsContext;
     ASSERT(Fcb);
+
+    if (pRelativeFileName == NULL)
+        return STATUS_INVALID_PARAMETER;
+
+    DPRINT("try related for %S\n", pRelativeFileName);
 
     if (Fcb->Flags & FCB_IS_VOLUME)
     {

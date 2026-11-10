@@ -64,5 +64,5 @@ set_module_type(jscript win32dll)
 target_link_libraries(jscript uuid wine oldnames wine_dll_register)
 add_importlibs(jscript user32 ole32 oleaut32 advapi32 msvcrt kernel32 ntdll)
 add_pch(jscript precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET jscript DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET jscript DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(jscript) # CORE-5743: No ARRAY_SIZE nor CONST_VTABLE

@@ -10,5 +10,5 @@ add_library(compstui MODULE ${SOURCE})
 set_module_type(compstui win32dll)
 target_link_libraries(compstui wine msvcrtex)
 add_importlibs(compstui comctl32 user32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET compstui DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET compstui DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(compstui) # CORE-5743: No ARRAY_SIZE macro

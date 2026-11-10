@@ -34,7 +34,7 @@ BEGIN
     LTEXT           "[03-03-93] Jim Randell - X11用のハック解除された",IDC_STATIC,7,47,215,8
     LTEXT           "[03-07-93] Jamie Zawinski - コードの整理と整頓",IDC_STATIC,7,56,215,8
     LTEXT           "[10-08-94] Ge van Geldorp - Windows に移植",IDC_STATIC,7,65,215,8
-    LTEXT           "[08-15-03] Ge van Geldorp - ReactOS に移植",IDC_STATIC,7,74,215,8
+    LTEXT           "[08-15-03] Ge van Geldorp - VerOS NT に移植",IDC_STATIC,7,74,215,8
     CTEXT           "Ge van Geldorpさん、安らかに眠れ。あなたが居なくてさみしい!",IDC_STATIC,7,87,215,10,SS_SUNKEN
     DEFPUSHBUTTON   "OK",IDOK,87,100,56,14
 END

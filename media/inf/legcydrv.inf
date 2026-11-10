@@ -1,10 +1,10 @@
 [Version]
 Signature  = "$Windows NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile = layout.inf
 Class      = LegacyDriver
 ClassGUID  = {8ECC055D-047F-11D1-A537-0000F8753ED1}
-Provider   = %ReactOS%
+Provider   = %VerOS NT%
 DriverVer  = 03/20/2012,1.01.0.0
 
 [ClassInstall32.NT]

@@ -29,5 +29,5 @@ add_idl_reg_scripts(scrrun regtypelib scrrun.idl)
 target_link_libraries(scrrun uuid wine wine_dll_register wine_dll_canunload oldnames)
 add_importlibs(scrrun oleaut32 version advapi32 msvcrt kernel32 ntdll)
 add_pch(scrrun precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET scrrun DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET scrrun DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(scrrun) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

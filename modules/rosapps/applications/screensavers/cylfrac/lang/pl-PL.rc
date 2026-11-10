@@ -11,5 +11,5 @@ STRINGTABLE
 BEGIN
     IDS_DESCRIPTION "Fraktale cylindryczne"
     IDS_TITLE       "O programie"
-    IDS_TEXT        "Fraktale cylindryczne autorstwa unC0Rr.\nWersja dedykowana dla ReactOS."
+    IDS_TEXT        "Fraktale cylindryczne autorstwa unC0Rr.\nWersja dedykowana dla VerOS NT."
 END

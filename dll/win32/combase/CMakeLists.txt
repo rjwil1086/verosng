@@ -35,5 +35,5 @@ endif()
 target_link_libraries(combase wine uuid pseh)
 add_importlibs(combase advapi32 ole32 oleaut32 user32 gdi32 rpcrt4 msvcrt kernel32_vista kernel32 ntdll)
 add_dependencies(combase combase_idlheader wineheaders rpcss)
-add_cd_file(TARGET combase DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET combase DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(combase) # CORE-5743: No ARRAY_SIZE macro

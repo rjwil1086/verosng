@@ -9,5 +9,5 @@ list(APPEND SOURCE
 add_library(dpnlobby MODULE ${SOURCE})
 set_module_type(dpnlobby win32dll)
 add_importlibs(dpnlobby dpnet msvcrt kernel32 ntdll)
-add_cd_file(TARGET dpnlobby DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET dpnlobby DESTINATION VerOS/system32 FOR all)
 set_wine_module(dpnlobby)

@@ -20,4 +20,4 @@ if(MSVC)
 endif()
 
 add_pch(calc calc.h SOURCE)
-add_cd_file(TARGET calc DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET calc DESTINATION VerOS/system32 FOR all)

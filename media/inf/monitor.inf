@@ -4,11 +4,11 @@
 ;
 [Version]
 Signature  = "$Windows NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile = layout.inf
 Class      = Monitor
 ClassGUID  = {4D36E96E-E325-11CE-BFC1-08002BE10318}
-Provider   = %ReactOS%
+Provider   = %VerOS NT%
 DriverVer  = 03/11/2012,1.00
 
 [DestinationDirs]

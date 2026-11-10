@@ -1,6 +1,6 @@
 [Version]
 Signature = "$Windows NT$"
-;Signature = "$ReactOS$"
+;Signature = "$VerOS NT$"
 
 ;
 ; The [SourceDisksNames] section lists all the available installation media
@@ -226,7 +226,7 @@ inport = inport.sys
 Cabinet = reactos.cab
 
 [SetupData]
-DefaultPath = \ReactOS
+DefaultPath = \VerOS
 SetupDebugOptions = "/DEBUG /KDSERIAL /DEBUGPORT=COM1 /FIRSTCHANCE"
 ;SetupDebugOptions = "/DEBUG /SOS /DEBUGPORT=SCREEN"
 OsLoadOptions = "/FASTDETECT /NOGUIBOOT /NODEBUG"
@@ -685,7 +685,7 @@ DelReg = registry.inf,DelReg
 AddReg = registry.inf,AddReg
 
 [Strings]
-cdname      = "ReactOS Installation Media"
-productname = "ReactOS"
+cdname      = "VerOS NT Installation Media"
+productname = "VerOS NT"
 
 ; EOF

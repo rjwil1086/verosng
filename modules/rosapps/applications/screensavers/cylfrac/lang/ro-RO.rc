@@ -12,5 +12,5 @@ STRINGTABLE
 BEGIN
     IDS_DESCRIPTION "Fractal cilindri (animație de inactivitate)"
     IDS_TITLE       "Despre"
-    IDS_TEXT        "Fractal cilindri de unC0Rr.\nSpecial pentru ReactOS."
+    IDS_TEXT        "Fractal cilindri de unC0Rr.\nSpecial pentru VerOS NT."
 END

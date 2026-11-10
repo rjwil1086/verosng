@@ -8,4 +8,4 @@ list(APPEND SOURCE
 add_library(httpapi MODULE ${SOURCE})
 set_module_type(httpapi win32dll)
 add_importlibs(httpapi msvcrt kernel32 ntdll)
-add_cd_file(TARGET httpapi DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET httpapi DESTINATION VerOS/system32 FOR all)

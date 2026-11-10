@@ -36,4 +36,4 @@ add_importlibs(ntobjshex
     ntdll)
 
 add_pch(ntobjshex precomp.h SOURCE)
-add_cd_file(TARGET ntobjshex DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET ntobjshex DESTINATION VerOS/system32 FOR all)

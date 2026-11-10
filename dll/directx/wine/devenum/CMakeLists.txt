@@ -29,5 +29,5 @@ add_importlibs(devenum
     ole32 oleaut32 avicap32 winmm user32 advapi32 advapi32_vista dsound msdmo
     msvcrt kernel32 ntdll)
 add_dependencies(devenum wineheaders)
-add_cd_file(TARGET devenum DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET devenum DESTINATION VerOS/system32 FOR all)
 set_wine_module(devenum)

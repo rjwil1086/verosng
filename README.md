@@ -1,132 +1,65 @@
-<p align=center>
-  <a href="https://reactos.org/">
-    <img alt="ReactOS" src="https://reactos.org/wiki/images/0/02/ReactOS_logo.png">
-  </a>
-</p>
+# VerOS NT
 
----
+VerOS NT is Ryan Wilson's hobby project: a one-person fork of [ReactOS](https://github.com/reactos/reactos). The goal is a general-purpose operating system that can install and run any application Windows 10 22H2 can install and run. That set is x64 programs and, later, 32-bit programs on the amd64 boot.
 
-<p align=center>
-  <a href="https://reactos.org/project-news/reactos-0416-released/">
-    <img alt="ReactOS 0.4.16 Release" src="https://img.shields.io/badge/release-0.4.16-0688CB.svg"></a>
-  <a href="https://reactos.org/download/">
-    <img alt="Download ReactOS" src="https://img.shields.io/badge/download-latest-0688CB.svg"></a>
-  <a href="https://sourceforge.net/projects/reactos/">
-    <img alt="SourceForge Download" src="https://img.shields.io/sourceforge/dm/reactos.svg?colorB=0688CB"></a>
-  <a href="https://github.com/reactos/reactos/blob/master/COPYING">
-    <img alt="License" src="https://img.shields.io/badge/license-GNU_GPL_2.0-0688CB.svg"></a>
-  <a href="https://reactos.org/donate/">
-    <img alt="Donate" src="https://img.shields.io/badge/%24-donate-E44E4A.svg"></a>
-  <a href="https://twitter.com/reactos">
-    <img alt="Follow on Twitter" src="https://img.shields.io/twitter/follow/reactos.svg?style=social&label=Follow%20%40reactos"></a>
-</p>
+These are alpha builds for the harness, experiments, and watching compatibility scores move. Run them in a virtual machine. A daily machine or a production environment needs a finished OS.
 
-## Quick Links
-[Website](https://reactos.org/) &bull;
-[Official chat](https://chat.reactos.org/) &bull;
-[Wiki](https://reactos.org/wiki/) &bull;
-[Forum](https://reactos.org/forum/) &bull;
-[Community Discord](https://discord.gg/7knjvhT) &bull;
-[JIRA Bug Tracker](https://jira.reactos.org/issues/) &bull;
-[ReactOS Git mirror](https://git.reactos.org/) &bull;
-[Testman](https://reactos.org/testman/)
+Cursor and Grok write most of the patches. Ryan reviews them before they land. Each generated change ships with a public note under [`veros/transparency/`](veros/transparency/). A prompt may use QEMU harness traces, public documentation, this tree under GPL-2.0, and Wine code under the license already on the file. Leaked or proprietary Windows source, and decompiled or disassembled Microsoft binaries, stay out of the notes and out of the prompts.
 
-## What is ReactOS?
+Windows is a registered trademark of Microsoft Corporation. Microsoft and the ReactOS Project have not licensed or endorsed this fork.
 
-ReactOS™ is an Open Source effort to develop a quality operating system that is compatible with applications and drivers written for the Microsoft® Windows™ NT family of operating systems (NT4, 2000, XP, 2003, Vista, 7).
+## Plan
 
-The ReactOS project, although currently focused on Windows Server 2003 compatibility, is always keeping an eye toward compatibility with Windows Vista and future Windows NT releases.
+The path is [docs/MILESTONES.md](docs/MILESTONES.md). A commit note marks a milestone in progress when it says the work is for that milestone, and complete when it says that milestone is done. A transparency record does the same when it says that milestone is done.
 
-The code of ReactOS is licensed under [GNU GPL 2.0](https://github.com/reactos/reactos/blob/master/COPYING).
+An application that Windows 10 22H2 x64 can run installs and runs here. A driver, a graphics driver, more RAM, or more processors becomes the next pass when the application under test fails without it. Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
 
-### Product quality warning
+Finished milestones keep their numbers. The open work follows this order. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone.
 
-**ReactOS is currently an Alpha quality operating system.** This means that ReactOS is under heavy development and you have to be ready to encounter some problems. Different things may not work well and it can corrupt the data present on your hard disk. It is HIGHLY recommended to test ReactOS on a virtual machine or on a computer with no sensitive or critical data!
+1. Milestone 9. Native i386 is unsupported.
+2. Milestone 13. One module compiles as Windows 10 22H2 when that installer's log names a prototype `0x502` hides. The installer then runs again.
+3. Milestone 14. Service numbers, when a program issues a direct call and the number disagrees with the name list.
+4. Milestone 15. The next application, one at a time.
+5. Milestone 16. WoW64, after the first installed x64 program. Milestone 15 then includes 32-bit programs.
+6. Milestone 17. A retail driver, when the application needs that device.
+7. Milestone 18. One shared structure layout, when milestone 17 or 15 names a wrong size or offset.
+8. Milestone 19. The remaining non-graphics drivers, after milestone 17, when the application needs that device.
+9. Milestone 20, when the application needs `opengl32` or `d3d11`.
+10. Milestone 21, when that application fails on the software rasterizer.
+11. Milestone 22, when that application still fails on virtio-gpu.
+12. Milestone 23, when that application still fails on the DRM driver.
+13. Milestone 24. Physical memory above 8 GiB, when an application fails for lack of RAM.
+14. Milestone 25. Logical processors, when an application needs them.
+15. Milestone 26. The Vista page-table software bits, after milestone 24.
+16. Milestone 27. The root compile becomes Windows 10 22H2, after milestones 24, 13, and 18.
+
+## Compatibility loop
+
+The same QEMU harness path runs a reference guest and a VerOS NT guest.
+
+1. The harness records traces, boot results, and crashes from both guests.
+2. The diff engine places reference behavior beside the VerOS NT result.
+3. Cursor and Grok get a concrete mismatch, and the generation record is published.
+4. The harness boots again, checks for a crash, and runs the regression test.
+5. Compatibility moves because the harness measured it.
+
+`ARCH=amd64` is the only supported OS build. A native i386 boot is unsupported. 32-bit applications run on the amd64 boot.
 
 ## Building
 
-![Build](https://github.com/reactos/reactos/workflows/Build/badge.svg) [![rosbewin.badge]][rosbewin.link] [![rosbeunix.badge]][rosbeunix.link] [![coverity.badge]][coverity.link]
+The daily build is Windows, Clang 18.1.8, amd64, Debug, target `bootcd`. `ARCH=amd64` is the only supported OS build. Details and tool paths are in [docs/LOCAL_BUILD.md](docs/LOCAL_BUILD.md).
 
-To build the system it is strongly advised to use the _ReactOS Build Environment (RosBE)._
-Up-to-date versions for Windows and for Unix/GNU-Linux are available from our download page at: ["Build Environment"](https://reactos.org/wiki/Build_Environment).
+From the source tree:
 
-Alternatively one can use Microsoft Visual C++ (MSVC) version 2019+. Building with MSVC is covered here: ["Visual Studio or Microsoft Visual C++"](https://reactos.org/wiki/CMake#Visual_Studio_or_Microsoft_Visual_C.2B.2B).
+```powershell
+.\tools\pipeline\Build-Bootcd.ps1
+.\tools\pipeline\Test-Boot.ps1
+```
 
-See ["Building ReactOS"](https://reactos.org/wiki/Building_ReactOS) article for more details.
+`Build-Bootcd.ps1` writes `build-amd64\bootcd.iso`. It uses RosBE 2.2.1 and Clang 18.1.8 from the parent `tools` folder when `Setup-BuildEnvironment.ps1` created them, and otherwise from `D:\RosBE`, `C:\RosBE`, or `D:\LLVM-18`. `Test-Boot.ps1` boots that ISO with QEMU 11.1.0, 8 GiB of RAM, 4 processors, and TCG. `build-amd64/` and `output/` stay untracked.
 
-### Binaries
+## License
 
-To build ReactOS you must run the `configure` script in the directory you want to have your build files. Choose `configure.cmd` or `configure.sh` depending on your system. Then run `ninja <modulename>` to build a module you want or just `ninja` to build all modules.
+GPL-2.0 is the default. The text is in [COPYING](COPYING). A file header wins when it names a different license. Wine-synced code keeps the license it arrived with.
 
-### Bootable images
-
-To build a bootable CD image run `ninja bootcd` from the build directory. This will create a CD image with a filename `bootcd.iso`.
-
-You can always download fresh binary builds of bootable images from the ["Daily builds"](https://reactos.org/getbuilds/) page.
-
-## Installing
-
-By default, ReactOS currently can only be installed on a machine that has a FAT16 or FAT32 partition as the active (bootable) partition.
-The partition on which ReactOS is to be installed (which may or may not be the bootable partition) must also be formatted as FAT16 or FAT32.
-ReactOS Setup can format the partitions if needed.
-
-Starting with 0.4.10, ReactOS can be installed using the BtrFS file system. But consider this as an experimental feature and thus regressions not triggered on FAT setup may be observed.
-
-To install ReactOS from the bootable CD distribution, extract the archive contents. Then burn the CD image, boot from it, and follow the instructions.
-
-See ["Installing ReactOS"](https://reactos.org/wiki/Installing_ReactOS) Wiki page or [INSTALL](INSTALL) for more details.
-
-## Testing
-
-If you discover a bug in ReactOS search on JIRA first - it might be reported already. If not report the bug providing logs and as much information as possible.
-
-See ["File Bugs"](https://reactos.org/wiki/File_Bugs) for a guide.
-
-__NOTE:__ The bug tracker is _not_ for discussions. Please use our [official chat](https://chat.reactos.org/) or our [forum](https://reactos.org/forum/).
-
-## Contributing  [![prwelcome.badge]](https://reactos.org/wiki/Commiting_Changes)
-
-We are always looking for developers! Check [how to contribute](CONTRIBUTING.md) if you are willing to participate.
-
-__Legal notice__: If you have seen proprietary Microsoft Windows source code (including but not limited to the leaked Windows NT 3.5, NT 4, 2000 source code and the Windows Research Kernel), your contribution won't be accepted because of potential copyright violation.
-
-__AI tools__: Write PR descriptions and commit messages yourself, and label any other AI-generated text. See [details](CONTRIBUTING.md#ai-generated-communication).
-
-Try out cloud-based ReactOS development using Gitpod and Docker:
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/reactos/reactos)
-
-You can also support ReactOS by [donating](https://reactos.org/donate/)! We rely on our backers to maintain our servers and accelerate development by [hiring full-time devs](https://reactos.org/contributing/#paid-jobs).
-
-## More information
-
-ReactOS is a Free and Open Source operating system based on the Windows architecture,
-providing support for existing applications and drivers, and an alternative to the current dominant consumer operating system.
-
-It is not another wrapper built on Linux, like WINE. It does not attempt or plan to compete with WINE; in fact, the user-mode part of ReactOS is almost entirely WINE-based and our two teams have cooperated closely in the past.
-
-ReactOS is also not "yet another OS". It does not attempt to be a third player like any other alternative OS out there. People are not meant to uninstall Linux and use ReactOS instead; ReactOS is a replacement for Windows users who want a Windows replacement that behaves just like Windows.
-
-More information is available at: [reactos.org](https://reactos.org/).
-
-Also see the [media/doc](/media/doc/) subdirectory for some sparse notes.
-
-## Who is responsible
-
-Active devs are listed as members of [GitHub organization](https://github.com/orgs/reactos/people).
-See also the [CREDITS](CREDITS) file for others.
-
-## Code mirrors
-
-The main development is done on [GitHub](https://github.com/reactos/reactos). We have an [alternative mirror](https://git.reactos.org/?p=reactos.git) in case GitHub is down.
-
-There is also an obsolete [SVN archive repository](https://svn.reactos.org/reactos/) that is kept for historical purposes.
-
-[coverity.badge]:   https://scan.coverity.com/projects/205/badge.svg?flat=1
-[rosbewin.badge]:   https://img.shields.io/badge/RosBE_Windows-2.2.1-0688CB.svg
-[rosbeunix.badge]:  https://img.shields.io/badge/RosBE_Unix-2.2.1-0688CB.svg
-[prwelcome.badge]:  https://img.shields.io/badge/PR-welcome-0688CB.svg
-
-[coverity.link]:    https://scan.coverity.com/projects/205
-[rosbewin.link]:    https://sourceforge.net/projects/reactos/files/RosBE-Windows/i386/2.2.1/
-[rosbeunix.link]:   https://sourceforge.net/projects/reactos/files/RosBE-Unix/2.2.1/
+Upstream is [reactos/reactos](https://github.com/reactos/reactos). Development of this fork is on [rjwil1086/verosng](https://github.com/rjwil1086/verosng).

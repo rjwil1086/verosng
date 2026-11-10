@@ -16,4 +16,4 @@ add_library(rasadhlp MODULE
 set_module_type(rasadhlp win32dll)
 add_importlibs(rasadhlp ws2_32 msvcrt kernel32 ntdll)
 add_pch(rasadhlp precomp.h SOURCE)
-add_cd_file(TARGET rasadhlp DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET rasadhlp DESTINATION VerOS/system32 FOR all)

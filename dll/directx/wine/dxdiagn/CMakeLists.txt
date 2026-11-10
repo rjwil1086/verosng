@@ -23,5 +23,5 @@ add_importlibs(dxdiagn
     d3d9 ddraw dsound version ole32 oleaut32 user32 advapi32 psapi
     msvcrt kernel32 ntdll)
 add_dependencies(dxdiagn wineheaders)
-add_cd_file(TARGET dxdiagn DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET dxdiagn DESTINATION VerOS/system32 FOR all)
 set_wine_module(dxdiagn)

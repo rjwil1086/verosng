@@ -953,7 +953,7 @@ DocumentPropertySheets( PPROPSHEETUI_INFO pCPSUIInfo, LPARAM lparam )
                     if ( pi9 )
                     {
                         Result = pi9->pDevMode->dmSize + pi9->pDevMode->dmDriverExtra;
-                        FIXME("IDPS : Using ReactOS backup!!! DevMode Size %d\n",Result);
+                        FIXME("IDPS : Using VerOS NT backup!!! DevMode Size %d\n",Result);
                         HeapFree(hProcessHeap, 0, pi9);
                     }
                 }

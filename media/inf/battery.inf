@@ -2,11 +2,11 @@
 
 [Version]
 Signature  = "$Windows NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile = layout.inf
 Class      = Battery
 ClassGUID  = {72631E54-78A4-11D0-BCF7-00AA00B7B32A}
-Provider   = %ReactOS%
+Provider   = %VerOS NT%
 DriverVer  = 02/28/2010,1.00
 
 [DestinationDirs]

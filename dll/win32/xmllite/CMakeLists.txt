@@ -21,5 +21,5 @@ set_module_type(xmllite win32dll)
 target_link_libraries(xmllite uuid wine oldnames)
 add_importlibs(xmllite msvcrt kernel32 ntdll)
 add_pch(xmllite precomp.h SOURCE)
-add_cd_file(TARGET xmllite DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET xmllite DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(xmllite) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

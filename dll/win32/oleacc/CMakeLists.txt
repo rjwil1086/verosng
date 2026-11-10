@@ -35,5 +35,5 @@ add_idl_reg_scripts(oleacc regtypelib oleacc_classes.idl)
 target_link_libraries(oleacc uuid wine ${PSEH_LIB} oldnames)
 add_importlibs(oleacc oleaut32 ole32 user32 rpcrt4 msvcrt kernel32 ntdll)
 add_pch(oleacc precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET oleacc DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET oleacc DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(oleacc) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

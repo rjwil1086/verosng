@@ -27,6 +27,12 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 if (-not $Iso) {
     $Iso = Join-Path $SourceRoot "build-amd64\bootcd.iso"
 }
+if (-not $PSBoundParameters.ContainsKey("Qemu")) {
+    $localQemu = Join-Path (Split-Path $SourceRoot -Parent) "tools\qemu\qemu-system-x86_64.exe"
+    if (Test-Path $localQemu) {
+        $Qemu = $localQemu
+    }
+}
 if (-not (Test-Path $Qemu)) {
     Write-Error "QEMU was not found at $Qemu"
 }
@@ -46,10 +52,10 @@ $serial = Join-Path $OutputDir "boot-$stamp.log"
 $jsonl = Join-Path $OutputDir "abi-$stamp.jsonl"
 $qemuLog = Join-Path $OutputDir "qemu-$stamp.log"
 
-$bios = "C:\Program Files\qemu\share"
+$bios = Join-Path (Split-Path $Qemu -Parent) "share"
 $argLine = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -cdrom `"$Iso`" -boot d -no-reboot -serial `"file:$serial`""
 if ($ShowWindow) {
-    $argLine += " -display gtk -name `"VerOS NG`""
+    $argLine += " -display gtk -name `"VerOS NT`""
 } else {
     $argLine += " -display none"
 }

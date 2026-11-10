@@ -63,5 +63,5 @@ target_link_libraries(crypt32 wine ${PSEH_LIB} oldnames)
 add_delay_importlibs(crypt32 cryptnet)
 add_importlibs(crypt32 bcrypt user32 advapi32 advapi32_vista msvcrt kernel32_vista kernel32 ntdll)
 add_pch(crypt32 precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET crypt32 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET crypt32 DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(crypt32) # CORE-5743: No ARRAY_SIZE macro

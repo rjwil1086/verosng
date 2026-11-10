@@ -1,7 +1,7 @@
 
 ; Main ReactOS package
 
-.Set DiskLabelTemplate="VerOS NG"                ; Label of disk
+.Set DiskLabelTemplate="VerOS NT"                ; Label of disk
 .Set CabinetNameTemplate="reactos.cab"          ; reactos.cab
 .Set InfFileName="reactos.inf"                  ; reactos.inf
 

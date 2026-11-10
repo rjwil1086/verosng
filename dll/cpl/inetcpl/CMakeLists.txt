@@ -23,5 +23,5 @@ target_link_libraries(inetcpl wine)
 add_delay_importlibs(inetcpl cryptui wininet ole32 urlmon shell32)
 add_importlibs(inetcpl advapi32 comctl32 user32 shlwapi msvcrt kernel32 ntdll)
 add_pch(inetcpl precomp.h SOURCE)
-add_cd_file(TARGET inetcpl DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET inetcpl DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(inetcpl) # CORE-5743: No ARRAY_SIZE macro

@@ -4,6 +4,9 @@
  * PURPOSE:     Tests for the arcname.c functions:
  *              ArcPathNormalize(), ArcPathToNtPath().
  * COPYRIGHT:   Copyright 2017-2018 Hermes Belusca-Maito
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Hermes Belusca-Maito
+ *              Ryan Wilson
  *
  * You may need to fix the included headers before being able to
  * compile this file (this file has only been compiled under VS).
@@ -26,7 +29,7 @@
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-    WCHAR ArcPath[MAX_PATH] = L"multi(5)disk()rdisk(1)partition()\\ReactOS";
+    WCHAR ArcPath[MAX_PATH] = L"multi(5)disk()rdisk(1)partition()\\VerOS";
     WCHAR NormalizedArcPathBuffer[MAX_PATH];
     UNICODE_STRING NormalizedArcPath;
     WCHAR NtPathBuffer[MAX_PATH];
@@ -48,7 +51,7 @@ int _tmain(int argc, _TCHAR* argv[])
     wprintf(L"NtPath = '%wZ'\n", &NtPath);
     ArcPathToNtPath(&NtPath, L"ramdisk(0)");                // OK
     wprintf(L"NtPath = '%wZ'\n", &NtPath);
-    ArcPathToNtPath(&NtPath, L"ramdisk(0)\\ReactOS\\system32\\ntoskrnl.exe");   // OK
+    ArcPathToNtPath(&NtPath, L"ramdisk(0)\\VerOS\\system32\\ntoskrnl.exe");   // OK
     wprintf(L"NtPath = '%wZ'\n", &NtPath);
     ArcPathToNtPath(&NtPath, L"net(0)\\Foobar");            // OK but not supported
     wprintf(L"NtPath = '%wZ'\n", &NtPath);

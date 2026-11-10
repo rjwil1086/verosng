@@ -9,4 +9,4 @@ list(APPEND SOURCE
 add_library(winfax MODULE ${SOURCE})
 set_module_type(winfax win32dll)
 add_importlibs(winfax msvcrt kernel32 ntdll)
-add_cd_file(TARGET winfax DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET winfax DESTINATION VerOS/system32 FOR all)

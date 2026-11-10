@@ -13,5 +13,5 @@ STRINGTABLE
 BEGIN
     IDS_DESCRIPTION "Cilindrinis fraktalas"
     IDS_TITLE       "Apie"
-    IDS_TEXT        "Ekrano užsklanda sukurta unC0Rr.\nSpecialiai ReactOS."
+    IDS_TEXT        "Ekrano užsklanda sukurta unC0Rr.\nSpecialiai VerOS NT."
 END

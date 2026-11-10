@@ -8,4 +8,4 @@ add_library(dxtn MODULE
 
 set_module_type(dxtn win32dll ENTRYPOINT 0)
 add_importlibs(dxtn msvcrt kernel32)
-add_cd_file(TARGET dxtn DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET dxtn DESTINATION VerOS/system32 FOR all)

@@ -8,4 +8,4 @@ list(APPEND SOURCE
 add_library(vdmdbg MODULE ${SOURCE})
 set_module_type(vdmdbg win32dll UNICODE)
 add_importlibs(vdmdbg msvcrt kernel32 ntdll)
-add_cd_file(TARGET vdmdbg DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET vdmdbg DESTINATION VerOS/system32 FOR all)

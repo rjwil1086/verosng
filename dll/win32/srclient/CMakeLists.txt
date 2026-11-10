@@ -9,4 +9,4 @@ list(APPEND SOURCE
 add_library(srclient MODULE ${SOURCE})
 set_module_type(srclient win32dll)
 add_importlibs(srclient msvcrt kernel32 ntdll)
-add_cd_file(TARGET srclient DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET srclient DESTINATION VerOS/system32 FOR all)

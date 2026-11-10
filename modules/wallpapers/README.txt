@@ -15,7 +15,7 @@ Wallpapers
 | Polarlicht.jpg                | CC0-1.0      | Public domain                                 | https://jira.reactos.org/browse/CORE-8446              |
 | Silhouette.png                | CC-BY-4.0    | Jake Collins (polar@ever3st.com)              | https://ever3st.com/Graphics/Loot/                     |
 | Silhouette Dark.png           | CC-BY-4.0    | Jake Collins (polar@ever3st.com)              | https://ever3st.com/Graphics/Loot/                     |
-| veros-ng.bmp                  | GPL-2.0-or-later | VerOS NG logo                            | veros/logo/VerOS NG Logo.jpg                           |
+| veros-nt.bmp                  | GPL-2.0-or-later | VerOS NT logo                            | veros/logo/VerOS NT Logo.svg                           |
 |-------------------------------|--------------|-----------------------------------------------|--------------------------------------------------------|
 
 Note: Nebula was inspired from concept art by community member taisayshello.

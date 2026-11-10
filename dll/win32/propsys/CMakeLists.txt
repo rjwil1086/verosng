@@ -18,5 +18,5 @@ set_module_type(propsys win32dll)
 target_link_libraries(propsys uuid wine wine_dll_register)
 add_importlibs(propsys ole32 oleaut32 msvcrt kernel32 ntdll)
 add_pch(propsys precomp.h SOURCE)
-add_cd_file(TARGET propsys DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET propsys DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(propsys) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

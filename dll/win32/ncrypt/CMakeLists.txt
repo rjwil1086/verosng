@@ -9,5 +9,5 @@ add_library(ncrypt MODULE
 set_module_type(ncrypt win32dll)
 target_link_libraries(ncrypt wine symcrypt oldnames)
 add_importlibs(ncrypt bcrypt msvcrt advapi32 kernel32 kernel32_vista ntdll)
-add_cd_file(TARGET ncrypt DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET ncrypt DESTINATION VerOS/system32 FOR all)
 set_wine_module(ncrypt)

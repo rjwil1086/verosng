@@ -56,5 +56,5 @@ add_importlibs(quartz
     dsound msacm32 msvfw32 ole32 oleaut32 rpcrt4 user32 gdi32 advapi32 advapi32_vista winmm
     kernel32_vista msvcrt kernel32 ntdll)
 add_dependencies(quartz wineheaders dxsdk stdole2)
-add_cd_file(TARGET quartz DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET quartz DESTINATION VerOS/system32 FOR all)
 set_wine_module(quartz)

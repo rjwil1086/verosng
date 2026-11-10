@@ -16,5 +16,5 @@ set_module_type(tapi32 win32dll)
 target_link_libraries(tapi32 wine)
 add_importlibs(tapi32 advapi32 msvcrt kernel32 ntdll)
 add_pch(tapi32 precomp.h SOURCE)
-add_cd_file(TARGET tapi32 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET tapi32 DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(tapi32) # CORE-5743: No ARRAY_SIZE macro

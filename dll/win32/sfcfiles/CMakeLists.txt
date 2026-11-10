@@ -7,4 +7,4 @@ list(APPEND SOURCE
 add_library(sfcfiles MODULE ${SOURCE})
 set_module_type(sfcfiles win32dll)
 add_importlibs(sfcfiles msvcrt kernel32 ntdll)
-add_cd_file(TARGET sfcfiles DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET sfcfiles DESTINATION VerOS/system32 FOR all)

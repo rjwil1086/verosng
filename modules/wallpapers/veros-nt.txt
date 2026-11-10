@@ -1,0 +1,5 @@
+SPDX-License-Identifier: GPL-2.0-or-later
+
+veros-nt.bmp is the VerOS NT desktop wallpaper, 3840x2160. The mark
+from veros/logo/VerOS NT Logo.svg is centered on that logo's slate field,
+and the desktop scales the picture to the display size.

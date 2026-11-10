@@ -2420,6 +2420,19 @@ FixupUpdateSequenceArray(PDEVICE_EXTENSION Vcb,
     USHORT USACount;
     USHORT *Block;
 
+    /* The update sequence lives in the first sector. An offset outside that
+     * sector, or an odd one, is a damaged record rather than a fixup to apply. */
+    if (Record->UsaCount < 2 ||
+        Record->UsaOffset < sizeof(NTFS_RECORD_HEADER) ||
+        (Record->UsaOffset & 1) ||
+        (ULONG)Record->UsaOffset + (ULONG)Record->UsaCount * sizeof(USHORT) >
+            Vcb->NtfsInfo.BytesPerSector)
+    {
+        DPRINT1("Update sequence is outside the first sector (offset %u, count %u)\n",
+                Record->UsaOffset, Record->UsaCount);
+        return STATUS_FILE_CORRUPT_ERROR;
+    }
+
     USA = (USHORT*)((PCHAR)Record + Record->UsaOffset);
     USANumber = *(USA++);
     USACount = Record->UsaCount - 1; /* Exclude the USA Number. */

@@ -12,4 +12,4 @@ list(APPEND SOURCE
 add_library(cards MODULE ${SOURCE})
 set_module_type(cards win32dll UNICODE)
 add_importlibs(cards user32 gdi32 msvcrt kernel32)
-add_cd_file(TARGET cards DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET cards DESTINATION VerOS/system32 FOR all)

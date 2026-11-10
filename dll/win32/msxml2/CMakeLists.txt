@@ -18,5 +18,5 @@ set_source_files_properties(msxml2.rc PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_
 target_link_libraries(msxml2 wine)
 add_importlibs(msxml2 msxml3 msvcrt kernel32)
 add_dependencies(msxml2 stdole2)
-add_cd_file(TARGET msxml2 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET msxml2 DESTINATION VerOS/system32 FOR all)
 set_wine_module(msxml2)

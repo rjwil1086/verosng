@@ -11,4 +11,4 @@ add_custom_command(OUTPUT ${DRVMAIN_SDB}
                    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/drvmain.xml native-xml2sdb)
 
 add_custom_target(compatdb DEPENDS ${SYSMAIN_SDB} ${DRVMAIN_SDB})
-add_cd_file(TARGET compatdb FILE ${SYSMAIN_SDB} ${DRVMAIN_SDB} DESTINATION reactos/AppPatch FOR all)
+add_cd_file(TARGET compatdb FILE ${SYSMAIN_SDB} ${DRVMAIN_SDB} DESTINATION VerOS/AppPatch FOR all)

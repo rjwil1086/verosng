@@ -8,4 +8,4 @@ add_library(bthci MODULE
 
 set_module_type(bthci win32dll UNICODE)
 add_importlibs(bthci msvcrt kernel32 ntdll)
-add_cd_file(TARGET bthci DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET bthci DESTINATION VerOS/system32 FOR all)

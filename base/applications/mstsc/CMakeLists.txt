@@ -38,7 +38,7 @@ set_module_type(mstsc win32gui UNICODE)
 target_compile_definitions(mstsc PRIVATE _CRT_NON_CONFORMING_SWPRINTFS)
 add_importlibs(mstsc user32 gdi32 comctl32 ws2_32 crypt32 secur32 advapi32 shell32 ole32 comdlg32 msvcrt kernel32)
 add_pch(mstsc precomp.h SOURCE)
-add_cd_file(TARGET mstsc DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET mstsc DESTINATION VerOS/system32 FOR all)
 
 if(MSVC)
     # Disable warning C4267: 'initializing': conversion from 'size_t' to 'uint16', possible loss of data

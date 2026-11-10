@@ -43,5 +43,5 @@ target_link_libraries(vbscript uuid wine oldnames wine_dll_register wine_dll_can
 add_importlibs(vbscript oleaut32 ole32 user32 msvcrt kernelbase kernel32_vista kernel32 ntdll)
 add_dependencies(vbscript vbscript_idlheader stdole2)
 add_pch(vbscript precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET vbscript DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET vbscript DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(vbscript) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

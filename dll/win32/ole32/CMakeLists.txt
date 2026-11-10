@@ -87,5 +87,5 @@ add_delay_importlibs(ole32 oleaut32)
 add_importlibs(ole32 combase coml2 kernel32_vista advapi32 user32 gdi32 rpcrt4 msvcrt kernel32 ntdll)
 add_dependencies(ole32 ole32idl)
 add_pch(ole32 precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET ole32 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET ole32 DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(ole32) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

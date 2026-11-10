@@ -30,4 +30,4 @@ target_include_directories(libpng PUBLIC ${REACTOS_SOURCE_DIR}/sdk/include/react
 set_module_type(libpng win32dll)
 target_link_libraries(libpng zlib ${PSEH_LIB})
 add_importlibs(libpng msvcrt kernel32 ntdll)
-add_cd_file(TARGET libpng DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET libpng DESTINATION VerOS/system32 FOR all)

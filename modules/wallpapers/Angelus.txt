@@ -14,5 +14,5 @@ Inspired from the new OS from Redmond. There are four versions: darker, lighter,
 
 Borealis Series
 ---------------
-Wallpaper inspired by the look of Redmond Vista's but with the feel of ReactOS.
-With colors of Vista, and ReactOS logo.
+Wallpaper inspired by the look of Redmond Vista's but with the feel of VerOS NT.
+With colors of Vista, and VerOS NT logo.

@@ -8,4 +8,4 @@ add_library(dcomlaunch MODULE
 
 set_module_type(dcomlaunch win32dll UNICODE)
 add_importlibs(dcomlaunch advapi32 msvcrt kernel32 ntdll)
-add_cd_file(TARGET dcomlaunch DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET dcomlaunch DESTINATION VerOS/system32 FOR all)

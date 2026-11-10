@@ -1,10 +1,10 @@
 [Version]
 Signature   = "$Windows NT$"
-;Signature  = "$ReactOS$"
+;Signature  = "$VerOS NT$"
 LayoutFile  = layout.inf
 Class       = Media
 ClassGUID   = {4d36e96c-e325-11ce-bfc1-08002be10318}
-Provider    = %ReactOS%
+Provider    = %VerOS NT%
 DriverVer=07/01/2001,5.1.2600.3264
 
 [DestinationDirs]
@@ -38,13 +38,13 @@ msyuv.dll
 tsbyuv.dll
 
 [VfWWDM]
-HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"Description",,"ReactOS WDM Image Capture"
-HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"FriendlyName",,"ReactOS WDM Image Capture"
+HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"Description",,"VerOS NT WDM Image Capture"
+HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"FriendlyName",,"VerOS NT WDM Image Capture"
 HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"Driver",,"vfwwdm.drv"
 
 [VfWWDM.NT]
-HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"Description",,"ReactOS WDM Image Capture (Win32)"
-HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"FriendlyName",,"ReactOS WDM Image Capture (Win32)"
+HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"Description",,"VerOS NT WDM Image Capture (Win32)"
+HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"FriendlyName",,"VerOS NT WDM Image Capture (Win32)"
 HKLM,%MediaResourcesMSVideo%\MSVideo.VFWWDM,"Driver",,"vfwwdm32.dll"
 
 [VfWWDM.AddReg.NT]

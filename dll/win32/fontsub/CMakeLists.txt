@@ -9,5 +9,5 @@ add_library(fontsub MODULE
 set_module_type(fontsub win32dll)
 target_link_libraries(fontsub wine)
 add_importlibs(fontsub msvcrt kernel32 ntdll)
-add_cd_file(TARGET fontsub DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET fontsub DESTINATION VerOS/system32 FOR all)
 set_wine_module(fontsub)

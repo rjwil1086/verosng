@@ -19,7 +19,8 @@ function Find-RosBE {
     if ($Hint -and (Test-Path (Join-Path $Hint "rosbe-gcc-env.cmd"))) {
         return (Resolve-Path $Hint).Path
     }
-    foreach ($candidate in @("C:\RosBE", "D:\RosBE", "$env:SystemDrive\RosBE")) {
+    $local = Join-Path (Split-Path $SourceRoot -Parent) "tools\rosbe"
+    foreach ($candidate in @($local, "C:\RosBE", "D:\RosBE", "$env:SystemDrive\RosBE")) {
         if (Test-Path (Join-Path $candidate "rosbe-gcc-env.cmd")) {
             return $candidate
         }
@@ -46,7 +47,9 @@ New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 $buildArgs = "--build `"$BuildDir`" --target bootcd"
 $runner = Join-Path $BuildDir "build-bootcd.cmd"
 $clang = $null
+$localClang = Join-Path (Split-Path $SourceRoot -Parent) "tools\clang\bin\clang.exe"
 foreach ($candidate in @(
+    $localClang,
     "D:\LLVM-18\clang+llvm-18.1.8-x86_64-pc-windows-msvc\bin\clang.exe",
     "C:\Program Files\LLVM\bin\clang.exe"
 )) {

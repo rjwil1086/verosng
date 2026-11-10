@@ -7,7 +7,7 @@
 
 #pragma once
 
-#define NSCBANDCLASSNAME L"ReactOS NameSpace Control Band"
+#define NSCBANDCLASSNAME L"VerOS NT NameSpace Control Band"
 
 #define WM_USER_SHELLEVENT (WM_USER + 88)
 

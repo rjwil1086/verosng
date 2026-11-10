@@ -15,5 +15,5 @@ list(APPEND MSC_FILES
     services.msc)
 
 foreach(item ${MSC_FILES})
-    add_cd_file(FILE "${CMAKE_CURRENT_SOURCE_DIR}/${item}" DESTINATION reactos/system32 FOR all)
+    add_cd_file(FILE "${CMAKE_CURRENT_SOURCE_DIR}/${item}" DESTINATION VerOS/system32 FOR all)
 endforeach(item)

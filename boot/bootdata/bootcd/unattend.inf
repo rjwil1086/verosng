@@ -1,15 +1,15 @@
 [Unattend]
-Signature = "$ReactOS$"
+Signature = "$VerOS$"
 
 ; Set UnattendSetupEnabled to yes in order to get unattended setup working.
 ; yes - unattend setup enabled
 ; no - unattend setup disabled
 UnattendSetupEnabled = no
 
-; Install to \Device\Harddisk0\Partition1\ReactOS
+; Install to \Device\Harddisk0\Partition1\VerOS
 DestinationDiskNumber = 0
 DestinationPartitionNumber = 1
-InstallationDirectory=ReactOS
+InstallationDirectory=VerOS
 
 ; BootLoaderLocation=0  Skip installation
 ; BootLoaderLocation=1  Install on removable media (floppy)

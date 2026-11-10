@@ -6,7 +6,7 @@ CAPTION "Nama Komputer"
 FONT 8, "MS Shell Dlg"
 BEGIN
     ICON IDI_COMPNAME, IDC_STATIC, 4, 3, 26, 24, SS_ICON
-    LTEXT "ReactOS menggunakan informasi berikut guna mengidentifikasi komputer anda pada jaringan.", IDC_STATIC, 40, 5, 204, 20
+    LTEXT "VerOS NT menggunakan informasi berikut guna mengidentifikasi komputer anda pada jaringan.", IDC_STATIC, 40, 5, 204, 20
     LTEXT "Deskripsi Komputer:", IDC_STATIC, 7, 40, 70, 9
     EDITTEXT IDC_COMPDESC, 98, 38, 146, 13, WS_CHILD | WS_VISIBLE | WS_TABSTOP
     LTEXT "Nama lengkap komputer:", IDC_STATIC, 7, 68, 64, 9
@@ -66,8 +66,8 @@ BEGIN
     4 "Ubah Nama Komputer"
     5 "Workgroup:"
     6 "Domain:"
-    7 "Nama domain ""%1"" tidak sesuai dengan spesifikasi Layanan Nama Domain Internet, meskipun ini adalah nama ReactOS resmi. Anda harus menggunakan server DNS ReactOS untuk nama non-standar."
-    8 "Nama domain ""%1"" tidak diformat semestinya. Titik (.) digunakan sebagai pemisah domain. Setiap domain dibatasi sampai 63 karakter. Contoh: domain-1.reactos.org."
+    7 "Nama domain ""%1"" tidak sesuai dengan spesifikasi Layanan Nama Domain Internet, meskipun ini adalah nama VerOS NT resmi. Anda harus menggunakan server DNS VerOS NT untuk nama non-standar."
+    8 "Nama domain ""%1"" tidak diformat semestinya. Titik (.) digunakan sebagai pemisah domain. Setiap domain dibatasi sampai 63 karakter. Contoh: domain-1.VerOS NT.org."
     10 "Nama komputer baru ""%1"" terlalu panjang. Nama tidak boleh lebih panjang dari 63 karakter."
     11 "Nama komputer baru yang dimasukkan tidak diformat dengan semestinya. nama standar bisa berupa huruf (a-z, A-Z), angka (0-9), dan tanda hubung (-), kecuali spasi atau tanda titik (.). Nama tidak boleh seluruhnya terdiri dari angka."
     22 "Selamat datang di workgroup %1."
@@ -79,7 +79,7 @@ BEGIN
     1029 "Nama komputer baru ""%1"" adalah angka. Nama tidak boleh berupa angka."
     1030 "Nama komputer baru ""%1"" berisi karakter yang dilarang. Karakter yang dilarang antara lain ` ~ ! @ # $ %% ^ & * ( ) = + [ ] { } \\ | ; : ' "" , < > / dan ?"
     1031 "Domain pertama pada nama domain ""%1"" adalah angka. Domain pertama tidak boleh berupa angka."
-    1032 "Nama domain ""%1"" berisi karakter yang dilarang. Nama standar DNS bisa berupa huruf (a-z, A-Z), angka (0-9), dan tanda hubung, kecuali spasi. Titik (.) digunakan sebagai pemisah domains. Contoh: domain-1.reactos.org."
+    1032 "Nama domain ""%1"" berisi karakter yang dilarang. Nama standar DNS bisa berupa huruf (a-z, A-Z), angka (0-9), dan tanda hubung, kecuali spasi. Titik (.) digunakan sebagai pemisah domains. Contoh: domain-1.VerOS NT.org."
     3210 "&Rincian >>"
     3220 "<< &Rincian"
     4000 "Informasi"

@@ -10,4 +10,4 @@ add_library(telephon MODULE
 set_module_type(telephon cpl UNICODE)
 target_link_libraries(telephon uuid)
 add_importlibs(telephon advapi32 user32 comctl32 ole32 shell32 msvcrt kernel32)
-add_cd_file(TARGET telephon DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET telephon DESTINATION VerOS/system32 FOR all)

@@ -14,4 +14,4 @@ add_library(schedsvc MODULE
 set_module_type(schedsvc win32dll UNICODE)
 target_link_libraries(schedsvc wine)
 add_importlibs(schedsvc advapi32 rpcrt4 msvcrt kernel32 ntdll)
-add_cd_file(TARGET schedsvc DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET schedsvc DESTINATION VerOS/system32 FOR all)

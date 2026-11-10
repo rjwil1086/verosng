@@ -20,4 +20,4 @@ add_dependencies(crtdll psdk)
 
 add_importlibs(crtdll kernel32 kernel32_vista ntdll)
 add_delay_importlibs(crtdll user32)
-add_cd_file(TARGET crtdll DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET crtdll DESTINATION VerOS/system32 FOR all)

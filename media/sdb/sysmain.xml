@@ -1,6 +1,6 @@
 <SDB>
     <DATABASE>
-        <NAME>ReactOS compatibility fix database</NAME>
+        <NAME>VerOS NT compatibility fix database</NAME>
         <DATABASE_ID>{11111111-1111-1111-1111-111111111111}</DATABASE_ID>
         <LIBRARY>
             <INCLUDE MODULE="kernel32.dll" />
@@ -256,7 +256,7 @@
             </SHIM>
             <SHIM NAME="ShimTest">
                 <DLLFILE>acgenral.dll</DLLFILE>
-                <DESCRIPTION>Shim used to test ReactOS shim engine functionality</DESCRIPTION>
+                <DESCRIPTION>Shim used to test VerOS NT shim engine functionality</DESCRIPTION>
             </SHIM>
             <SHIM NAME="VMHorizonSetup">
                 <DLLFILE>aclayers.dll</DLLFILE>
@@ -283,7 +283,7 @@
             </FLAG>
 
             <FLAG NAME="RendererFull3D">
-                <!-- ReactOS specific (CORE-20322) -->
+                <!-- VerOS NT specific (CORE-20322) -->
                 <FLAG_MASK_KERNEL>0x8000000000000000</FLAG_MASK_KERNEL>
             </FLAG>
         </LIBRARY>
@@ -404,7 +404,7 @@
             <!-- TODO: Add more fixes! -->
         </LAYER>
         <LAYER NAME="WIN7SP1">
-            <!-- ReactOS specific. Windows does not have this version lie -->
+            <!-- VerOS NT specific. Windows does not have this version lie -->
             <SHIM_REF NAME="Win7SP1VersionLie" />
             <DATA NAME="SHIMVERSIONNT" DATA_DWORD="601" />
             <SHIM_REF NAME="GlobalMemoryStatus2GB" />
@@ -423,21 +423,21 @@
             <!-- TODO: Add more fixes! -->
         </LAYER>
         <LAYER NAME="WIN10RTM">
-            <!-- ReactOS specific. Windows does not have this version lie -->
+            <!-- VerOS NT specific. Windows does not have this version lie -->
             <SHIM_REF NAME="Win10RTMVersionLie" />
             <DATA NAME="SHIMVERSIONNT" DATA_DWORD="1000" />
             <SHIM_REF NAME="GlobalMemoryStatus2GB" />
             <!-- TODO: Add more fixes! -->
         </LAYER>
         <LAYER NAME="WINSRV16RTM">
-            <!-- ReactOS specific. Windows does not have this version lie -->
+            <!-- VerOS NT specific. Windows does not have this version lie -->
             <SHIM_REF NAME="Win2k16RTMVersionLie" />
             <DATA NAME="SHIMVERSIONNT" DATA_DWORD="1000" />
             <SHIM_REF NAME="GlobalMemoryStatus2GB" />
             <!-- TODO: Add more fixes! -->
         </LAYER>
         <LAYER NAME="WINSRV19RTM">
-            <!-- ReactOS specific. Windows does not have this version lie -->
+            <!-- VerOS NT specific. Windows does not have this version lie -->
             <SHIM_REF NAME="Win2k19RTMVersionLie" />
             <DATA NAME="SHIMVERSIONNT" DATA_DWORD="1000" />
             <SHIM_REF NAME="GlobalMemoryStatus2GB" />
@@ -504,13 +504,13 @@
             <SHIM_REF NAME="MsysDecoy" />
         </EXE>
 
-        <!-- ReactOS shim used to test the shim engine -->
-        <EXE NAME="shimtest_ros.exe" APP_NAME="Shim test application" VENDOR="ReactOS">
+        <!-- VerOS NT shim used to test the shim engine -->
+        <EXE NAME="shimtest_ros.exe" APP_NAME="Shim test application" VENDOR="VerOS NT">
             <MATCHING_FILE NAME="*">
-                <FILE_DESCRIPTION>ReactOS Shim Engine test utility</FILE_DESCRIPTION>
+                <FILE_DESCRIPTION>VerOS NT Shim Engine test utility</FILE_DESCRIPTION>
                 <ORIGINAL_FILENAME>shimtest_ros.exe</ORIGINAL_FILENAME>
                 <INTERNAL_NAME>shimtest_ros</INTERNAL_NAME>
-                <COMPANY_NAME>ReactOS - test</COMPANY_NAME>
+                <COMPANY_NAME>VerOS NT - test</COMPANY_NAME>
             </MATCHING_FILE>
             <SHIM_REF NAME="ShimTest" />
         </EXE>

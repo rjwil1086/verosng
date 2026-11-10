@@ -27,4 +27,4 @@ add_library(input MODULE
 set_module_type(input win32dll UNICODE)
 add_importlibs(input advapi32 user32 comctl32 gdi32 msvcrt kernel32 setupapi)
 add_pch(input input.h SOURCE)
-add_cd_file(TARGET input DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET input DESTINATION VerOS/system32 FOR all)

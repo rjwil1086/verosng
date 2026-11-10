@@ -71,5 +71,5 @@ add_delay_importlibs(rpcrt4 iphlpapi wininet secur32 user32 ole32 oleaut32)
 add_importlibs(rpcrt4 advapi32 advapi32_vista kernel32_vista ws2_32 msvcrt kernel32 ntdll)
 add_dependencies(rpcrt4 ndr_types_header)
 add_pch(rpcrt4 precomp.h "${PCH_SKIP_SOURCE}")
-add_cd_file(TARGET rpcrt4 DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET rpcrt4 DESTINATION VerOS/system32 FOR all)
 set_wine_module_FIXME(rpcrt4) # CORE-5743: No ARRAY_SIZE and CONST_VTABLE

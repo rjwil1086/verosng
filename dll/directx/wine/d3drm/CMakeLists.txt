@@ -28,7 +28,7 @@ set_module_type(d3drm win32dll UNICODE)
 target_link_libraries(d3drm wine wine_dll_canunload dxguid uuid)
 add_importlibs(d3drm ddraw d3dxof msvcrt kernel32 ntdll)
 add_dependencies(d3drm wineheaders)
-add_cd_file(TARGET d3drm DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET d3drm DESTINATION VerOS/system32 FOR all)
 set_wine_module(d3drm)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang")

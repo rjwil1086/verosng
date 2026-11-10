@@ -16,4 +16,4 @@ endif()
 
 add_importlibs(idndl kernel32)
 add_dependencies(idndl psdk)
-add_cd_file(TARGET idndl DESTINATION reactos FOR all)
+add_cd_file(TARGET idndl DESTINATION VerOS FOR all)

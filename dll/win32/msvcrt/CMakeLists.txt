@@ -186,7 +186,7 @@ if(MSVC)
     set_property(TARGET libmsvcrt APPEND PROPERTY STATIC_LIBRARY_OPTIONS "/ignore:4102")
 endif()
 
-add_cd_file(TARGET msvcrt DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET msvcrt DESTINATION VerOS/system32 FOR all)
 
 ###############################################################################
 # Import library

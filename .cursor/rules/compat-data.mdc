@@ -8,7 +8,7 @@ alwaysApply: false
 
 - A status needs evidence: a spec line, a source path, a plugin JSONL event, a QEMU serial log, or an explicit manual note.
 - A spec hit means the export exists. A plugin hit means it was called. A return without a bugcheck is what marks it working.
-- The kernel ABI percent is exact status agreement between the Windows 10 22H2 kernel probe and the VerOS kernel probe. A plugin return does not set that percent. Untested reference names count as zero.
+- The kernel ABI percent is exact status agreement between the Windows 10 22H2 kernel probe and the VerOS NT kernel probe. A plugin return does not set that percent. Untested reference names count as zero.
 - `untested` stays `untested`. Do not turn a missing run into a pass.
 - Syscall number match stays untested until a name-only reference gains ordinals. Do not invent Windows 10 22H2 ordinals.
 - Structure rows store numeric offsets only. Do not paste WDK header text into the catalog.

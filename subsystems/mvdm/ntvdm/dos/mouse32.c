@@ -40,7 +40,7 @@
 /* PRIVATE VARIABLES **********************************************************/
 
 static const CHAR MouseCopyright[] =
-    "ReactOS PS/2 16/32-bit Mouse Driver Compatible MS-MOUSE 6.26\r\n"
+    "VerOS NT PS/2 16/32-bit Mouse Driver Compatible MS-MOUSE 6.26\r\n"
     "Version "KERNEL_VERSION_STR" (Build "KERNEL_VERSION_BUILD_STR")\r\n"
     "Copyright (C) ReactOS Team 1996-"COPYRIGHT_YEAR"\0";
 

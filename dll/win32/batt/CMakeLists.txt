@@ -8,4 +8,4 @@ add_library(batt MODULE
 
 set_module_type(batt win32dll UNICODE)
 add_importlibs(batt setupapi msvcrt kernel32 ntdll)
-add_cd_file(TARGET batt DESTINATION reactos/system32 FOR all)
+add_cd_file(TARGET batt DESTINATION VerOS/system32 FOR all)
