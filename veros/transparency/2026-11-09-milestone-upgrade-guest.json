@@ -1,0 +1,32 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Where do an in-place upgrade and a daily build guest belong in the milestone list?",
+  "allowedInputs": [
+    "docs/MILESTONES.md as it stood before this edit",
+    "The user's request to add those two milestones, renumber the later ones, and describe the boot-menu, welcome-menu, and unattended upgrade paths",
+    "boot/bootdata/bootcd.ini, boot/bootdata/bootcd/unattend.inf, base/setup/welcome, base/setup/lib/utils/osdetect.c, and tools/pipeline/Test-Boot.ps1 already in this tree",
+    "The project rule that a test VM lives under virtual-machines/"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": null
+  },
+  "cursor": {
+    "prompt": "Add the upgrade and the daily build guest. Implement the plan as specified.",
+    "model": "Grok 4.7",
+    "date": "2026-11-09"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "milestone sections in docs/MILESTONES.md",
+    "before": 28,
+    "after": 30,
+    "note": "The count is the number of milestone headings, 0 through 27 before and 0 through 29 after. It is not a probe score."
+  }
+}
