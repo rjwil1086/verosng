@@ -10,39 +10,11 @@ VerOS NT is a trademark of Ryan Wilson. Windows is a registered trademark of Mic
 
 ## Plan
 
-The path is [docs/MILESTONES.md](docs/MILESTONES.md). A commit note marks a milestone in progress when it says the work is for that milestone, and complete when it says that milestone is done. A transparency record does the same when it says that milestone is done.
+The path is the [milestones on GitHub](https://github.com/rjwil1086/verosng/milestones). Open milestones follow the number in the title. Close a milestone there when the work is done. Rename the title to change its number.
 
 An application that Windows 10 22H2 x64 can run installs and runs here. A driver, a graphics driver, more RAM, or more processors becomes the next pass when the application under test fails without it. Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
 
-Finished milestones keep their numbers. The open work follows this order. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone. A missing Windows GPU driver does not interrupt milestones 29 through 33.
-
-1. Milestone 9. Native i386 is unsupported.
-2. Milestone 13. In-place upgrade of an existing install from the boot menu, the CD welcome menu, or an unattended push. The installed disk then boots for the test.
-3. Milestone 14. One module compiles as Windows 10 22H2 when that installer's log names a prototype `0x502` hides. The installer then runs again.
-4. Milestone 15. Service numbers, when a program issues a direct call and the number disagrees with the name list. This can happen during milestone 16.
-5. Milestone 16. The next application, one at a time. Milestones 12 and 14 are the same interruption.
-6. Milestone 17. The application catalog, on the installed disk, while milestone 16 is the application under test. Each finished row is published to the Tested Applications page. A failing row returns to milestone 16.
-7. Milestone 18. WoW64, after the first installed x64 program. Milestone 16 then includes 32-bit programs.
-8. Milestone 19. IrfanView's 32-bit installer completes, and IrfanView opens one image.
-9. Milestone 20. A retail driver, when the application needs that device.
-10. Milestone 21. The driver catalog, on virtual hardware, while milestone 20 is the driver under test. Each finished row is published to the Tested Drivers page. A failing storage, network, or USB row returns to milestone 20.
-11. Milestone 22. One shared structure layout, when milestone 20, 21, or 16 names a wrong size or offset. The caller then runs again.
-12. Milestone 23. The remaining non-graphics drivers, after milestone 20, when the application needs that device. Milestones 25 through 27, and milestones 34 and 38, do not wait for it.
-13. Milestone 24. Every driver-catalog row is working on its QEMU device.
-14. Milestone 25, when the application needs `opengl32` or `d3d11`.
-15. Milestone 26, when that application fails on the software rasterizer.
-16. Milestone 27, when that application still fails on virtio-gpu. AMD, Intel, and Nvidia firmware are separate installers.
-17. Milestone 28. Every application-catalog row that has an installer is working.
-18. Milestone 29. Physical memory above 8 GiB, when the daily development guest fails for lack of RAM. This finishes before milestone 30 when both are underway.
-19. Milestone 30. Logical processors, when the daily development guest needs them.
-20. Milestone 31. The daily development guest. Cursor and the toolchain build the amd64 boot CD on the installed disk, after milestones 29 and 30.
-21. Milestone 32. The Vista page-table software bits, after milestone 29, when a caller fails on the current write and dirty positions.
-22. Milestone 33. The root compile becomes Windows 10 22H2, after milestones 29, 14, and 22.
-23. Milestone 34, when an application still fails on the DRM driver. A missing Windows GPU driver does not interrupt milestones 29 through 33.
-24. Milestone 35. One physical machine boots the live CD and the installed disk to the desktop.
-25. Milestone 36. The inbox Bluetooth driver delivers one HID report on that machine.
-26. Milestone 37. One USB printer prints one page on that machine.
-27. Milestone 38. That machine's Windows GPU driver is the selected display.
+Finished milestones keep their numbers. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone. A missing Windows GPU driver does not interrupt milestones 29 through 33.
 
 ## Compatibility loop
 

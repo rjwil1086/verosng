@@ -5,7 +5,11 @@ alwaysApply: true
 
 # Application goal
 
-The order is `docs/MILESTONES.md`. A task stays only when the amd64 live CD still reaches the desktop.
+The order is the open milestones on https://github.com/rjwil1086/verosng/milestones, lowest title number first. A task stays only when the amd64 live CD still reaches the desktop.
+
+Update a milestone on GitHub. The title stays `Milestone N: …`. Rename that title to change the number. Close the milestone when the work is done. Edit the description there. Do not add `docs/MILESTONES.md`.
+
+A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone. A missing Windows GPU driver does not interrupt milestones 29 through 33.
 
 An application that Windows 10 22H2 x64 can run installs and runs here. That set is x64 programs and 32-bit programs on the amd64 boot. A driver or a graphics backend waits until the application under test fails without it.
 

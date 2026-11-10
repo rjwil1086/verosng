@@ -1,0 +1,31 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Can the roadmap move from docs/MILESTONES.md to GitHub milestones, with the site and the cursor rule following that list?",
+  "allowedInputs": [
+    "docs/MILESTONES.md as it stood before this edit",
+    "The GitHub milestones REST API for rjwil1086/verosng",
+    "The user request to manage milestones on GitHub and delete docs/MILESTONES.md"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Let's implement this change. Make sure you update cursor rules around updating the milestone.md file to update github milestones instead. Don't forget we don't need milestones.md after this either.",
+    "model": "Grok 4.7",
+    "date": "2026-11-10"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "roadmap milestones on GitHub",
+    "before": 0,
+    "after": 39,
+    "note": "Milestones 0 through 12 were created closed and 13 through 38 open. docs/MILESTONES.md was removed. No boot was run."
+  }
+}
