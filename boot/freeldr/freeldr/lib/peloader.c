@@ -6,6 +6,9 @@
  *
  * COPYRIGHT:   Copyright 1998-2003 Brian Palmer <brianp@sginet.com>
  *              Copyright 2006-2019 Aleksey Bragin <aleksey@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ *
+ * PROGRAMMERS: Ryan Wilson
  *
  * NOTES:       The source code in this file is based on the work of respective
  *              authors of PE loading code in ReactOS and Brian Palmer and
@@ -26,6 +29,10 @@ DBG_DEFAULT_CHANNEL(PELOADER);
 /* GLOBALS *******************************************************************/
 
 LIST_ENTRY FrLdrModuleList;
+
+#define TAG_PE_FILE 'FErP'
+/* One contiguous read of a boot image. Larger files keep the per-section path. */
+#define PE_SINGLE_READ_LIMIT (64 * 1024 * 1024)
 
 PELDR_IMPORTDLL_LOAD_CALLBACK PeLdrImportDllLoadCallback = NULL;
 
@@ -854,12 +861,15 @@ PeLdrLoadImageEx(
     ULONG FileId;
     PVOID PhysicalBase;
     PVOID VirtualBase = NULL;
+    PUCHAR FileImage = NULL;
     UCHAR HeadersBuffer[SECTOR_SIZE * 2];
     PIMAGE_NT_HEADERS NtHeaders;
     PIMAGE_SECTION_HEADER SectionHeader;
     ULONG VirtualSize, SizeOfRawData, NumberOfSections;
     ARC_STATUS Status;
     LARGE_INTEGER Position;
+    FILEINFORMATION FileInfo;
+    ULONG FileSize = 0;
     ULONG i, BytesRead;
 
     TRACE("PeLdrLoadImage('%s', %ld)\n", FilePath, MemoryType);
@@ -872,8 +882,43 @@ PeLdrLoadImageEx(
         return FALSE;
     }
 
+    /*
+     * Read the file in one pass. Section-by-section seeks repeat the same
+     * transfer setup on a CD. If the temporary buffer cannot be allocated,
+     * the per-section reads below still load the image.
+     */
+    Status = ArcGetFileInformation(FileId, &FileInfo);
+    if (Status == ESUCCESS &&
+        FileInfo.EndingAddress.HighPart == 0 &&
+        FileInfo.EndingAddress.LowPart != 0 &&
+        FileInfo.EndingAddress.LowPart <= PE_SINGLE_READ_LIMIT)
+    {
+        FileSize = FileInfo.EndingAddress.LowPart;
+        FileImage = FrLdrTempAlloc(FileSize, TAG_PE_FILE);
+        if (FileImage)
+        {
+            Position.QuadPart = 0;
+            Status = ArcSeek(FileId, &Position, SeekAbsolute);
+            if (Status == ESUCCESS)
+                Status = ArcRead(FileId, FileImage, FileSize, &BytesRead);
+            if (Status != ESUCCESS || BytesRead != FileSize)
+            {
+                FrLdrTempFree(FileImage, TAG_PE_FILE);
+                FileImage = NULL;
+                Position.QuadPart = 0;
+                ArcSeek(FileId, &Position, SeekAbsolute);
+            }
+        }
+    }
+
     /* Load the first 2 sectors of the image so we can read the PE header */
-    Status = ArcRead(FileId, HeadersBuffer, SECTOR_SIZE * 2, &BytesRead);
+    if (FileImage)
+    {
+        RtlCopyMemory(HeadersBuffer, FileImage, min(sizeof(HeadersBuffer), FileSize));
+        Status = ESUCCESS;
+    }
+    else
+        Status = ArcRead(FileId, HeadersBuffer, SECTOR_SIZE * 2, &BytesRead);
     if (Status != ESUCCESS)
     {
         ERR("ArcRead('%s') failed. Status: %u\n", FilePath, Status);
@@ -886,6 +931,8 @@ PeLdrLoadImageEx(
     if (!NtHeaders)
     {
         ERR("No NT header found in \"%s\"\n", FilePath);
+        if (FileImage)
+            FrLdrTempFree(FileImage, TAG_PE_FILE);
         ArcClose(FileId);
         return FALSE;
     }
@@ -894,6 +941,8 @@ PeLdrLoadImageEx(
     if (((NtHeaders->FileHeader.Characteristics & IMAGE_FILE_EXECUTABLE_IMAGE) == 0))
     {
         ERR("Not an executable image \"%s\"\n", FilePath);
+        if (FileImage)
+            FrLdrTempFree(FileImage, TAG_PE_FILE);
         ArcClose(FileId);
         return FALSE;
     }
@@ -913,6 +962,8 @@ PeLdrLoadImageEx(
         if (PhysicalBase == NULL)
         {
             ERR("Failed to alloc %lu bytes for image %s\n", NtHeaders->OptionalHeader.SizeOfImage, FilePath);
+            if (FileImage)
+                FrLdrTempFree(FileImage, TAG_PE_FILE);
             ArcClose(FileId);
             return FALSE;
         }
@@ -928,7 +979,24 @@ PeLdrLoadImageEx(
     /* If headers are quite big, request next bytes from file */
     if (NtHeaders->OptionalHeader.SizeOfHeaders > sizeof(HeadersBuffer))
     {
-        Status = ArcRead(FileId, (PUCHAR)PhysicalBase + sizeof(HeadersBuffer), NtHeaders->OptionalHeader.SizeOfHeaders - sizeof(HeadersBuffer), &BytesRead);
+        ULONG HeaderRest = NtHeaders->OptionalHeader.SizeOfHeaders - sizeof(HeadersBuffer);
+
+        if (FileImage)
+        {
+            if (sizeof(HeadersBuffer) + HeaderRest > FileSize)
+                Status = EIO;
+            else
+            {
+                RtlCopyMemory((PUCHAR)PhysicalBase + sizeof(HeadersBuffer),
+                              FileImage + sizeof(HeadersBuffer),
+                              HeaderRest);
+                Status = ESUCCESS;
+            }
+        }
+        else
+        {
+            Status = ArcRead(FileId, (PUCHAR)PhysicalBase + sizeof(HeadersBuffer), HeaderRest, &BytesRead);
+        }
         if (Status != ESUCCESS)
         {
             ERR("ArcRead('%s') failed. Status: %u\n", FilePath, Status);
@@ -976,14 +1044,32 @@ PeLdrLoadImageEx(
         /* Actually read the section (if its size is not 0) */
         if (SizeOfRawData != 0)
         {
-            /* Seek to the correct position */
-            Position.QuadPart = SectionHeader->PointerToRawData;
-            Status = ArcSeek(FileId, &Position, SeekAbsolute);
-
             TRACE("SH->VA: 0x%X\n", SectionHeader->VirtualAddress);
 
-            /* Read this section from the file, size = SizeOfRawData */
-            Status = ArcRead(FileId, (PUCHAR)PhysicalBase + SectionHeader->VirtualAddress, SizeOfRawData, &BytesRead);
+            if (FileImage)
+            {
+                if (SectionHeader->PointerToRawData > FileSize ||
+                    SizeOfRawData > FileSize - SectionHeader->PointerToRawData)
+                {
+                    Status = EIO;
+                }
+                else
+                {
+                    RtlCopyMemory((PUCHAR)PhysicalBase + SectionHeader->VirtualAddress,
+                                  FileImage + SectionHeader->PointerToRawData,
+                                  SizeOfRawData);
+                    Status = ESUCCESS;
+                }
+            }
+            else
+            {
+                /* Seek to the correct position */
+                Position.QuadPart = SectionHeader->PointerToRawData;
+                Status = ArcSeek(FileId, &Position, SeekAbsolute);
+
+                /* Read this section from the file, size = SizeOfRawData */
+                Status = ArcRead(FileId, (PUCHAR)PhysicalBase + SectionHeader->VirtualAddress, SizeOfRawData, &BytesRead);
+            }
             if (Status != ESUCCESS)
             {
                 ERR("PeLdrLoadImage(): Error reading section from file!\n");
@@ -1002,6 +1088,9 @@ PeLdrLoadImageEx(
     }
 
     /* We are done with the file, close it */
+    if (FileImage)
+        FrLdrTempFree(FileImage, TAG_PE_FILE);
+    FileImage = NULL;
     ArcClose(FileId);
 
     /* If loading failed, return right now */
@@ -1030,6 +1119,8 @@ PeLdrLoadImageEx(
 
 Failure:
     /* Cleanup and bail out */
+    if (FileImage)
+        FrLdrTempFree(FileImage, TAG_PE_FILE);
     MmFreeMemory(PhysicalBase);
     return FALSE;
 }

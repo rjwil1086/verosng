@@ -4,6 +4,7 @@
  * Copyright 2005-2006 Hervé Poussineau (hpoussin@reactos.org)
  *           2005 Christoph von Wittich (Christoph@ActiveVB.de)
  *           2009 Colin Finck (colin@reactos.org)
+ * Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -1061,6 +1062,112 @@ cleanup:
         HeapFree(GetProcessHeap(), 0, DeviceInstance);
 
     return ReturnValue;
+}
+
+static BOOL
+ReadPipeExact(HANDLE Pipe, PVOID Buffer, DWORD Size)
+{
+    DWORD Done = 0;
+
+    while (Done < Size)
+    {
+        DWORD Bytes = 0;
+
+        if (!ReadFile(Pipe, (PBYTE)Buffer + Done, Size - Done, &Bytes, NULL) || Bytes == 0)
+            return FALSE;
+        Done += Bytes;
+    }
+    return TRUE;
+}
+
+static BOOL
+WritePipeExact(HANDLE Pipe, LPCVOID Buffer, DWORD Size)
+{
+    DWORD Done = 0;
+
+    while (Done < Size)
+    {
+        DWORD Bytes = 0;
+
+        if (!WriteFile(Pipe, (const BYTE *)Buffer + Done, Size - Done, &Bytes, NULL) || Bytes == 0)
+            return FALSE;
+        Done += Bytes;
+    }
+    return TRUE;
+}
+
+/*
+ * One process installs every device sent on the pipe, so the INF index
+ * built for the first device is still here for the next one.
+ * A DWORD byte count of 0 ends the list. Each device is answered with
+ * a DWORD success flag.
+ */
+BOOL WINAPI
+ClientSideInstallBatchW(
+    IN HWND hWndOwner,
+    IN HINSTANCE hInstance,
+    IN LPWSTR lpNamedPipeName,
+    IN INT Show)
+{
+    HANDLE hPipe = INVALID_HANDLE_VALUE;
+    BOOL Result = TRUE;
+
+    UNREFERENCED_PARAMETER(hWndOwner);
+    UNREFERENCED_PARAMETER(hInstance);
+    UNREFERENCED_PARAMETER(Show);
+
+    hPipe = CreateFileW(lpNamedPipeName,
+                        GENERIC_READ | GENERIC_WRITE,
+                        0,
+                        NULL,
+                        OPEN_EXISTING,
+                        FILE_ATTRIBUTE_NORMAL,
+                        NULL);
+    if (hPipe == INVALID_HANDLE_VALUE)
+    {
+        ERR("CreateFileW failed with error %u\n", GetLastError());
+        return FALSE;
+    }
+
+    for (;;)
+    {
+        DWORD Value = 0;
+        DWORD Installed;
+        PWSTR DeviceInstance;
+
+        if (!ReadPipeExact(hPipe, &Value, sizeof(Value)))
+        {
+            Result = FALSE;
+            break;
+        }
+        if (Value == 0)
+            break;
+        if (Value < sizeof(WCHAR) || (Value % sizeof(WCHAR)) != 0 || Value > 32 * 1024)
+        {
+            Result = FALSE;
+            break;
+        }
+
+        DeviceInstance = HeapAlloc(GetProcessHeap(), 0, Value);
+        if (!DeviceInstance || !ReadPipeExact(hPipe, DeviceInstance, Value))
+        {
+            HeapFree(GetProcessHeap(), 0, DeviceInstance);
+            Result = FALSE;
+            break;
+        }
+        DeviceInstance[(Value / sizeof(WCHAR)) - 1] = UNICODE_NULL;
+
+        Installed = DevInstallW(NULL, NULL, DeviceInstance, SW_HIDE) ? 1 : 0;
+        HeapFree(GetProcessHeap(), 0, DeviceInstance);
+        if (!WritePipeExact(hPipe, &Installed, sizeof(Installed)))
+        {
+            Result = FALSE;
+            break;
+        }
+    }
+
+    CloseHandle(hPipe);
+    return Result;
 }
 
 BOOL WINAPI

@@ -23,6 +23,7 @@ DBG_DEFAULT_CHANNEL(FILESYSTEM);
 
 #define TAG_NTFS_CONTEXT 'CftN'
 #define TAG_NTFS_LIST 'LftN'
+#define TAG_NTFS_DIR 'RftN'
 #define TAG_NTFS_MFT 'MftN'
 #define TAG_NTFS_INDEX_REC 'IftN'
 #define TAG_NTFS_BITMAP 'BftN'
@@ -31,6 +32,14 @@ DBG_DEFAULT_CHANNEL(FILESYSTEM);
 #define TAG_NTFS_DATA 'DftN'
 
 #define NTFS_MAX_ATTRIBUTE_LIST_RECURSION 8
+
+typedef struct _NTFS_CACHED_NAME
+{
+    ULONGLONG MftIndex;
+    ULONG Attributes;
+    UCHAR NameLength;
+    CHAR Name[255];
+} NTFS_CACHED_NAME, *PNTFS_CACHED_NAME;
 
 typedef struct _NTFS_VOLUME_INFO
 {
@@ -43,6 +52,14 @@ typedef struct _NTFS_VOLUME_INFO
     PNTFS_ATTR_CONTEXT MFTContext;
     ULONG DeviceId;
     PUCHAR TemporarySector;
+    /* Last directory index, reused for the next file in that directory. */
+    BOOLEAN DirectoryCached;
+    ULONGLONG CachedDirectory;
+    ULONG CachedPathLength;
+    CHAR CachedPath[261];
+    ULONG CachedNameCount;
+    ULONG CachedNameCapacity;
+    PNTFS_CACHED_NAME CachedNames;
 } NTFS_VOLUME_INFO;
 
 PNTFS_VOLUME_INFO NtfsVolumes[MAX_FDS];
@@ -653,6 +670,90 @@ NtfsCompareFileName(
     return TRUE;
 }
 
+static VOID
+NtfsDiscardDirectoryCache(PNTFS_VOLUME_INFO Volume)
+{
+    if (Volume->CachedNames)
+        FrLdrTempFree(Volume->CachedNames, TAG_NTFS_DIR);
+    Volume->CachedNames = NULL;
+    Volume->CachedNameCount = 0;
+    Volume->CachedNameCapacity = 0;
+    Volume->DirectoryCached = FALSE;
+    Volume->CachedPathLength = 0;
+}
+
+static VOID
+NtfsRememberDirectoryEntry(PNTFS_VOLUME_INFO Volume, PNTFS_INDEX_ENTRY IndexEntry)
+{
+    PNTFS_CACHED_NAME Entry;
+    ULONG i;
+    ULONG Length;
+
+    Length = IndexEntry->FileName.FileNameLength;
+    if (Length == 0 || Length >= 255)
+        return;
+
+    if (Volume->CachedNameCount == Volume->CachedNameCapacity)
+    {
+        ULONG Capacity = Volume->CachedNameCapacity ? Volume->CachedNameCapacity * 2 : 64;
+        PNTFS_CACHED_NAME Names;
+
+        Names = FrLdrTempAlloc(Capacity * sizeof(NTFS_CACHED_NAME), TAG_NTFS_DIR);
+        if (Names == NULL)
+            return;
+        if (Volume->CachedNames && Volume->CachedNameCount != 0)
+        {
+            RtlCopyMemory(Names,
+                          Volume->CachedNames,
+                          Volume->CachedNameCount * sizeof(NTFS_CACHED_NAME));
+            FrLdrTempFree(Volume->CachedNames, TAG_NTFS_DIR);
+        }
+        Volume->CachedNames = Names;
+        Volume->CachedNameCapacity = Capacity;
+    }
+
+    Entry = &Volume->CachedNames[Volume->CachedNameCount];
+    Entry->MftIndex = IndexEntry->Data.Directory.IndexedFile & NTFS_MFT_MASK;
+    Entry->Attributes = IndexEntry->FileName.FileAttributes;
+    Entry->NameLength = (UCHAR)Length;
+    for (i = 0; i < Length; i++)
+        Entry->Name[i] = (CHAR)IndexEntry->FileName.FileName[i];
+    Volume->CachedNameCount++;
+}
+
+static BOOLEAN
+NtfsFindCachedName(
+    PNTFS_VOLUME_INFO Volume,
+    PCSTR FileName,
+    SIZE_T FileNameLen,
+    PULONGLONG OutMFTIndex,
+    PULONG FileAttributes)
+{
+    ULONG i;
+
+    for (i = 0; i < Volume->CachedNameCount; i++)
+    {
+        PNTFS_CACHED_NAME Entry = &Volume->CachedNames[i];
+        ULONG n;
+
+        if (Entry->NameLength != FileNameLen)
+            continue;
+        for (n = 0; n < FileNameLen; n++)
+        {
+            if (tolower((UCHAR)Entry->Name[n]) != tolower((UCHAR)FileName[n]))
+                break;
+        }
+        if (n != FileNameLen)
+            continue;
+
+        *OutMFTIndex = Entry->MftIndex;
+        *FileAttributes = Entry->Attributes;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 static BOOLEAN
 NtfsFindMftRecord(
     _In_ PNTFS_VOLUME_INFO Volume,
@@ -675,8 +776,17 @@ NtfsFindMftRecord(
     ULONG RecordOffset;
     ULONG IndexBlockSize;
     SIZE_T FileNameLen;
+    BOOLEAN Found = FALSE;
+    BOOLEAN ScanComplete = FALSE;
 
     FileNameLen = strlen(FileName);
+
+    if (Volume->DirectoryCached && Volume->CachedDirectory == MFTIndex)
+    {
+        return NtfsFindCachedName(Volume, FileName, FileNameLen, OutMFTIndex, FileAttributes);
+    }
+
+    NtfsDiscardDirectoryCache(Volume);
 
     MftRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
     if (MftRecord == NULL)
@@ -714,13 +824,12 @@ NtfsFindMftRecord(
         while (IndexEntry < IndexEntryEnd &&
                !(IndexEntry->Flags & NTFS_INDEX_ENTRY_END))
         {
-            if (NtfsCompareFileName(FileName, FileNameLen, IndexEntry))
+            NtfsRememberDirectoryEntry(Volume, IndexEntry);
+            if (!Found && NtfsCompareFileName(FileName, FileNameLen, IndexEntry))
             {
                 *OutMFTIndex = (IndexEntry->Data.Directory.IndexedFile & NTFS_MFT_MASK);
                 *FileAttributes = IndexEntry->FileName.FileAttributes;
-                FrLdrTempFree(IndexRecord, TAG_NTFS_INDEX_REC);
-                FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
-                return TRUE;
+                Found = TRUE;
             }
             IndexEntry = (PNTFS_INDEX_ENTRY)((PCHAR)IndexEntry + IndexEntry->Length);
         }
@@ -766,6 +875,7 @@ NtfsFindMftRecord(
             IndexAllocationSize = NtfsGetAttributeSize(&IndexAllocationCtx->Record);
 
             RecordOffset = 0;
+            ScanComplete = TRUE;
 
             for (;;)
             {
@@ -788,6 +898,7 @@ NtfsFindMftRecord(
 
                 if (!NtfsFixupRecord(Volume, (PNTFS_RECORD)IndexRecord))
                 {
+                    ScanComplete = FALSE;
                     break;
                 }
 
@@ -798,16 +909,13 @@ NtfsFindMftRecord(
                 while (IndexEntry < IndexEntryEnd &&
                        !(IndexEntry->Flags & NTFS_INDEX_ENTRY_END))
                 {
-                    if (NtfsCompareFileName(FileName, FileNameLen, IndexEntry))
+                    NtfsRememberDirectoryEntry(Volume, IndexEntry);
+                    if (!Found && NtfsCompareFileName(FileName, FileNameLen, IndexEntry))
                     {
                         TRACE("File found\n");
                         *OutMFTIndex = (IndexEntry->Data.Directory.IndexedFile & NTFS_MFT_MASK);
                         *FileAttributes = IndexEntry->FileName.FileAttributes;
-                        NtfsReleaseAttributeContext(IndexAllocationCtx);
-                        FrLdrTempFree(BitmapData, TAG_NTFS_BITMAP);
-                        FrLdrTempFree(IndexRecord, TAG_NTFS_INDEX_REC);
-                        FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
-                        return TRUE;
+                        Found = TRUE;
                     }
                     IndexEntry = (PNTFS_INDEX_ENTRY)((PCHAR)IndexEntry + IndexEntry->Length);
                 }
@@ -818,6 +926,10 @@ NtfsFindMftRecord(
             NtfsReleaseAttributeContext(IndexAllocationCtx);
             FrLdrTempFree(BitmapData, TAG_NTFS_BITMAP);
         }
+        else
+        {
+            ScanComplete = TRUE;
+        }
 
         FrLdrTempFree(IndexRecord, TAG_NTFS_INDEX_REC);
     }
@@ -827,7 +939,17 @@ NtfsFindMftRecord(
     }
     FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
 
-    return FALSE;
+    if (ScanComplete)
+    {
+        Volume->CachedDirectory = MFTIndex;
+        Volume->DirectoryCached = TRUE;
+    }
+    else
+    {
+        NtfsDiscardDirectoryCache(Volume);
+    }
+
+    return Found;
 }
 
 static BOOLEAN NtfsLookupFile(PNTFS_VOLUME_INFO Volume, PCSTR FileName, PNTFS_MFT_RECORD MftRecord, PNTFS_FILE_HANDLE FileHandle)
@@ -837,6 +959,7 @@ static BOOLEAN NtfsLookupFile(PNTFS_VOLUME_INFO Volume, PCSTR FileName, PNTFS_MF
     ULONGLONG CurrentMFTIndex;
     ULONG FileAttributes;
     CHAR PathPart[261];
+    PCSTR OriginalName = FileName;
 
     TRACE("NtfsLookupFile() FileName = %s\n", FileName);
 
@@ -846,6 +969,32 @@ static BOOLEAN NtfsLookupFile(PNTFS_VOLUME_INFO Volume, PCSTR FileName, PNTFS_MF
     if (*FileName == '\\' || *FileName == '/')
         ++FileName;
     PathPart[0] = ANSI_NULL;
+
+    /*
+     * The previous file left its parent directory in memory. Another file in
+     * that directory only needs its own name resolved.
+     */
+    if (Volume->DirectoryCached && Volume->CachedPathLength != 0)
+    {
+        ULONG Prefix = Volume->CachedPathLength;
+        PCSTR Rest;
+
+        if (_strnicmp(OriginalName, Volume->CachedPath, Prefix) == 0 &&
+            (OriginalName[Prefix] == '\\' || OriginalName[Prefix] == '/'))
+        {
+            Rest = OriginalName + Prefix + 1;
+            if (*Rest != '\0' && strchr(Rest, '\\') == NULL && strchr(Rest, '/') == NULL)
+            {
+            FsGetFirstNameFromPath(PathPart, Rest);
+            if (!NtfsFindMftRecord(Volume, Volume->CachedDirectory, PathPart, &CurrentMFTIndex, &FileAttributes))
+            {
+                TRACE("- Failed\n");
+                return FALSE;
+            }
+            goto ReadFileRecord;
+            }
+        }
+    }
 
     /* Figure out how many sub-directories we are nested in and loop once for each part */
     NumberOfPathParts = FsGetNumPathParts(FileName);
@@ -866,6 +1015,26 @@ static BOOLEAN NtfsLookupFile(PNTFS_VOLUME_INFO Volume, PCSTR FileName, PNTFS_MF
         TRACE("- Lookup: %x\n", CurrentMFTIndex);
     }
 
+    if (NumberOfPathParts > 1 && Volume->DirectoryCached)
+    {
+        PCSTR LastSep = strrchr(OriginalName, '\\');
+        ULONG Length;
+
+        if (LastSep == NULL)
+            LastSep = strrchr(OriginalName, '/');
+        if (LastSep != NULL)
+        {
+            Length = (ULONG)(LastSep - OriginalName);
+            if (Length < sizeof(Volume->CachedPath))
+            {
+                RtlCopyMemory(Volume->CachedPath, OriginalName, Length);
+                Volume->CachedPath[Length] = ANSI_NULL;
+                Volume->CachedPathLength = Length;
+            }
+        }
+    }
+
+ReadFileRecord:
     if (!NtfsReadMftRecord(Volume, CurrentMFTIndex, MftRecord))
     {
         TRACE("NtfsLookupFile: Can't read MFT record\n");
@@ -1053,6 +1222,7 @@ NtfsFreeVolume(PNTFS_VOLUME_INFO Volume)
         FrLdrTempFree(Volume->MasterFileTable, TAG_NTFS_MFT);
     if (Volume->TemporarySector)
         FrLdrTempFree(Volume->TemporarySector, TAG_NTFS_DATA);
+    NtfsDiscardDirectoryCache(Volume);
     FrLdrTempFree(Volume, TAG_NTFS_VOLUME);
 }
 

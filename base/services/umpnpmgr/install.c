@@ -24,6 +24,7 @@
  * PROGRAMMER:       Eric Kohl (eric.kohl@reactos.org)
  *                   Hervé Poussineau (hpoussin@reactos.org)
  *                   Colin Finck (colin@reactos.org)
+ *                   Ryan Wilson <ryan@verosnt.com>
  */
 
 /* INCLUDES *****************************************************************/
@@ -52,6 +53,86 @@ CreatePnpInstallEventSecurity(
 /* FUNCTIONS *****************************************************************/
 
 static BOOL
+DeviceNeedsInstall(PCWSTR DeviceInstance)
+{
+    DWORD BytesWritten;
+    DWORD Value;
+    HKEY DeviceKey;
+
+    if (RegOpenKeyExW(hEnumKey,
+                      DeviceInstance,
+                      0,
+                      KEY_QUERY_VALUE,
+                      &DeviceKey) != ERROR_SUCCESS)
+    {
+        return TRUE;
+    }
+
+    if (RegQueryValueExW(DeviceKey,
+                         L"Class",
+                         NULL,
+                         NULL,
+                         NULL,
+                         NULL) == ERROR_SUCCESS)
+    {
+        DPRINT("No need to install: %S\n", DeviceInstance);
+        RegCloseKey(DeviceKey);
+        return FALSE;
+    }
+
+    BytesWritten = sizeof(DWORD);
+    if (RegQueryValueExW(DeviceKey,
+                         L"ConfigFlags",
+                         NULL,
+                         NULL,
+                         (PBYTE)&Value,
+                         &BytesWritten) == ERROR_SUCCESS)
+    {
+        if (Value & CONFIGFLAG_FAILEDINSTALL)
+        {
+            DPRINT("No need to install: %S\n", DeviceInstance);
+            RegCloseKey(DeviceKey);
+            return FALSE;
+        }
+    }
+
+    RegCloseKey(DeviceKey);
+    return TRUE;
+}
+
+static BOOL
+WritePipeExact(HANDLE Pipe, LPCVOID Buffer, DWORD Size)
+{
+    DWORD Done = 0;
+
+    while (Done < Size)
+    {
+        DWORD Bytes = 0;
+
+        if (!WriteFile(Pipe, (const BYTE *)Buffer + Done, Size - Done, &Bytes, NULL) || Bytes == 0)
+            return FALSE;
+        Done += Bytes;
+    }
+    return TRUE;
+}
+
+static BOOL
+ReadPipeExact(HANDLE Pipe, PVOID Buffer, DWORD Size)
+{
+    DWORD Done = 0;
+
+    while (Done < Size)
+    {
+        DWORD Bytes = 0;
+
+        if (!ReadFile(Pipe, (PBYTE)Buffer + Done, Size - Done, &Bytes, NULL) || Bytes == 0)
+            return FALSE;
+        Done += Bytes;
+    }
+    return TRUE;
+}
+
+static BOOL
 InstallDevice(PCWSTR DeviceInstance, BOOL ShowWizard)
 {
     BOOL DeviceInstalled = FALSE;
@@ -64,7 +145,6 @@ InstallDevice(PCWSTR DeviceInstance, BOOL ShowWizard)
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFOW StartupInfo;
     UUID RandomUuid;
-    HKEY DeviceKey;
     SECURITY_ATTRIBUTES EventAttrs;
     PSECURITY_DESCRIPTOR EventSd;
 
@@ -78,42 +158,8 @@ InstallDevice(PCWSTR DeviceInstance, BOOL ShowWizard)
 
     ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
 
-    if (RegOpenKeyExW(hEnumKey,
-                      DeviceInstance,
-                      0,
-                      KEY_QUERY_VALUE,
-                      &DeviceKey) == ERROR_SUCCESS)
-    {
-        if (RegQueryValueExW(DeviceKey,
-                             L"Class",
-                             NULL,
-                             NULL,
-                             NULL,
-                             NULL) == ERROR_SUCCESS)
-        {
-            DPRINT("No need to install: %S\n", DeviceInstance);
-            RegCloseKey(DeviceKey);
-            return TRUE;
-        }
-
-        BytesWritten = sizeof(DWORD);
-        if (RegQueryValueExW(DeviceKey,
-                             L"ConfigFlags",
-                             NULL,
-                             NULL,
-                             (PBYTE)&Value,
-                             &BytesWritten) == ERROR_SUCCESS)
-        {
-            if (Value & CONFIGFLAG_FAILEDINSTALL)
-            {
-                DPRINT("No need to install: %S\n", DeviceInstance);
-                RegCloseKey(DeviceKey);
-                return TRUE;
-            }
-        }
-
-        RegCloseKey(DeviceKey);
-    }
+    if (!DeviceNeedsInstall(DeviceInstance))
+        return TRUE;
 
     DPRINT1("Installing: %S\n", DeviceInstance);
 
@@ -246,6 +292,138 @@ cleanup:
     }
 
     return DeviceInstalled;
+}
+
+
+static VOID
+InstallRemainingDevices(PWSTR Current)
+{
+    for (; Current[0] != UNICODE_NULL; Current += lstrlenW(Current) + 1)
+        InstallDevice(Current, FALSE);
+}
+
+/*
+ * Step 1 shares one newdev process so it can keep the INF index.
+ * The wizard path still uses InstallDevice, because a fault in that
+ * process must not take Plug and Play down with it. If this worker
+ * dies, the remaining devices fall back to that per-device path.
+ */
+static VOID
+InstallConfiguredDevices(PWSTR DeviceList)
+{
+    PWSTR Current;
+    UUID RandomUuid;
+    WCHAR UuidString[39];
+    WCHAR PipeName[74];
+    WCHAR CommandLine[160];
+    HANDLE hPipe = INVALID_HANDLE_VALUE;
+    LPVOID Environment = NULL;
+    PROCESS_INFORMATION ProcessInfo;
+    STARTUPINFOW StartupInfo;
+    BOOL Any = FALSE;
+    DWORD Zero = 0;
+
+    for (Current = DeviceList; Current[0] != UNICODE_NULL; Current += lstrlenW(Current) + 1)
+    {
+        if (DeviceNeedsInstall(Current))
+        {
+            Any = TRUE;
+            break;
+        }
+    }
+    if (!Any)
+        return;
+
+    ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+    UuidCreate(&RandomUuid);
+    _swprintf(UuidString, L"{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+        RandomUuid.Data1, RandomUuid.Data2, RandomUuid.Data3,
+        RandomUuid.Data4[0], RandomUuid.Data4[1], RandomUuid.Data4[2],
+        RandomUuid.Data4[3], RandomUuid.Data4[4], RandomUuid.Data4[5],
+        RandomUuid.Data4[6], RandomUuid.Data4[7]);
+
+    wcscpy(PipeName, L"\\\\.\\pipe\\PNP_Device_Install_Pipe_0.");
+    wcscat(PipeName, UuidString);
+    hPipe = CreateNamedPipeW(PipeName,
+                             PIPE_ACCESS_DUPLEX,
+                             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                             1, 8192, 8192, 0, NULL);
+    if (hPipe == INVALID_HANDLE_VALUE)
+    {
+        DPRINT1("CreateNamedPipeW failed with error %u\n", GetLastError());
+        InstallRemainingDevices(DeviceList);
+        return;
+    }
+
+    wcscpy(CommandLine, L"rundll32.exe newdev.dll,ClientSideInstallBatch ");
+    wcscat(CommandLine, PipeName);
+    ZeroMemory(&StartupInfo, sizeof(StartupInfo));
+    StartupInfo.cb = sizeof(StartupInfo);
+
+    if (hUserToken)
+    {
+        if (!CreateEnvironmentBlock(&Environment, hUserToken, FALSE) ||
+            !CreateProcessAsUserW(hUserToken, NULL, CommandLine, NULL, NULL, FALSE,
+                                  CREATE_UNICODE_ENVIRONMENT, Environment, NULL,
+                                  &StartupInfo, &ProcessInfo))
+        {
+            DPRINT1("Batch installer failed to start, error %u\n", GetLastError());
+            goto Fallback;
+        }
+    }
+    else if (!CreateProcessW(NULL, CommandLine, NULL, NULL, FALSE, 0, NULL, NULL,
+                             &StartupInfo, &ProcessInfo))
+    {
+        DPRINT1("Batch installer failed to start, error %u\n", GetLastError());
+        goto Fallback;
+    }
+
+    if (!ConnectNamedPipe(hPipe, NULL) && GetLastError() != ERROR_PIPE_CONNECTED)
+    {
+        DPRINT1("ConnectNamedPipe failed with error %u\n", GetLastError());
+        goto Fallback;
+    }
+
+    for (Current = DeviceList; Current[0] != UNICODE_NULL; Current += lstrlenW(Current) + 1)
+    {
+        DWORD Length;
+        DWORD Installed = 0;
+
+        if (!DeviceNeedsInstall(Current))
+            continue;
+
+        DPRINT1("Installing: %S\n", Current);
+        Length = (lstrlenW(Current) + 1) * sizeof(WCHAR);
+        if (!WritePipeExact(hPipe, &Length, sizeof(Length)) ||
+            !WritePipeExact(hPipe, Current, Length) ||
+            !ReadPipeExact(hPipe, &Installed, sizeof(Installed)))
+        {
+            DPRINT1("Batch installer stopped, falling back\n");
+            if (ProcessInfo.hProcess)
+                TerminateProcess(ProcessInfo.hProcess, 1);
+            InstallRemainingDevices(Current);
+            goto Cleanup;
+        }
+    }
+
+    WritePipeExact(hPipe, &Zero, sizeof(Zero));
+    WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
+    goto Cleanup;
+
+Fallback:
+    if (ProcessInfo.hProcess)
+        TerminateProcess(ProcessInfo.hProcess, 1);
+    InstallRemainingDevices(DeviceList);
+
+Cleanup:
+    if (hPipe != INVALID_HANDLE_VALUE)
+        CloseHandle(hPipe);
+    if (Environment)
+        DestroyEnvironmentBlock(Environment);
+    if (ProcessInfo.hProcess)
+        CloseHandle(ProcessInfo.hProcess);
+    if (ProcessInfo.hThread)
+        CloseHandle(ProcessInfo.hThread);
 }
 
 
@@ -568,12 +746,7 @@ DeviceInstallThread(LPVOID lpParameter)
         }
     }
 
-    for (PWSTR currentDev = deviceList;
-         currentDev[0] != UNICODE_NULL;
-         currentDev += lstrlenW(currentDev) + 1)
-    {
-        InstallDevice(currentDev, FALSE);
-    }
+    InstallConfiguredDevices(deviceList);
 
 Cleanup:
     HeapFree(GetProcessHeap(), 0, deviceList);

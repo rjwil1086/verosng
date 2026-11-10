@@ -1,4 +1,5 @@
 @ stdcall ClientSideInstallW(ptr ptr wstr long)
+@ stdcall ClientSideInstallBatchW(ptr ptr wstr long)
 @ stdcall DevInstallW(ptr ptr wstr long)
 @ stdcall InstallDevInst(ptr wstr long ptr)
 @ stdcall InstallDevInstEx(ptr wstr long ptr long)

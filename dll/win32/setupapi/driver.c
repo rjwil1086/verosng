@@ -2,6 +2,7 @@
  * SetupAPI driver-related functions
  *
  * Copyright 2005-2006 Hervé Poussineau (hpoussin@reactos.org)
+ * Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -565,6 +566,499 @@ done:
     return Result;
 }
 
+/*
+ * Published hardware and compatible IDs from %SystemRoot%\inf.
+ * The first compatible-driver search builds this. Later searches in the
+ * same process open only the INF files that match the device.
+ */
+typedef struct _INF_ID_ENTRY
+{
+    struct _INF_ID_ENTRY *Next;
+    DWORD LineKey;
+    DWORD FieldIndex;
+    GUID ClassGuid;
+    FILETIME DriverDate;
+    DWORDLONG DriverVersion;
+    WCHAR InfPath[MAX_PATH];
+    WCHAR Section[LINE_LEN];
+    WCHAR Description[LINE_LEN];
+    WCHAR Provider[LINE_LEN];
+    WCHAR Manufacturer[LINE_LEN];
+    WCHAR Id[1];
+} INF_ID_ENTRY;
+
+static INF_ID_ENTRY *InfIndexHead;
+static DWORD InfIndexFileCount;
+static FILETIME InfIndexNewest;
+static BOOL InfIndexReady;
+static CRITICAL_SECTION InfIndexLock;
+static LONG InfIndexLockState;
+
+static VOID
+LockInfIndex(VOID)
+{
+    if (InterlockedCompareExchange(&InfIndexLockState, 1, 0) == 0)
+    {
+        InitializeCriticalSection(&InfIndexLock);
+        InterlockedExchange(&InfIndexLockState, 2);
+    }
+    else
+    {
+        while (InfIndexLockState != 2)
+            Sleep(0);
+    }
+    EnterCriticalSection(&InfIndexLock);
+}
+
+static VOID
+FreeInfIndex(VOID)
+{
+    INF_ID_ENTRY *Entry = InfIndexHead;
+
+    while (Entry)
+    {
+        INF_ID_ENTRY *Next = Entry->Next;
+        HeapFree(GetProcessHeap(), 0, Entry);
+        Entry = Next;
+    }
+    InfIndexHead = NULL;
+    InfIndexReady = FALSE;
+    InfIndexFileCount = 0;
+    InfIndexNewest.dwLowDateTime = 0;
+    InfIndexNewest.dwHighDateTime = 0;
+}
+
+static BOOL
+GetDefaultInfDirectory(LPWSTR Directory, DWORD Cch)
+{
+    DWORD Length;
+
+    Length = GetSystemWindowsDirectoryW(Directory, Cch);
+    if (Length == 0 || Length >= Cch)
+        return FALSE;
+    if (Directory[0] && Directory[strlenW(Directory) - 1] != '\\')
+    {
+        if (strlenW(Directory) + 1 >= Cch)
+            return FALSE;
+        strcatW(Directory, BackSlash);
+    }
+    if (strlenW(Directory) + strlenW(InfDirectory) >= Cch)
+        return FALSE;
+    strcatW(Directory, InfDirectory);
+    return TRUE;
+}
+
+static BOOL
+StampDefaultInfDirectory(LPCWSTR Directory, DWORD *FileCount, FILETIME *Newest)
+{
+    WCHAR Pattern[MAX_PATH];
+    WIN32_FIND_DATAW FindData;
+    HANDLE Find;
+
+    if (strlenW(Directory) + 5 >= MAX_PATH)
+        return FALSE;
+    strcpyW(Pattern, Directory);
+    strcatW(Pattern, L"*.inf");
+
+    *FileCount = 0;
+    Newest->dwLowDateTime = 0;
+    Newest->dwHighDateTime = 0;
+
+    Find = FindFirstFileW(Pattern, &FindData);
+    if (Find == INVALID_HANDLE_VALUE)
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+            return TRUE;
+        return FALSE;
+    }
+
+    do
+    {
+        if (FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            continue;
+        (*FileCount)++;
+        if (CompareFileTime(&FindData.ftLastWriteTime, Newest) > 0)
+            *Newest = FindData.ftLastWriteTime;
+    } while (FindNextFileW(Find, &FindData));
+
+    FindClose(Find);
+    return GetLastError() == ERROR_NO_MORE_FILES;
+}
+
+static BOOL
+AppendInfId(
+    LPCWSTR InfPath,
+    LPCWSTR Section,
+    LPCWSTR Description,
+    LPCWSTR Provider,
+    LPCWSTR Manufacturer,
+    LPCWSTR Id,
+    const GUID *ClassGuid,
+    FILETIME DriverDate,
+    DWORDLONG DriverVersion,
+    DWORD LineKey,
+    DWORD FieldIndex)
+{
+    SIZE_T IdBytes = (strlenW(Id) + 1) * sizeof(WCHAR);
+    INF_ID_ENTRY *Entry;
+    INF_ID_ENTRY **Tail;
+
+    Entry = HeapAlloc(GetProcessHeap(), 0, FIELD_OFFSET(INF_ID_ENTRY, Id) + IdBytes);
+    if (!Entry)
+        return FALSE;
+    ZeroMemory(Entry, FIELD_OFFSET(INF_ID_ENTRY, Id));
+    Entry->LineKey = LineKey;
+    Entry->FieldIndex = FieldIndex;
+    Entry->ClassGuid = *ClassGuid;
+    Entry->DriverDate = DriverDate;
+    Entry->DriverVersion = DriverVersion;
+    lstrcpynW(Entry->InfPath, InfPath, MAX_PATH);
+    lstrcpynW(Entry->Section, Section, LINE_LEN);
+    lstrcpynW(Entry->Description, Description, LINE_LEN);
+    if (Provider)
+        lstrcpynW(Entry->Provider, Provider, LINE_LEN);
+    if (Manufacturer)
+        lstrcpynW(Entry->Manufacturer, Manufacturer, LINE_LEN);
+    memcpy(Entry->Id, Id, IdBytes);
+
+    Tail = &InfIndexHead;
+    while (*Tail)
+        Tail = &(*Tail)->Next;
+    *Tail = Entry;
+    return TRUE;
+}
+
+static BOOL
+IndexOneInf(LPCWSTR FullPath, DWORD *LineKey)
+{
+    struct InfFileDetails *Details;
+    LPWSTR ProviderName = NULL;
+    FILETIME DriverDate;
+    DWORDLONG DriverVersion = 0;
+    GUID ClassGuid;
+    INFCONTEXT ContextManufacturer;
+    BOOL Result;
+
+    Details = CreateInfFileDetails(FullPath);
+    if (!Details)
+        return TRUE;
+
+    if (!GetVersionInformationFromInfFile(Details->hInf, &ClassGuid, &ProviderName, &DriverDate, &DriverVersion))
+    {
+        DereferenceInfFile(Details);
+        return TRUE;
+    }
+
+    Result = SetupFindFirstLineW(Details->hInf, INF_MANUFACTURER, NULL, &ContextManufacturer);
+    while (Result)
+    {
+        LPWSTR ManufacturerName = NULL;
+        WCHAR ManufacturerSection[LINE_LEN + 1];
+        DWORD RequiredSize = 0;
+
+        Result = SetupGetStringFieldW(&ContextManufacturer, 0, NULL, 0, &RequiredSize);
+        if (Result)
+        {
+            ManufacturerName = HeapAlloc(GetProcessHeap(), 0, RequiredSize * sizeof(WCHAR));
+            if (!ManufacturerName)
+            {
+                HeapFree(GetProcessHeap(), 0, ProviderName);
+                DereferenceInfFile(Details);
+                return FALSE;
+            }
+            Result = SetupGetStringFieldW(&ContextManufacturer, 0, ManufacturerName, RequiredSize, &RequiredSize);
+        }
+        Result = SetupGetStringFieldW(&ContextManufacturer, 1, ManufacturerSection, LINE_LEN, &RequiredSize);
+        if (Result)
+        {
+            ManufacturerSection[RequiredSize] = 0;
+            Result = SetupDiGetActualSectionToInstallW(
+                Details->hInf, ManufacturerSection, ManufacturerSection, LINE_LEN, NULL, NULL);
+        }
+        if (Result)
+        {
+            INFCONTEXT ContextDevice;
+
+            Result = SetupFindFirstLineW(Details->hInf, ManufacturerSection, NULL, &ContextDevice);
+            while (Result)
+            {
+                WCHAR Description[LINE_LEN];
+                DWORD FieldCount;
+                DWORD Field;
+
+                (*LineKey)++;
+                if (!SetupGetStringFieldW(&ContextDevice, 0, Description, LINE_LEN, NULL))
+                    Description[0] = 0;
+
+                FieldCount = SetupGetFieldCount(&ContextDevice);
+                for (Field = 2; Field <= FieldCount; Field++)
+                {
+                    LPWSTR DeviceId = NULL;
+                    BOOL GotId = FALSE;
+                    DWORD IdSize = 128;
+
+                    SetLastError(ERROR_INSUFFICIENT_BUFFER);
+                    while (!GotId && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+                    {
+                        HeapFree(GetProcessHeap(), 0, DeviceId);
+                        DeviceId = HeapAlloc(GetProcessHeap(), 0, IdSize * sizeof(WCHAR));
+                        if (!DeviceId)
+                        {
+                            HeapFree(GetProcessHeap(), 0, ManufacturerName);
+                            HeapFree(GetProcessHeap(), 0, ProviderName);
+                            DereferenceInfFile(Details);
+                            return FALSE;
+                        }
+                        GotId = SetupGetStringFieldW(&ContextDevice, Field, DeviceId, IdSize, &IdSize);
+                    }
+                    if (GotId && DeviceId[0])
+                    {
+                        if (!AppendInfId(FullPath, ManufacturerSection, Description, ProviderName,
+                                         ManufacturerName, DeviceId, &ClassGuid, DriverDate,
+                                         DriverVersion, *LineKey, Field))
+                        {
+                            HeapFree(GetProcessHeap(), 0, DeviceId);
+                            HeapFree(GetProcessHeap(), 0, ManufacturerName);
+                            HeapFree(GetProcessHeap(), 0, ProviderName);
+                            DereferenceInfFile(Details);
+                            return FALSE;
+                        }
+                    }
+                    HeapFree(GetProcessHeap(), 0, DeviceId);
+                }
+                Result = SetupFindNextLine(&ContextDevice, &ContextDevice);
+            }
+        }
+
+        HeapFree(GetProcessHeap(), 0, ManufacturerName);
+        Result = SetupFindNextLine(&ContextManufacturer, &ContextManufacturer);
+    }
+
+    HeapFree(GetProcessHeap(), 0, ProviderName);
+    DereferenceInfFile(Details);
+    return TRUE;
+}
+
+static BOOL
+RebuildInfIndex(LPCWSTR Directory, DWORD FileCount, const FILETIME *Newest)
+{
+    WCHAR Pattern[MAX_PATH];
+    WIN32_FIND_DATAW FindData;
+    HANDLE Find;
+    DWORD LineKey = 0;
+
+    FreeInfIndex();
+    if (strlenW(Directory) + 5 >= MAX_PATH)
+        return FALSE;
+    strcpyW(Pattern, Directory);
+    strcatW(Pattern, L"*.inf");
+
+    Find = FindFirstFileW(Pattern, &FindData);
+    if (Find == INVALID_HANDLE_VALUE)
+    {
+        if (GetLastError() != ERROR_FILE_NOT_FOUND)
+            return FALSE;
+    }
+    else
+    {
+        do
+        {
+            WCHAR FullPath[MAX_PATH];
+
+            if (FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                continue;
+            if (strlenW(Directory) + strlenW(FindData.cFileName) >= MAX_PATH)
+                continue;
+            strcpyW(FullPath, Directory);
+            strcatW(FullPath, FindData.cFileName);
+            if (!IndexOneInf(FullPath, &LineKey))
+            {
+                FindClose(Find);
+                FreeInfIndex();
+                return FALSE;
+            }
+        } while (FindNextFileW(Find, &FindData));
+        FindClose(Find);
+    }
+
+    InfIndexFileCount = FileCount;
+    InfIndexNewest = *Newest;
+    InfIndexReady = TRUE;
+    return TRUE;
+}
+
+static BOOL
+EnsureInfIndex(VOID)
+{
+    WCHAR Directory[MAX_PATH];
+    DWORD FileCount;
+    FILETIME Newest;
+
+    if (!GetDefaultInfDirectory(Directory, MAX_PATH))
+        return FALSE;
+    if (!StampDefaultInfDirectory(Directory, &FileCount, &Newest))
+        return FALSE;
+    if (InfIndexReady &&
+        InfIndexFileCount == FileCount &&
+        CompareFileTime(&InfIndexNewest, &Newest) == 0)
+    {
+        return TRUE;
+    }
+    return RebuildInfIndex(Directory, FileCount, &Newest);
+}
+
+struct IndexedInfFile
+{
+    struct IndexedInfFile *Next;
+    struct InfFileDetails *Details;
+    WCHAR Path[MAX_PATH];
+};
+
+static struct InfFileDetails *
+OpenIndexedInf(struct IndexedInfFile **Opened, LPCWSTR Path)
+{
+    struct IndexedInfFile *File;
+
+    for (File = *Opened; File; File = File->Next)
+    {
+        if (strcmpiW(File->Path, Path) == 0)
+            return File->Details;
+    }
+
+    File = HeapAlloc(GetProcessHeap(), 0, sizeof(*File));
+    if (!File)
+        return NULL;
+    File->Details = CreateInfFileDetails(Path);
+    if (!File->Details)
+    {
+        HeapFree(GetProcessHeap(), 0, File);
+        return NULL;
+    }
+    lstrcpynW(File->Path, Path, MAX_PATH);
+    File->Next = *Opened;
+    *Opened = File;
+    return File->Details;
+}
+
+static DWORD
+RankForIndexedId(LPCWSTR HardwareIDs, LPCWSTR CompatibleIDs, LPCWSTR Id, DWORD FieldIndex, LPCWSTR *MatchedId)
+{
+    DWORD DriverRank;
+    LPCWSTR CurrentId;
+
+    if (HardwareIDs)
+    {
+        for (DriverRank = 0, CurrentId = HardwareIDs; *CurrentId; CurrentId += strlenW(CurrentId) + 1, DriverRank++)
+        {
+            if (strcmpiW(Id, CurrentId) == 0)
+            {
+                *MatchedId = CurrentId;
+                return DriverRank + (FieldIndex == 2 ? 0 : 0x1000 + FieldIndex - 3);
+            }
+        }
+    }
+    if (CompatibleIDs)
+    {
+        for (DriverRank = 0, CurrentId = CompatibleIDs; *CurrentId; CurrentId += strlenW(CurrentId) + 1, DriverRank++)
+        {
+            if (strcmpiW(Id, CurrentId) == 0)
+            {
+                *MatchedId = CurrentId;
+                return DriverRank + (FieldIndex == 2 ? 0x2000 : 0x3000 + FieldIndex - 3);
+            }
+        }
+    }
+    return (DWORD)-1;
+}
+
+static BOOL
+BuildCompatListFromInfIndex(PLIST_ENTRY DriverListHead, LPCWSTR HardwareIDs, LPCWSTR CompatibleIDs)
+{
+    INF_ID_ENTRY *Entry;
+    struct IndexedInfFile *Opened = NULL;
+    DWORD *AddedLines = NULL;
+    DWORD AddedCount = 0;
+    DWORD AddedCapacity = 0;
+    BOOL Ok;
+
+    LockInfIndex();
+    Ok = EnsureInfIndex();
+    if (!Ok)
+    {
+        LeaveCriticalSection(&InfIndexLock);
+        return FALSE;
+    }
+
+    for (Entry = InfIndexHead; Entry; Entry = Entry->Next)
+    {
+        DWORD i;
+        DWORD Rank;
+        LPCWSTR MatchedId = NULL;
+        struct InfFileDetails *Details;
+        BOOL Already = FALSE;
+
+        for (i = 0; i < AddedCount; i++)
+        {
+            if (AddedLines[i] == Entry->LineKey)
+            {
+                Already = TRUE;
+                break;
+            }
+        }
+        if (Already)
+            continue;
+
+        Rank = RankForIndexedId(HardwareIDs, CompatibleIDs, Entry->Id, Entry->FieldIndex, &MatchedId);
+        if (Rank == (DWORD)-1)
+            continue;
+
+        if (AddedCount == AddedCapacity)
+        {
+            DWORD Capacity = AddedCapacity ? AddedCapacity * 2 : 16;
+            DWORD *Grown = HeapAlloc(GetProcessHeap(), 0, Capacity * sizeof(DWORD));
+            if (!Grown)
+                break;
+            if (AddedLines)
+            {
+                memcpy(Grown, AddedLines, AddedCount * sizeof(DWORD));
+                HeapFree(GetProcessHeap(), 0, AddedLines);
+            }
+            AddedLines = Grown;
+            AddedCapacity = Capacity;
+        }
+        AddedLines[AddedCount++] = Entry->LineKey;
+
+        Details = OpenIndexedInf(&Opened, Entry->InfPath);
+        if (!Details)
+            continue;
+        AddKnownDriverToList(
+            DriverListHead,
+            SPDIT_COMPATDRIVER,
+            &Entry->ClassGuid,
+            Details,
+            Entry->InfPath,
+            Entry->Section,
+            Entry->Description,
+            Entry->Provider[0] ? Entry->Provider : NULL,
+            Entry->Manufacturer,
+            MatchedId,
+            Entry->DriverDate,
+            Entry->DriverVersion,
+            Rank);
+    }
+
+    LeaveCriticalSection(&InfIndexLock);
+    while (Opened)
+    {
+        struct IndexedInfFile *Next = Opened->Next;
+        DereferenceInfFile(Opened->Details);
+        HeapFree(GetProcessHeap(), 0, Opened);
+        Opened = Next;
+    }
+    HeapFree(GetProcessHeap(), 0, AddedLines);
+    return TRUE;
+}
+
 /***********************************************************************
  *		SetupDiBuildDriverInfoList (SETUPAPI.@)
  */
@@ -636,6 +1130,23 @@ SetupDiBuildDriverInfoList(
             if (!HardwareIDs && !CompatibleIDs)
             {
                 SetLastError(ERROR_FILE_NOT_FOUND);
+                goto done;
+            }
+        }
+
+        /*
+         * A default-directory compatible search reuses the published ID index.
+         * A single INF, an explicit directory, and the installed-driver path
+         * keep the scan below.
+         */
+        if (DriverType == SPDIT_COMPATDRIVER &&
+            !(InstallParams.Flags & DI_ENUMSINGLEINF) &&
+            !(InstallParams.FlagsEx & DI_FLAGSEX_INSTALLEDDRIVER) &&
+            !InstallParams.DriverPath[0])
+        {
+            if (BuildCompatListFromInfIndex(pDriverListHead, HardwareIDs, CompatibleIDs))
+            {
+                ret = TRUE;
                 goto done;
             }
         }
