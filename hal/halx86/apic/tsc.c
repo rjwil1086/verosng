@@ -1,9 +1,12 @@
 /*
- * PROJECT:         ReactOS HAL
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            hal/halx86/apic/tsc.c
- * PURPOSE:         HAL Routines for TSC handling
- * PROGRAMMERS:     Timo Kreuzer (timo.kreuzer@reactos.org)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        hal/halx86/apic/tsc.c
+ * PURPOSE:     HAL Routines for TSC handling
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Timo Kreuzer (timo.kreuzer@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

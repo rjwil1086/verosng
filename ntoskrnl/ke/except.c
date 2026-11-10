@@ -1,10 +1,13 @@
 /*
- * PROJECT:         ReactOS Kernel
- * LICENSE:         BSD - See COPYING.ARM in the top level directory
- * FILE:            ntoskrnl/ke/except.c
- * PURPOSE:         Platform independent exception handling
- * PROGRAMMERS:     ReactOS Portable Systems Group
- *                  Alex Ionescu (alex.ionescu@reactos.org)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        ntoskrnl/ke/except.c
+ * PURPOSE:     Platform independent exception handling
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: ReactOS Portable Systems Group
+ *              Alex Ionescu (alex.ionescu@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

@@ -1,31 +1,19 @@
 /*
- *  RPCRT4
- *
- * Copyright 2000 Huw D M Davies for CodeWeavers
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
- * 
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU Lesser General Public License, version 2.1 or later (LGPL-2.1-or-later)
+ * FILE:        dll/win32/rpcrt4/rpcrt4_main.c
+ * PURPOSE:     RPCRT4
+ * COPYRIGHT:   Copyright 2000 Huw D M Davies for CodeWeavers
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+/*
  * WINE RPC TODO's (and a few TODONT's)
- *
  * - Statistics: we are supposed to be keeping various counters.  we aren't.
- *
  * - Async RPC: Unimplemented.
- *
  * - The NT "ports" API, aka LPC.  Greg claims this is on his radar.  Might (or
- *   might not) enable users to get some kind of meaningful result out of
- *   NT-based native rpcrt4's.  Commonly-used transport for self-to-self RPC's.
+ * might not) enable users to get some kind of meaningful result out of
+ * NT-based native rpcrt4's.  Commonly-used transport for self-to-self RPC's.
  */
 
 #include <stdarg.h>

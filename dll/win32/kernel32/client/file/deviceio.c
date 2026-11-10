@@ -1,9 +1,12 @@
 /*
- * PROJECT:         ReactOS Kernel
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            dll/win32/kernel32/client/file/deviceio.c
- * PURPOSE:         Device I/O Base Client Functionality
- * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/kernel32/client/file/deviceio.c
+ * PURPOSE:     Device I/O Base Client Functionality
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex.ionescu@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/

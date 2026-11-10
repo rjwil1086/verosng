@@ -1,9 +1,12 @@
 /*
- * PROJECT:         ReactOS Runtime Library
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            lib/rtl/generictable.c
- * PURPOSE:         Splay Tree Generic Table Implementation
- * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        sdk/lib/rtl/generictable.c
+ * PURPOSE:     Splay Tree Generic Table Implementation
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex.ionescu@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

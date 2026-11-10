@@ -1,4 +1,9 @@
-# SPDX-License-Identifier: GPL-2.0-or-later
+# PROJECT:     VerOS NT
+# LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+# FILE:        tools/windows-trace/Test-TraceCorpus.ps1
+# PURPOSE:     Check that a Windows trace corpus is large enough
+# COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+# PROGRAMMERS: Ryan Wilson
 
 param(
     [string]$SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,

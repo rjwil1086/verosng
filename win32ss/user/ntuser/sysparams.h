@@ -1,3 +1,12 @@
+/*
+ * PROJECT:     VerOS NT Subsystem
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        win32ss/user/ntuser/sysparams.h
+ * PURPOSE:     System parameter values
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+
 #pragma once
 
 // Create one struct

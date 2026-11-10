@@ -1,22 +1,14 @@
 /*
- * iphlpapi dll implementation
- *
- * Copyright (C) 2003 Juan Lang
- *               2018 Pierre Schweitzer
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU Lesser General Public License, version 2.1 or later (LGPL-2.1-or-later)
+ * FILE:        dll/win32/iphlpapi/iphlpapi_main.c
+ * PURPOSE:     iphlpapi dll implementation
+ * COPYRIGHT:   Copyright (C) 2003 Juan Lang
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+/*
+ * 2018 Pierre Schweitzer
  */
 
 #define DEBUG

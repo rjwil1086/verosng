@@ -1,28 +1,15 @@
 /*
- *  ReactOS kernel
- *  Copyright (C) 2002 ReactOS Team
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
- *
- * COPYRIGHT:        See COPYING in the top level directory
- * PROJECT:          ReactOS kernel
- * FILE:             drivers/filesystems/ntfs/fsctl.c
- * PURPOSE:          NTFS filesystem driver
- * PROGRAMMER:       Eric Kohl
- *                   Valentin Verkhovsky
- *                   Pierre Schweitzer
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/filesystems/ntfs/fsctl.c
+ * PURPOSE:     NTFS filesystem driver
+ * COPYRIGHT:   Copyright (C) 2002 ReactOS Team
+ *              See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Eric Kohl
+ *              Valentin Verkhovsky
+ *              Pierre Schweitzer
+ *              Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/
@@ -128,6 +115,14 @@ NtfsHasFileSystem(PDEVICE_OBJECT DeviceToMount)
     if (RtlCompareMemory(BootSector->OEMID, "NTFS    ", 8) != 8)
     {
         DPRINT1("Failed with NTFS-identifier: [%.8s]\n", BootSector->OEMID);
+        Status = STATUS_UNRECOGNIZED_VOLUME;
+        goto ByeBye;
+    }
+
+    /* The BIOS boot signature. A damaged sector must not mount. */
+    if (BootSector->EndSector != 0xAA55)
+    {
+        DPRINT1("Boot sector signature is %x\n", BootSector->EndSector);
         Status = STATUS_UNRECOGNIZED_VOLUME;
         goto ByeBye;
     }

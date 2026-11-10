@@ -1,8 +1,11 @@
 /*
- * PROJECT:     ReactOS Kernel
- * LICENSE:     MIT (https://spdx.org/licenses/MIT)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        ntoskrnl/ke/processor.c
  * PURPOSE:     Portable processor related routines
  * COPYRIGHT:   Copyright 2025 Timo Kreuzer <timo.kreuzer@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

@@ -1,8 +1,11 @@
 /*
- * PROJECT:     ReactOS Kernel - Vista+ APIs
- * LICENSE:     LGPL-2.1-or-later (https://spdx.org/licenses/LGPL-2.1-or-later)
+ * PROJECT:     VerOS NT Subsystem
+ * LICENSE:     GNU Lesser General Public License, version 2.1 or later (LGPL-2.1-or-later)
+ * FILE:        win32ss/user/user32_vista/dpi.c
  * PURPOSE:     DPI functions for user32 and user32_vista.
  * COPYRIGHT:   Copyright 2024 Carl Bialorucki <cbialo2@outlook.com>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 #define WIN32_NO_STATUS

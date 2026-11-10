@@ -1,5 +1,6 @@
 /*
  * Copyright 2014 Jacek Caban for CodeWeavers
+ * Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public

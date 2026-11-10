@@ -1,11 +1,14 @@
 /*
- * PROJECT:         ReactOS Kernel
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            ntoskrnl/io/iomgr/driver.c
- * PURPOSE:         Driver Object Management
- * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
- *                  Filip Navara (navaraf@reactos.org)
- *                  Hervé Poussineau (hpoussin@reactos.org)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        ntoskrnl/io/iomgr/driver.c
+ * PURPOSE:     Driver Object Management
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex.ionescu@reactos.org)
+ *              Filip Navara (navaraf@reactos.org)
+ *              Hervé Poussineau (hpoussin@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/

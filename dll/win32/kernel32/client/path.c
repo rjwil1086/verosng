@@ -1,9 +1,12 @@
 /*
- * PROJECT:         ReactOS Win32 Base API
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            dll/win32/kernel32/client/path.c
- * PURPOSE:         Handles path APIs
- * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/kernel32/client/path.c
+ * PURPOSE:     Handles path APIs
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex.ionescu@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/

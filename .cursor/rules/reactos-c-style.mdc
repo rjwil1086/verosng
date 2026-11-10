@@ -9,7 +9,7 @@ alwaysApply: false
 Follow [CODING_STYLE.md](CODING_STYLE.md) and [.clang-format](.clang-format).
 
 - Indent with 4 spaces. Braces go on their own lines. Keep lines to 100 characters.
-- New files start with the SPDX header used in CODING_STYLE.md (`GPL-2.0-or-later` unless the file is already under another GPL-2.0-compatible license).
+- New and edited files use the header in [file-headers.mdc](file-headers.mdc). That rule chooses GPL-2.0-or-later or LGPL-2.1-or-later and keeps the original copyright lines.
 - Do not reformat a file in the same commit as a behavior change. A formatting-only commit starts with `[FORMATTING]`.
 - Do not reformat files listed in `media/doc/WINESYNC.txt` or `media/doc/3rd Party Files.txt`.
 

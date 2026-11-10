@@ -1,28 +1,19 @@
 /*
- * ReactOS VBE miniport video driver
- * Copyright (C) 2004 Filip Navara
- *
+ * PROJECT:     VerOS NT Subsystem
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        win32ss/drivers/miniport/vbe/vbemp.c
+ * PURPOSE:     ReactOS VBE miniport video driver
+ * COPYRIGHT:   Copyright (C) 2004 Filip Navara
+ *              Copyright (C) 2004 Magnus Olsen
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+/*
  * Power Management and VBE 1.2 support
- * Copyright (C) 2004 Magnus Olsen
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
  * TODO:
  * - Check input parameters everywhere.
  * - Call VideoPortVerifyAccessRanges to reserve the memory we're about
- *   to map.
+ * to map.
  */
 
 /* INCLUDES *******************************************************************/

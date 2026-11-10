@@ -1,8 +1,11 @@
 /*
- * PROJECT:        ReactOS Kernel
- * LICENSE:        GNU GPLv2 only as published by the Free Software Foundation
- * PURPOSE:        To Implement AHCI Miniport driver targeting storport NT 5.2
- * PROGRAMMERS:    Aman Priyadarshi (aman.eureka@gmail.com)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 only (GPL-2.0-only)
+ * FILE:        drivers/storage/port/storahci/storahci.h
+ * PURPOSE:     To Implement AHCI Miniport driver targeting storport NT 5.2
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Aman Priyadarshi (aman.eureka@gmail.com)
+ *              Ryan Wilson
  */
 
 #include <ntddk.h>

@@ -1,6 +1,7 @@
 /*++ NDK Version: 0098
 
 Copyright (c) Alex Ionescu.  All rights reserved.
+Copyright 2026 Ryan Wilson <ryan@verosnt.com>
 
 Header Name:
 
@@ -13,6 +14,7 @@ Abstract:
 Author:
 
     Alex Ionescu (alexi@tinykrnl.org) - Updated - 27-Feb-2006
+    Ryan Wilson
 
 --*/
 

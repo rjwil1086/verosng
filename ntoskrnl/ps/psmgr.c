@@ -1,9 +1,12 @@
 /*
- * PROJECT:         ReactOS Kernel
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            ntoskrnl/ps/psmgr.c
- * PURPOSE:         Process Manager: Initialization Code
- * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        ntoskrnl/ps/psmgr.c
+ * PURPOSE:     Process Manager: Initialization Code
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex.ionescu@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

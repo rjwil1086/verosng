@@ -1,10 +1,13 @@
 /*
- * COPYRIGHT:       See COPYING in the top level directory
- * PROJECT:         ReactOS NT User-Mode Library
- * FILE:            dll/ntdll/ldr/ldrutils.c
- * PURPOSE:         Internal Loader Utility Functions
- * PROGRAMMERS:     Alex Ionescu (alex@relsoft.net)
- *                  Aleksey Bragin (aleksey@reactos.org)
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/ntdll/ldr/ldrutils.c
+ * PURPOSE:     Internal Loader Utility Functions
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex@relsoft.net)
+ *              Aleksey Bragin (aleksey@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/

@@ -1,8 +1,12 @@
 /*
- * COPYRIGHT:       See COPYING in the top level directory
- * PROJECT:         ReactOS system libraries
- * PURPOSE:         Vista functions
- * PROGRAMMER:      Thomas Weidenmueller <w3seek@reactos.com>
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/kernel32/kernel32_vista/vista.c
+ * PURPOSE:     Vista functions
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Thomas Weidenmueller <w3seek@reactos.com>
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/

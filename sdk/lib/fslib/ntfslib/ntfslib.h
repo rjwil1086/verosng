@@ -1,9 +1,12 @@
 /*
- * COPYRIGHT:   See COPYING in the top level directory
- * PROJECT:     ReactOS NTFS FS library
- * FILE:        lib/fslib/ntfslib/ntfslib.h
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        sdk/lib/fslib/ntfslib/ntfslib.h
  * PURPOSE:     NTFS lib definitions
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROGRAMMERS: Pierre Schweitzer, Klachkov Valery
+ *              Ryan Wilson
  */
 
 #ifndef NTFSLIB_H

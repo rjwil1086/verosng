@@ -1,9 +1,12 @@
 /*
- * COPYRIGHT: See COPYING in the top level directory
- * PROJECT  : ReactOS system libraries
- * MODULE   : kernel32.dll
- * FILE     : reactos/dll/win32/kernel32/misc/ldr.c
- * AUTHOR   : Aleksey Bragin <aleksey@reactos.org>
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/kernel32/client/loader.c
+ * PURPOSE:     Kernel32 loader
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Aleksey Bragin <aleksey@reactos.org>
+ *              Ryan Wilson
  */
 
 #include <k32.h>

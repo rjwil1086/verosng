@@ -1,11 +1,14 @@
 /*
- * COPYRIGHT:        See COPYING in the top level directory
- * PROJECT:          ReactOS Win32k subsystem
- * PURPOSE:          Message queues
- * FILE:             win32ss/user/ntuser/msgqueue.c
- * PROGRAMER:        Casper S. Hornstrup (chorns@users.sourceforge.net)
-                     Alexandre Julliard
-                     Maarten Lankhorst
+ * PROJECT:     VerOS NT Subsystem
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        win32ss/user/ntuser/msgqueue.c
+ * PURPOSE:     Message queues
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Casper S. Hornstrup (chorns@users.sourceforge.net)
+ *              Alexandre Julliard
+ *              Maarten Lankhorst
+ *              Ryan Wilson
  */
 
 #include <win32k.h>

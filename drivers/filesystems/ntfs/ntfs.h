@@ -1,3 +1,12 @@
+/*
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/filesystems/ntfs/ntfs.h
+ * PURPOSE:     NTFS filesystem driver
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+
 #ifndef NTFS_H
 #define NTFS_H
 

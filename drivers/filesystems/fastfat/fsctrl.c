@@ -3,6 +3,12 @@
 
 Copyright (c) 1989-2000 Microsoft Corporation
 
+Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+
+Programmers:
+
+    Ryan Wilson
+
 Module Name:
 
     FsCtrl.c

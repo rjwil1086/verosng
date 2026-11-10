@@ -1,16 +1,19 @@
 /*
- * COPYRIGHT:   See COPYING in the top level directory
- * PROJECT:     ReactOS NTFS FS library
- * FILE:        lib/fslib/ntfslib/files.c
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        sdk/lib/fslib/ntfslib/files.c
  * PURPOSE:     NTFS metadata builder
- *
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+/*
  * Builds MFT records 0..35 into one buffer, then writes the MFT and the
  * auxiliary streams ($LogFile, $AttrDef, $UpCase, $Secure:$SDS/$SDH,
  * $MFT:$BITMAP, the cluster $Bitmap, the root $I30 index, the TxF payloads).
  * Records 0..15 are the reserved system files; 24..35 are the $Extend subtree.
  * Directory index entries are copied from each child's own $FILE_NAME in the
  * buffer, so the two copies always agree.
- *
  * The $MFT is reserved large and contiguous (LAYOUT.MftClusters): the NTFS VBR
  * assumes a contiguous MFT, and a full install must not fragment it.
  */

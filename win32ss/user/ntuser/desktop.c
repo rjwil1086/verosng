@@ -1,9 +1,12 @@
 /*
- *  COPYRIGHT:        See COPYING in the top level directory
- *  PROJECT:          ReactOS Win32k subsystem
- *  PURPOSE:          Desktops
- *  FILE:             subsystems/win32/win32k/ntuser/desktop.c
- *  PROGRAMMER:       Casper S. Hornstrup (chorns@users.sourceforge.net)
+ * PROJECT:     VerOS NT Subsystem
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        win32ss/user/ntuser/desktop.c
+ * PURPOSE:     Desktops
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Casper S. Hornstrup (chorns@users.sourceforge.net)
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

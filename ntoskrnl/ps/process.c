@@ -1,10 +1,13 @@
 /*
- * PROJECT:         ReactOS Kernel
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            ntoskrnl/ps/process.c
- * PURPOSE:         Process Manager: Process Management
- * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
- *                  Thomas Weidenmueller (w3seek@reactos.org
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        ntoskrnl/ps/process.c
+ * PURPOSE:     Process Manager: Process Management
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex.ionescu@reactos.org)
+ *              Thomas Weidenmueller (w3seek@reactos.org
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

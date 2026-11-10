@@ -1,9 +1,15 @@
 /*
- * COPYRIGHT:       See COPYING in the top level directory
- * PROJECT:         ReactOS system libraries
- * FILE:            lib/ntdll/rtl/process.c
- * PURPOSE:         Process functions
- * PROGRAMMER:      Ariadne (ariadne@xs4all.nl)
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/ntdll/rtl/version.c
+ * PURPOSE:     Process functions
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ariadne (ariadne@xs4all.nl)
+ *              Ryan Wilson
+ */
+
+/*
  * UPDATE HISTORY:
  *                  Created 01/11/98
  */

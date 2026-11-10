@@ -5,6 +5,7 @@
  *
  * Contributors:
  *   Timo Kreuzer (timo.kreuzer@reactos.org)
+ *   Ryan Wilson
  *
  * THIS SOFTWARE IS NOT COPYRIGHTED
  *

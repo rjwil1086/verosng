@@ -1,9 +1,12 @@
 /*
- * COPYRIGHT:   See COPYING in the top level directory
- * PROJECT:     ReactOS NTFS FS library
- * FILE:        lib/fslib/ntfslib/ntfslib.c
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        sdk/lib/fslib/ntfslib/ntfslib.c
  * PURPOSE:     NTFS lib
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROGRAMMERS: Pierre Schweitzer, Klachkov Valery
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/
@@ -432,6 +435,8 @@ NtfsFormat(
     // match the copies stored in its parent directory's index entries.
     {
         LARGE_INTEGER SystemTime;
+
+        SystemTime.QuadPart = 0;
         KeQuerySystemTime(&SystemTime);
         NtfsFormatData.FormatTime = (ULONGLONG)SystemTime.QuadPart;
     }

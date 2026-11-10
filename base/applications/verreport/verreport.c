@@ -1,7 +1,10 @@
 /*
- * PROJECT:     ReactOS
- * LICENSE:     GPL-2.0-or-later (https://spdx.org/licenses/GPL-2.0-or-later)
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        base/applications/verreport/verreport.c
  * PURPOSE:     Print the runtime NT version and the unmanifested GetVersion lie
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 #include <stdio.h>

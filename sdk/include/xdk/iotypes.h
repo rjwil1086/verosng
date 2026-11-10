@@ -1,3 +1,12 @@
+/*
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        sdk/include/xdk/iotypes.h
+ * PURPOSE:     I/O manager types
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+
 $if (_WDMDDK_ || _NTDDK_)
 /******************************************************************************
  *                         I/O Manager Types                                  *

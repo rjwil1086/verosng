@@ -1,29 +1,16 @@
 /*
- *  ReactOS kernel
- *  Copyright (C) 2002,2003 ReactOS Team
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
- *
- * COPYRIGHT:        See COPYING in the top level directory
- * PROJECT:          ReactOS kernel
- * FILE:             drivers/filesystem/ntfs/attrib.c
- * PURPOSE:          NTFS filesystem driver
- * PROGRAMMERS:      Eric Kohl
- *                   Valentin Verkhovsky
- *                   Hervé Poussineau (hpoussin@reactos.org)
- *                   Pierre Schweitzer (pierre@reactos.org)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/filesystems/ntfs/attrib.c
+ * PURPOSE:     NTFS filesystem driver
+ * COPYRIGHT:   Copyright (C) 2002,2003 ReactOS Team
+ *              See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Eric Kohl
+ *              Valentin Verkhovsky
+ *              Hervé Poussineau (hpoussin@reactos.org)
+ *              Pierre Schweitzer (pierre@reactos.org)
+ *              Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/
@@ -258,7 +245,9 @@ AddFileName(PFILE_RECORD_HEADER FileRecord,
 
     FileNameAttribute = (PFILENAME_ATTRIBUTE)((LONG_PTR)AttributeAddress + ResidentHeaderLength);
 
-    // set timestamps
+    /* KeQuerySystemTime writes SystemTime. Zero it so a failed query cannot
+     * leave the file name with an unspecified stamp. */
+    SystemTime.QuadPart = 0;
     KeQuerySystemTime(&SystemTime);
     FileNameAttribute->CreationTime = SystemTime.QuadPart;
     FileNameAttribute->ChangeTime = SystemTime.QuadPart;
@@ -369,6 +358,9 @@ NtfsDosChar(WCHAR Char)
         case L'\\':
         case L'|':
             return FALSE;
+
+        default:
+            break;
     }
 
     return TRUE;
@@ -1022,6 +1014,7 @@ AddStandardInformation(PDEVICE_EXTENSION Vcb,
     RtlZeroMemory(StandardInfo, ValueLength);
 
     /* Times and the file attribute live in both the 48-byte and 72-byte values. */
+    SystemTime.QuadPart = 0;
     KeQuerySystemTime(&SystemTime);
     StandardInfo->CreationTime = SystemTime.QuadPart;
     StandardInfo->ChangeTime = SystemTime.QuadPart;

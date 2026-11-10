@@ -1,4 +1,9 @@
-# SPDX-License-Identifier: GPL-2.0-or-later
+# PROJECT:     VerOS NT
+# LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+# FILE:        tools/pipeline/Get-CrashReport.ps1
+# PURPOSE:     Write a crash report from a serial log
+# COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+# PROGRAMMERS: Ryan Wilson
 
 param(
     [string]$SerialLog = "",

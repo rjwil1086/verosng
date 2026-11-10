@@ -1,25 +1,15 @@
 /*
- * Locale-dependent format handling
- *
- * Copyright 1995 Martin von Loewis
- * Copyright 1998 David Lee Lambert
- * Copyright 2000 Julio César Gázquez
- * Copyright 2003 Jon Griffiths
- * Copyright 2005 Dmitry Timoshkov
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU Lesser General Public License, version 2.1 or later (LGPL-2.1-or-later)
+ * FILE:        dll/win32/kernel32/winnls/string/lcformat.c
+ * PURPOSE:     Locale-dependent format handling
+ * COPYRIGHT:   Copyright 1995 Martin von Loewis
+ *              Copyright 1998 David Lee Lambert
+ *              Copyright 2000 Julio César Gázquez
+ *              Copyright 2003 Jon Griffiths
+ *              Copyright 2005 Dmitry Timoshkov
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 #ifdef __REACTOS__

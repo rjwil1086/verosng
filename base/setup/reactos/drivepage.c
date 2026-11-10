@@ -1,10 +1,13 @@
 /*
- * PROJECT:     ReactOS GUI first stage setup application
- * LICENSE:     GPL-2.0-or-later (https://spdx.org/licenses/GPL-2.0-or-later)
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        base/setup/reactos/drivepage.c
  * PURPOSE:     Disk partitions/Volumes page
  * COPYRIGHT:   Copyright 2008-2010 Matthias Kupfer <mkupfer@reactos.org>
  *              Copyright 2008-2009 Dmitry Chapyshev <dmitry@reactos.org>
  *              Copyright 2018-2026 Hermès Bélusca-Maïto <hermes.belusca-maito@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 #include "reactos.h"

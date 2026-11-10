@@ -1,10 +1,13 @@
 /*
- * COPYRIGHT:         See COPYING in the top level directory
- * PROJECT:           ReactOS system libraries
- * PURPOSE:           System setup
- * FILE:              dll/win32/syssetup/install.c
- * PROGRAMER:         Eric Kohl
- *                    Whindmar Saksit <whindsaks@proton.me>
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/syssetup/install.c
+ * PURPOSE:     System setup
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Eric Kohl
+ *              Whindmar Saksit <whindsaks@proton.me>
+ *              Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/

@@ -1,3 +1,12 @@
+/*
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        ntoskrnl/include/sysfuncs.h
+ * PURPOSE:     NT system service names
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
+ */
+
 #ifndef SYSFUNCS_NT6_ONLY
     SVC_(AcceptConnectPort, 6)
     SVC_(AccessCheck, 8)

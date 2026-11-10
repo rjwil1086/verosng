@@ -1,9 +1,12 @@
 /*
- * PROJECT:         ReactOS Kernel
- * LICENSE:         BSD - See COPYING.ARM in the top level directory
- * FILE:            ntoskrnl/mm/ARM3/procsup.c
- * PURPOSE:         ARM Memory Manager Process Related Management
- * PROGRAMMERS:     ReactOS Portable Systems Group
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        ntoskrnl/mm/ARM3/procsup.c
+ * PURPOSE:     ARM Memory Manager Process Related Management
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: ReactOS Portable Systems Group
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/

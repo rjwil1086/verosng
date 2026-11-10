@@ -1,10 +1,16 @@
 /*
- * COPYRIGHT:       See COPYING in the top level directory
- * PROJECT:         ReactOS system libraries
- * FILE:            dll/win32/kernel32/client/time.c
- * PURPOSE:         Time conversion functions
- * PROGRAMMER:      Ariadne
- *                  DOSDATE and DOSTIME structures from Onno Hovers
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/kernel32/client/time.c
+ * PURPOSE:     Time conversion functions
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ariadne
+ *              DOSDATE and DOSTIME structures from Onno Hovers
+ *              Ryan Wilson
+ */
+
+/*
  * UPDATE HISTORY:
  *                  Created 19/01/99
  */

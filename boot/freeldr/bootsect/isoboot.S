@@ -1,13 +1,17 @@
 /*
- * PROJECT:     ReactOS Boot Sector for ISO file system (based on ISOLINUX)
- * LICENSE:     GPL-2.0+ (https://spdx.org/licenses/GPL-2.0+)
- * PURPOSE:     Booting ReactOS off a CD-ROM using the El Torito boot standard in "no emulation mode"
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/bootsect/isoboot.S
+ * PURPOSE:     Booting ReactOS off a CD-ROM using the El Torito boot
+ *              standard in "no emulation mode"
  * COPYRIGHT:   Copyright 1994-2009 H. Peter Anvin
  *              Copyright 2002 Michael K. Ter Louw
  *              Copyright 2002 Eric Kohl
  *              Copyright 2009 Intel Corporation *author: H. Peter Anvin
  *              Copyright 2011 Timo Kreuzer (timo.kreuzer@reactos.org)
  *              Copyright 2017 Colin Finck (colin@reactos.org)
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/

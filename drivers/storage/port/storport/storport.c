@@ -1,8 +1,11 @@
 /*
- * PROJECT:     ReactOS Storport Driver
- * LICENSE:     GPL-2.0+ (https://spdx.org/licenses/GPL-2.0+)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/storage/port/storport/storport.c
  * PURPOSE:     Storport driver main file
  * COPYRIGHT:   Copyright 2017 Eric Kohl (eric.kohl@reactos.org)
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/

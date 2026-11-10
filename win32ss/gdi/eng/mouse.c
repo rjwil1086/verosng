@@ -1,11 +1,15 @@
 /*
- * COPYRIGHT:        See COPYING in the top level directory
- * PROJECT:          ReactOS win32 subsystem
- * PURPOSE:          Mouse pointer functions
- * FILE:             win32ss/gdi/eng/mouse.c
- * PROGRAMER:        Casper S. Hornstrup (chorns@users.sourceforge.net)
- *                   Timo Kreuzer (timo.kreuzer@reactos.org)
+ * PROJECT:     VerOS NT Subsystem
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        win32ss/gdi/eng/mouse.c
+ * PURPOSE:     Mouse pointer functions
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Casper S. Hornstrup (chorns@users.sourceforge.net)
+ *              Timo Kreuzer (timo.kreuzer@reactos.org)
+ *              Ryan Wilson
  */
+
 /* INCLUDES ******************************************************************/
 
 #include <win32k.h>

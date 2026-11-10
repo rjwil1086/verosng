@@ -1,8 +1,11 @@
 /*
- * PROJECT:     ReactOS Bochs graphics card driver
- * LICENSE:     GPL-2.0-or-later (https://spdx.org/licenses/GPL-2.0-or-later)
+ * PROJECT:     VerOS NT Subsystem
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        win32ss/drivers/miniport/bochs/bochsmp.c
  * PURPOSE:     Bochs graphics card driver
  * COPYRIGHT:   Copyright 2022 Hervé Poussineau <hpoussin@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 #include "bochsmp.h"

@@ -1,4 +1,9 @@
-# SPDX-License-Identifier: GPL-2.0-or-later
+# PROJECT:     VerOS NT
+# LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+# FILE:        tools/pipeline/Build-Bootcd.ps1
+# PURPOSE:     Build the amd64 bootcd
+# COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+# PROGRAMMERS: Ryan Wilson
 
 param(
     [string]$SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,

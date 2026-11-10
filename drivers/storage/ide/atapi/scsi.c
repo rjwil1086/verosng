@@ -1,8 +1,11 @@
 /*
- * PROJECT:     ReactOS ATA Port Driver
- * LICENSE:     MIT (https://spdx.org/licenses/MIT)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/storage/ide/atapi/scsi.c
  * PURPOSE:     SCSI I/O queue and requests handling
  * COPYRIGHT:   Copyright 2026 Dmitry Borisov <di.sean@protonmail.com>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/

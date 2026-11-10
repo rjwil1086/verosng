@@ -127,7 +127,9 @@ typedef int RPC_STATUS;
     #define RpcExceptionCode() _SEH2_GetExceptionCode()
     #define RpcAbnormalTermination() (_SEH2_GetExceptionCode() != 0)
 
-    /* Clang amd64 has no SEH plugin, so RpcTryExcept does not catch.
+    /* Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+     * PROGRAMMERS: Ryan Wilson
+     * Clang amd64 has no SEH plugin, so RpcTryExcept does not catch.
      * An uncaught RPC exception kills the caller, including winlogon. */
 #if defined(__clang__) && (defined(_M_AMD64) || defined(__x86_64__)) && !defined(_NTDDK_)
 #include <setjmp.h>
