@@ -759,6 +759,9 @@ AddRun(PNTFS_VCB Vcb,
 *
 * Adds a $STANDARD_INFORMATION attribute to a given FileRecord.
 *
+* @param Vcb
+* Volume the file will live on. Major version 3 or newer gets the 72-byte value.
+*
 * @param FileRecord
 * Pointer to a complete file record to add the attribute to. Caller is responsible for
 * ensuring FileRecord is large enough to contain $STANDARD_INFORMATION.
@@ -766,6 +769,9 @@ AddRun(PNTFS_VCB Vcb,
 * @param AttributeAddress
 * Pointer to the region of memory that will receive the $STANDARD_INFORMATION attribute.
 * This address must reside within FileRecord. Must be aligned to an 8-byte boundary (relative to FileRecord).
+*
+* @param SecurityId
+* Security id stored in the 72-byte tail. Ignored on a volume older than version 3.
 *
 * @return
 * STATUS_SUCCESS on success. STATUS_NOT_IMPLEMENTED if target address isn't at the end
@@ -780,13 +786,16 @@ AddRun(PNTFS_VCB Vcb,
 * for the attribute.
 */
 NTSTATUS
-AddStandardInformation(PFILE_RECORD_HEADER FileRecord,
-                       PNTFS_ATTR_RECORD AttributeAddress)
+AddStandardInformation(PDEVICE_EXTENSION Vcb,
+                       PFILE_RECORD_HEADER FileRecord,
+                       PNTFS_ATTR_RECORD AttributeAddress,
+                       ULONG SecurityId)
 {
     ULONG ResidentHeaderLength = FIELD_OFFSET(NTFS_ATTR_RECORD, Resident.Reserved) + sizeof(UCHAR);
-    PSTANDARD_INFORMATION StandardInfo = (PSTANDARD_INFORMATION)((LONG_PTR)AttributeAddress + ResidentHeaderLength);
+    PSTANDARD_INFORMATION StandardInfo;
     LARGE_INTEGER SystemTime;
     ULONG FileRecordEnd = AttributeAddress->Length;
+    ULONG ValueLength;
 
     if (AttributeAddress->Type != AttributeEnd)
     {
@@ -794,14 +803,23 @@ AddStandardInformation(PFILE_RECORD_HEADER FileRecord,
         return STATUS_NOT_IMPLEMENTED;
     }
 
+    if (Vcb->NtfsInfo.MajorVersion >= 3)
+        ValueLength = NTFS_STD_INFO_V31_SIZE;
+    else
+        ValueLength = NTFS_STD_INFO_V12_SIZE;
+
+    StandardInfo = (PSTANDARD_INFORMATION)((LONG_PTR)AttributeAddress + ResidentHeaderLength);
+
     AttributeAddress->Type = AttributeStandardInformation;
-    AttributeAddress->Length = sizeof(STANDARD_INFORMATION) + ResidentHeaderLength;
+    AttributeAddress->Length = ValueLength + ResidentHeaderLength;
     AttributeAddress->Length = ALIGN_UP_BY(AttributeAddress->Length, ATTR_RECORD_ALIGNMENT);
-    AttributeAddress->Resident.ValueLength = sizeof(STANDARD_INFORMATION);
+    AttributeAddress->Resident.ValueLength = ValueLength;
     AttributeAddress->Resident.ValueOffset = ResidentHeaderLength;
     AttributeAddress->Instance = FileRecord->NextAttributeNumber++;
 
-    // set dates and times
+    RtlZeroMemory(StandardInfo, ValueLength);
+
+    /* Times and the file attribute live in both the 48-byte and 72-byte values. */
     KeQuerySystemTime(&SystemTime);
     StandardInfo->CreationTime = SystemTime.QuadPart;
     StandardInfo->ChangeTime = SystemTime.QuadPart;
@@ -809,11 +827,58 @@ AddStandardInformation(PFILE_RECORD_HEADER FileRecord,
     StandardInfo->LastAccessTime = SystemTime.QuadPart;
     StandardInfo->FileAttribute = NTFS_FILE_TYPE_ARCHIVE;
 
+    /* The tail stays zero apart from the security id. Do not write it into a v1.2 value. */
+    if (ValueLength >= NTFS_STD_INFO_V31_SIZE)
+        StandardInfo->SecurityId = SecurityId;
+
     // move the attribute-end and file-record-end markers to the end of the file record
     AttributeAddress = (PNTFS_ATTR_RECORD)((ULONG_PTR)AttributeAddress + AttributeAddress->Length);
     SetFileRecordEnd(FileRecord, AttributeAddress, FileRecordEnd);
 
     return STATUS_SUCCESS;
+}
+
+/**
+* @name NtfsCopyParentSecurityId
+* @implemented
+*
+* Copies the parent's security id onto a new file when both attributes are the
+* 72-byte NTFS 3.x form. A short attribute keeps the id it was created with.
+* The value length is left alone, so a 48-byte attribute is not widened and a
+* 72-byte tail is not rewritten except for SecurityId.
+*/
+VOID
+NtfsCopyParentSecurityId(PDEVICE_EXTENSION Vcb,
+                         PFILE_RECORD_HEADER FileRecord,
+                         ULONGLONG ParentMftIndex)
+{
+    PSTANDARD_INFORMATION ChildInfo;
+    PSTANDARD_INFORMATION ParentInfo;
+    PFILE_RECORD_HEADER ParentRecord;
+    ULONG ChildLength;
+    ULONG ParentLength;
+    NTSTATUS Status;
+
+    ChildInfo = NtfsFindStandardInformation(Vcb, FileRecord, &ChildLength);
+    if (ChildInfo == NULL || ChildLength < NTFS_STD_INFO_V31_SIZE)
+        return;
+
+    ParentRecord = ExAllocateFromNPagedLookasideList(&Vcb->FileRecLookasideList);
+    if (ParentRecord == NULL)
+        return;
+
+    Status = ReadFileRecord(Vcb, ParentMftIndex, ParentRecord);
+    if (!NT_SUCCESS(Status))
+    {
+        ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, ParentRecord);
+        return;
+    }
+
+    ParentInfo = NtfsFindStandardInformation(Vcb, ParentRecord, &ParentLength);
+    if (ParentInfo != NULL && ParentLength >= NTFS_STD_INFO_V31_SIZE)
+        ChildInfo->SecurityId = ParentInfo->SecurityId;
+
+    ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, ParentRecord);
 }
 
 /**
@@ -1967,20 +2032,33 @@ GetLastClusterInDataRun(PDEVICE_EXTENSION Vcb, PNTFS_ATTR_RECORD Attribute, PULO
 }
 
 PSTANDARD_INFORMATION
-GetStandardInformationFromRecord(PDEVICE_EXTENSION Vcb,
-                                 PFILE_RECORD_HEADER FileRecord)
+NtfsFindStandardInformation(PDEVICE_EXTENSION Vcb,
+                            PFILE_RECORD_HEADER FileRecord,
+                            PULONG ValueLength)
 {
     NTSTATUS Status;
     FIND_ATTR_CONTXT Context;
     PNTFS_ATTR_RECORD Attribute;
-    PSTANDARD_INFORMATION StdInfo;
+
+    if (ValueLength != NULL)
+        *ValueLength = 0;
 
     Status = FindFirstAttribute(&Context, Vcb, FileRecord, FALSE, &Attribute);
     while (NT_SUCCESS(Status))
     {
-        if (Attribute->Type == AttributeStandardInformation)
+        if (Attribute->Type == AttributeStandardInformation &&
+            Attribute->IsNonResident == 0 &&
+            Attribute->Resident.ValueLength >= NTFS_STD_INFO_V12_SIZE)
         {
-            StdInfo = (PSTANDARD_INFORMATION)((ULONG_PTR)Attribute + Attribute->Resident.ValueOffset);
+            PSTANDARD_INFORMATION StdInfo;
+
+            /* SecurityId and the rest of the tail are valid only at 72 bytes.
+             * Callers that need them must test ValueLength first. */
+            if (ValueLength != NULL)
+                *ValueLength = Attribute->Resident.ValueLength;
+
+            StdInfo = (PSTANDARD_INFORMATION)((ULONG_PTR)Attribute +
+                                              Attribute->Resident.ValueOffset);
             FindCloseAttribute(&Context);
             return StdInfo;
         }
@@ -1990,6 +2068,13 @@ GetStandardInformationFromRecord(PDEVICE_EXTENSION Vcb,
 
     FindCloseAttribute(&Context);
     return NULL;
+}
+
+PSTANDARD_INFORMATION
+GetStandardInformationFromRecord(PDEVICE_EXTENSION Vcb,
+                                 PFILE_RECORD_HEADER FileRecord)
+{
+    return NtfsFindStandardInformation(Vcb, FileRecord, NULL);
 }
 
 /**

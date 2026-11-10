@@ -412,8 +412,8 @@ typedef struct _ATTR_RECORD
 typedef struct _STANDARD_INFORMATION
 {
     ULONGLONG CreationTime;      // 0x00
-    ULONGLONG ChangeTime;        // 0x08
-    ULONGLONG LastWriteTime;     // 0x10
+    ULONGLONG LastWriteTime;     // 0x08 data modification
+    ULONGLONG ChangeTime;        // 0x10 MFT change
     ULONGLONG LastAccessTime;    // 0x18
     ULONG     FileAttribute;     // 0x20
     ULONG     MaximumVersions;   // 0x24
@@ -424,6 +424,12 @@ typedef struct _STANDARD_INFORMATION
     ULONGLONG QuotaCharge;       // 0x38
     ULONGLONG Usn;               // 0x40
 } STANDARD_INFORMATION, *PSTANDARD_INFORMATION;   // 72 bytes (NTFS 3.x)
+
+C_ASSERT(sizeof(STANDARD_INFORMATION) == 72);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, LastWriteTime) == 0x08);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, ChangeTime) == 0x10);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, SecurityId) == 0x34);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, Usn) == 0x40);
 
 typedef struct _FILENAME_ATTRIBUTE
 {

@@ -821,6 +821,10 @@ NtfsSetAllocationInformation(
 * maintaining automatically"; both are treated as no change, as the driver
 * doesn't yet update timestamps on I/O. FileAttributes of zero means no change.
 *
+* Only the prefix fields (times and FileAttribute) are written. Those exist in
+* both the 48-byte and 72-byte values. OwnerId, SecurityId, QuotaCharge, Usn,
+* and the attribute's value length are left as they were.
+*
 * NTFS keeps a second copy of these in $FILE_NAME and a third in the parent
 * directory's index entry; all three are updated here.
 *

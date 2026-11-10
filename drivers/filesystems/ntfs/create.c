@@ -41,9 +41,9 @@ static PCWSTR MftIdToName[] = {
     L"$Bitmap",
     L"$Boot",
     L"$BadClus",
-    L"$Quota",
+    L"$Secure",
     L"$UpCase",
-    L"$Extended",
+    L"$Extend",
 };
 
 /* FUNCTIONS ****************************************************************/
@@ -918,7 +918,7 @@ NtfsCreateDirectory(PDEVICE_EXTENSION DeviceExt,
     NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
 
     // add first attribute, $STANDARD_INFORMATION
-    AddStandardInformation(FileRecord, NextAttribute);
+    AddStandardInformation(DeviceExt, FileRecord, NextAttribute, NTFS_SECURITY_ID);
 
     // advance NextAttribute pointer to the next attribute
     NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)NextAttribute + (ULONG_PTR)NextAttribute->Length);
@@ -931,6 +931,9 @@ NtfsCreateDirectory(PDEVICE_EXTENSION DeviceExt,
         ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
         return Status;
     }
+
+    /* A 72-byte parent contributes its security id. A short parent leaves 0x100. */
+    NtfsCopyParentSecurityId(DeviceExt, FileRecord, ParentMftIndex);
 
     // save a pointer to the filename attribute
     FilenameAttribute = (PFILENAME_ATTRIBUTE)((ULONG_PTR)NextAttribute + NextAttribute->Resident.ValueOffset);
@@ -1121,7 +1124,7 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
     NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
 
     // add first attribute, $STANDARD_INFORMATION
-    AddStandardInformation(FileRecord, NextAttribute);
+    AddStandardInformation(DeviceExt, FileRecord, NextAttribute, NTFS_SECURITY_ID);
 
     // advance NextAttribute pointer to the next attribute
     NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)NextAttribute + (ULONG_PTR)NextAttribute->Length);
@@ -1134,6 +1137,9 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
         ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
         return Status;
     }
+
+    /* A 72-byte parent contributes its security id. A short parent leaves 0x100. */
+    NtfsCopyParentSecurityId(DeviceExt, FileRecord, ParentMftIndex);
 
     // save a pointer to the filename attribute
     FilenameAttribute = (PFILENAME_ATTRIBUTE)((ULONG_PTR)NextAttribute + NextAttribute->Resident.ValueOffset);

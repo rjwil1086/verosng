@@ -221,7 +221,8 @@ typedef enum
 #define NTFS_FILE_BITMAP            6
 #define NTFS_FILE_BOOT                7
 #define NTFS_FILE_BADCLUS            8
-#define NTFS_FILE_QUOTA                9
+/* Record 9 is $Secure on NTFS 3.x. $Quota lives under $Extend. */
+#define NTFS_FILE_SECURE             9
 #define NTFS_FILE_UPCASE            10
 #define NTFS_FILE_EXTEND            11
 #define NTFS_FILE_FIRST_USER_FILE   16
@@ -362,19 +363,37 @@ typedef struct
 
 typedef struct
 {
-    ULONGLONG CreationTime;
-    ULONGLONG LastWriteTime;
-    ULONGLONG ChangeTime;
-    ULONGLONG LastAccessTime;
-    ULONG FileAttribute;
-    ULONG AlignmentOrReserved[3];
-#if 0
-    ULONG QuotaId;
-    ULONG SecurityId;
-    ULONGLONG QuotaCharge;
-    USN Usn;
-#endif
+    ULONGLONG CreationTime;       /* 0x00 */
+    ULONGLONG LastWriteTime;      /* 0x08 data modification */
+    ULONGLONG ChangeTime;         /* 0x10 MFT change */
+    ULONGLONG LastAccessTime;     /* 0x18 */
+    ULONG FileAttribute;          /* 0x20 */
+    ULONG MaximumVersions;       /* 0x24 */
+    ULONG VersionNumber;         /* 0x28 */
+    ULONG ClassId;               /* 0x2C */
+    ULONG OwnerId;               /* 0x30 */
+    ULONG SecurityId;            /* 0x34 */
+    ULONGLONG QuotaCharge;        /* 0x38 */
+    ULONGLONG Usn;                /* 0x40 */
 } STANDARD_INFORMATION, *PSTANDARD_INFORMATION;
+
+/* NTFS 1.2 ends after ClassId. NTFS 3.x keeps the tail through Usn.
+ * OwnerId, SecurityId, QuotaCharge, and Usn are valid only when the
+ * resident value is the longer size. A 48-byte value is still legal
+ * on a 3.1 volume. */
+#define NTFS_STD_INFO_V12_SIZE 0x30
+#define NTFS_STD_INFO_V31_SIZE 0x48
+
+/* Id ntfslib stores in $SII and stamps on ordinary files. */
+#define NTFS_SECURITY_ID 0x100
+
+C_ASSERT(sizeof(STANDARD_INFORMATION) == NTFS_STD_INFO_V31_SIZE);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, LastWriteTime) == 0x08);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, ChangeTime) == 0x10);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, SecurityId) == 0x34);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, Usn) == 0x40);
+C_ASSERT(FIELD_OFFSET(STANDARD_INFORMATION, FileAttribute) + sizeof(ULONG) <=
+         NTFS_STD_INFO_V12_SIZE);
 
 
 typedef struct
@@ -712,8 +731,15 @@ AddFileName(PFILE_RECORD_HEADER FileRecord,
             PULONGLONG ParentMftIndex);
 
 NTSTATUS
-AddStandardInformation(PFILE_RECORD_HEADER FileRecord,
-                       PNTFS_ATTR_RECORD AttributeAddress);
+AddStandardInformation(PDEVICE_EXTENSION Vcb,
+                       PFILE_RECORD_HEADER FileRecord,
+                       PNTFS_ATTR_RECORD AttributeAddress,
+                       ULONG SecurityId);
+
+VOID
+NtfsCopyParentSecurityId(PDEVICE_EXTENSION Vcb,
+                         PFILE_RECORD_HEADER FileRecord,
+                         ULONGLONG ParentMftIndex);
 
 NTSTATUS
 ConvertDataRunsToLargeMCB(PUCHAR DataRun,
@@ -741,6 +767,11 @@ NtfsDumpDataRuns(PVOID StartOfRun,
 VOID
 NtfsDumpFileAttributes(PDEVICE_EXTENSION Vcb,
                        PFILE_RECORD_HEADER FileRecord);
+
+PSTANDARD_INFORMATION
+NtfsFindStandardInformation(PDEVICE_EXTENSION Vcb,
+                            PFILE_RECORD_HEADER FileRecord,
+                            PULONG ValueLength);
 
 PSTANDARD_INFORMATION
 GetStandardInformationFromRecord(PDEVICE_EXTENSION Vcb,

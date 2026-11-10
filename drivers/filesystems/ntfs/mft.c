@@ -1985,6 +1985,8 @@ ReadFileRecord(PDEVICE_EXTENSION Vcb,
 * parent directory's index entry. Windows funnels all three through one
 * routine (NtfsUpdateDuplicateInfo) precisely so they cannot drift; this is
 * that funnel. Callers change $STANDARD_INFORMATION and then say what moved.
+* This routine reads the prefix fields only. It does not resize the attribute
+* or write OwnerId, SecurityId, QuotaCharge, or Usn.
 *
 * The file record is written back here, so callers need not write it again.
 *
