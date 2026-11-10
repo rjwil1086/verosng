@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Windows 10 capture
 
-The guest is the powered-off VMware disk `D:\VMware\Windows 10 x64\Windows 10 x64.vmdk`. QEMU opens it with `format=vmdk` and `-snapshot`. `vmrun list` must show no running VMs first. Do not write the VMDK. Boot with TCG, `-m 8192`, and `-smp 4`. Do not pass `-accel whpx` to `qemu-system-x86_64`. The VerOS NG boot uses the same memory and CPU count.
+The guest is the powered-off QEMU disk `virtual-machines/win10-22h2/disk.qcow2` at the project root that contains this checkout. QEMU opens it with `format=qcow2` and `-snapshot`. Do not write the qcow2. Boot with `-accel tcg`, `-m 8192`, and `-smp 4`. Do not pass `-accel whpx` on a capture boot. The VerOS NG boot uses the same memory and CPU count.
 
 Two captures exist. Both stay under `output/`, which is gitignored.
 
@@ -16,7 +16,7 @@ A Windows result is evidence only when that guest log contains `DIFF END OK`. A 
 
 `differential-tests/syscall-diff`, `differential-tests/graphics-diff`, and `differential-tests/kernel-abi` reuse `output/<tool>/windows.log` when `differential-tests/probe-stamp/Test-WindowsProbe.ps1` prints `REUSE` for that tool. The stamp is `output/<tool>/windows.probe`. It records the probe source hash and the log hash. A change to that probe's sources requires a new Windows 10 boot. Each runner's `-CheckWindows` reports the same decision.
 
-The parent checkout keeps the probe source and the compare script. This tree keeps the name list and a report of names plus status codes. It may not keep the VMDK, an ISO, a disk image, a trace, a disassembly, a header, a `.lib`, a `.sys`, or an object file.
+The parent checkout keeps the probe source and the compare script. This tree keeps the name list and a report of names plus status codes. Neither tree may keep a disk image, an ISO, a trace, a disassembly, a header, a `.lib`, a `.sys`, or an object file.
 
 ```text
 Right: DIFF NtCreateFile 0x00000000

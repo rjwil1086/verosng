@@ -1,0 +1,33 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which disk and QEMU devices should the Windows 10 22H2 trace guest use?",
+  "allowedInputs": [
+    "source/.cursor/rules/windows-capture.mdc",
+    "source/.cursor/rules/qemu-interactive.mdc",
+    "source/.cursor/rules/local-build.mdc",
+    "tools/windows-trace/Collect-Traces.ps1",
+    "The user request to point probes at a new QEMU Windows test VM"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "windows-trace",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Implement the plan: Windows 10 22H2 test VM, and point the probes at that guest.",
+    "model": "Grok 4.7",
+    "date": "2026-11-09"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "Windows trace guest disk",
+    "before": "D:\\VMware\\Windows 10 x64\\Windows 10 x64.vmdk",
+    "after": "virtual-machines/win10-22h2/disk.qcow2",
+    "note": "No trace was captured. The after value is the default disk path in Collect-Traces.ps1."
+  }
+}

@@ -2,7 +2,7 @@
 
 param(
     [string]$SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
-    [string]$Disk = "D:\VMware\Windows 10 x64\Windows 10 x64.vmdk",
+    [string]$Disk = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path "virtual-machines\win10-22h2\disk.qcow2"),
     [string]$Qemu = "C:\Program Files\qemu\qemu-system-x86_64.exe",
     [string]$SyscallMap = "",
     [int]$TimeoutSec = 5400,
@@ -11,6 +11,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $PSBoundParameters.ContainsKey("Qemu")) {
+    $localQemu = Join-Path (Split-Path $SourceRoot -Parent) "tools\qemu\qemu-system-x86_64.exe"
+    if (Test-Path $localQemu) { $Qemu = $localQemu }
+}
+$QemuShare = Join-Path (Split-Path $Qemu) "share"
 $out = Join-Path $SourceRoot "output\windows"
 $trace = Join-Path $SourceRoot "output\windows-trace"
 $dll = Join-Path $SourceRoot "tools\qemu-harness\abi.dll"
@@ -118,20 +123,21 @@ foreach ($name in $apps.Keys) {
     if ($SyscallMap -and (Test-Path $SyscallMap)) {
         $plugin += ",syscalls=" + ($SyscallMap -replace '\\', '/')
     }
-    $codeFd = "C:\Program Files\qemu\share\edk2-x86_64-code.fd"
+    $codeFd = Join-Path $QemuShare "edk2-x86_64-code.fd"
     $varsFd = Join-Path $out "ovmf-vars.fd"
-    Copy-Item "C:\Program Files\qemu\share\edk2-i386-vars.fd" $varsFd -Force
+    Copy-Item (Join-Path $QemuShare "edk2-i386-vars.fd") $varsFd -Force
     $exe = $apps[$name]
     if ($exe -match ' ') { $exe = '"' + $exe + '"' }
     $launch = $exe
     foreach ($item in $extra[$name]) { $launch += " " + $item }
-    $arg = "-accel tcg -snapshot -machine q35 -cpu max -m 8192 -smp 4 -display none -vga std " +
+    $arg = "-accel tcg -snapshot -machine q35 -cpu qemu64,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time -m 8192 -smp 4 -display none -vga qxl " +
+        "-device qemu-xhci -device usb-tablet " +
         "-monitor tcp:127.0.0.1:${MonitorPort},server,nowait " +
         "-drive if=pflash,format=raw,readonly=on,file=`"$codeFd`" " +
         "-drive if=pflash,format=raw,file=`"$varsFd`" " +
-        "-drive `"file=$Disk,format=vmdk,if=none,id=hd`" -device nvme,drive=hd,serial=nvme0,bootindex=1 " +
+        "-drive `"file=$Disk,format=qcow2,if=none,id=hd`" -device virtio-blk-pci,drive=hd,bootindex=1 " +
         "-drive `"file=$iso,format=raw,if=none,id=cd`" -device ich9-ahci,id=ahci -device ide-cd,bus=ahci.0,drive=cd,bootindex=2 " +
-        "-netdev user,id=n0 -device e1000,netdev=n0 " +
+        "-netdev user,id=n0 -device virtio-net-pci,netdev=n0 " +
         "-chardev socket,id=qga,host=127.0.0.1,port=$QgaPort,server=on,wait=off " +
         "-device virtio-serial-pci -device virtserialport,chardev=qga,name=org.qemu.guest_agent.0 " +
         "-plugin `"$plugin`""
