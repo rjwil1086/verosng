@@ -1,0 +1,20 @@
+---
+description: New source is Rust unless C or C++ is required
+alwaysApply: true
+---
+
+# New code is Rust
+
+A new source file is Rust. A new function, type, or module goes in a Rust file.
+
+C or C++ is the right choice only when Rust does not fit:
+
+- The change belongs in an existing C or C++ file. Patch that file. Do not rewrite it in Rust to make the change.
+- The code has to stay C or C++ to match a binary interface, a build rule that only compiles C, or a phase that runs before a Rust runtime exists (a boot sector, early loader assembly, a header other C code includes).
+
+When the exception applies, follow [reactos-c-style.mdc](reactos-c-style.mdc).
+
+```text
+Right: a new NTFS helper in a new Rust crate, called from the existing C driver.
+Wrong: a new .c file for that helper, or a Rust rewrite of the driver to fix one bug.
+```
