@@ -91,15 +91,7 @@ NtfsClose(PNTFS_IRP_CONTEXT IrpContext)
     FileObject = IrpContext->FileObject;
     DeviceExtension = DeviceObject->DeviceExtension;
 
-    if (!ExAcquireResourceExclusiveLite(&DeviceExtension->DirResource,
-                                        BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT)))
-    {
-        return NtfsMarkIrpContextForQueue(IrpContext);
-    }
-
     Status = NtfsCloseFile(DeviceExtension, FileObject);
-
-    ExReleaseResourceLite(&DeviceExtension->DirResource);
 
     if (Status == STATUS_PENDING)
     {

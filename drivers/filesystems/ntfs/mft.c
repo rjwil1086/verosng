@@ -114,6 +114,108 @@ ReleaseAttributeContext(PNTFS_ATTR_CONTEXT Context)
 * Optional pointer to a ULONG that will receive the offset of the found attribute
 * from the beginning of the record. Can be set to NULL.
 */
+static
+VOID
+NtfsMergeAttributeSegments(PDEVICE_EXTENSION Vcb,
+                           PFILE_RECORD_HEADER BaseRecord,
+                           PNTFS_ATTR_CONTEXT Context)
+{
+    PNTFS_ATTR_RECORD Attribute;
+    PNTFS_ATTR_CONTEXT ListContext = NULL;
+    PUCHAR List = NULL;
+    ULONG ListSize;
+    PNTFS_ATTRIBUTE_LIST_ITEM Item;
+    PNTFS_ATTRIBUTE_LIST_ITEM End;
+
+    Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)BaseRecord + BaseRecord->AttributeOffset);
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0)
+    {
+        if (Attribute->Type == AttributeAttributeList)
+        {
+            ListContext = PrepareAttributeContext(Attribute);
+            break;
+        }
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+    }
+    if (ListContext == NULL)
+        return;
+
+    ListSize = (ULONG)AttributeDataLength(ListContext->pRecord);
+    if (ListSize == 0 || ListSize > 1024 * 1024)
+    {
+        ReleaseAttributeContext(ListContext);
+        return;
+    }
+
+    List = ExAllocatePoolWithTag(NonPagedPool, ListSize, TAG_NTFS);
+    if (List == NULL ||
+        ReadAttribute(Vcb, ListContext, 0, (PCHAR)List, ListSize) != ListSize)
+    {
+        if (List != NULL)
+            ExFreePoolWithTag(List, TAG_NTFS);
+        ReleaseAttributeContext(ListContext);
+        return;
+    }
+    ReleaseAttributeContext(ListContext);
+
+    Item = (PNTFS_ATTRIBUTE_LIST_ITEM)List;
+    End = (PNTFS_ATTRIBUTE_LIST_ITEM)(List + ListSize);
+    while (Item < End && Item->Length != 0 && Item->Type != AttributeEnd)
+    {
+        PFILE_RECORD_HEADER Remote;
+        PNTFS_ATTR_RECORD RemoteAttr;
+        PUCHAR Run;
+        ULONGLONG NextVbn;
+        LONGLONG RunOffset;
+        ULONGLONG RunLength;
+        ULONGLONG LastLcn = 0;
+
+        if (Item->Type == Context->pRecord->Type &&
+            Item->NameLength == Context->pRecord->NameLength &&
+            Item->StartingVCN != Context->pRecord->NonResident.LowestVCN &&
+            (Item->NameLength == 0 ||
+             RtlCompareMemory((PUCHAR)Item + Item->NameOffset,
+                              (PUCHAR)Context->pRecord + Context->pRecord->NameOffset,
+                              Item->NameLength * sizeof(WCHAR)) == Item->NameLength * sizeof(WCHAR)))
+        {
+            Remote = ExAllocateFromNPagedLookasideList(&Vcb->FileRecLookasideList);
+            if (Remote != NULL &&
+                NT_SUCCESS(ReadFileRecord(Vcb, Item->MFTIndex & NTFS_MFT_MASK, Remote)))
+            {
+                RemoteAttr = (PNTFS_ATTR_RECORD)((ULONG_PTR)Remote + Remote->AttributeOffset);
+                while (RemoteAttr->Type != AttributeEnd && RemoteAttr->Length != 0)
+                {
+                    if (RemoteAttr->Type == Item->Type &&
+                        RemoteAttr->IsNonResident &&
+                        RemoteAttr->NonResident.LowestVCN == Item->StartingVCN)
+                    {
+                        Run = (PUCHAR)RemoteAttr + RemoteAttr->NonResident.MappingPairsOffset;
+                        NextVbn = Item->StartingVCN;
+                        while (*Run != 0)
+                        {
+                            Run = DecodeRun(Run, &RunOffset, &RunLength);
+                            if (RunOffset != -1)
+                            {
+                                LastLcn += RunOffset;
+                                FsRtlAddLargeMcbEntry(&Context->DataRunsMCB, NextVbn, LastLcn, RunLength);
+                            }
+                            NextVbn += RunLength;
+                        }
+                        break;
+                    }
+                    RemoteAttr = (PNTFS_ATTR_RECORD)((ULONG_PTR)RemoteAttr + RemoteAttr->Length);
+                }
+            }
+            if (Remote != NULL)
+                ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Remote);
+        }
+
+        Item = (PNTFS_ATTRIBUTE_LIST_ITEM)((PUCHAR)Item + Item->Length);
+    }
+
+    ExFreePoolWithTag(List, TAG_NTFS);
+}
+
 NTSTATUS
 FindAttribute(PDEVICE_EXTENSION Vcb,
               PFILE_RECORD_HEADER MftRecord,
@@ -158,11 +260,19 @@ FindAttribute(PDEVICE_EXTENSION Vcb,
                 /* Found it, fill up the context and return. */
                 DPRINT("Found context\n");
                 *AttrCtx = PrepareAttributeContext(Attribute);
+                if (*AttrCtx == NULL)
+                {
+                    FindCloseAttribute(&Context);
+                    return STATUS_INSUFFICIENT_RESOURCES;
+                }
 
                 (*AttrCtx)->FileMFTIndex = MftRecord->MFTRecordNumber;
 
                 if (Offset != NULL)
                     *Offset = Context.Offset;
+
+                if (MftRecord->BaseFileRecord == 0 && (*AttrCtx)->pRecord->IsNonResident)
+                    NtfsMergeAttributeSegments(Vcb, MftRecord, *AttrCtx);
 
                 FindCloseAttribute(&Context);
                 return STATUS_SUCCESS;
@@ -221,6 +331,12 @@ FindAttribute(PDEVICE_EXTENSION Vcb,
                 ReadFileRecord(Vcb, MftIndex, RemoteHdr);
                 Status = FindAttribute(Vcb, RemoteHdr, Type, Name, NameLength, AttrCtx, Offset);
                 ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, RemoteHdr);
+                if (NT_SUCCESS(Status) &&
+                    MftRecord->BaseFileRecord == 0 &&
+                    (*AttrCtx)->pRecord->IsNonResident)
+                {
+                    NtfsMergeAttributeSegments(Vcb, MftRecord, *AttrCtx);
+                }
                 FindCloseAttribute(&Context);
                 return Status;
             }
@@ -463,6 +579,7 @@ IncreaseMftSize(PDEVICE_EXTENSION Vcb, BOOLEAN CanWait)
 
     // Update the mft mirror
     Status = UpdateMftMirror(Vcb);
+    NtfsLoadMftBitmap(Vcb);
 
     // Cleanup
     ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, BlankFileRecord);
@@ -1354,154 +1471,101 @@ NtfsMapAttributeRuns(PDEVICE_EXTENSION Vcb,
                      PNTFS_IO_RUN_LIST RunList,
                      PULONG MappedLength)
 {
-    ULONGLONG LastLCN = 0;
-    ULONGLONG CurrentOffset = 0;
-    PUCHAR DataRun;
-    LONGLONG DataRunOffset;
-    ULONGLONG DataRunLength = 0;
-    LONGLONG DataRunStartLCN = -1;
-    ULONG RunLength;
     ULONG Mapped = 0;
-    ULONG UsedBufferSize;
+    ULONG Index = 0;
+    ULONGLONG Pos = 0;
+    ULONGLONG EndVcn;
+    LONGLONG LastVbn = 0;
+    LONGLONG LastLbn = 0;
     NTSTATUS Status = STATUS_SUCCESS;
-
-    //TEMPTEMP
-    PUCHAR TempBuffer;
+    ULONG Cluster = Vcb->NtfsInfo.BytesPerCluster;
 
     *MappedLength = 0;
 
-    // This will be rewritten in the next iteration to just use the DataRuns MCB directly
-    TempBuffer = ExAllocatePoolWithTag(NonPagedPool, Vcb->NtfsInfo.BytesPerFileRecord, TAG_NTFS);
-    if (TempBuffer == NULL)
+    /* The MCB holds every segment, including runs that no longer fit in the
+     * file record the sizes are stored in. */
+    EndVcn = Context->pRecord->NonResident.HighestVCN + 1;
+    if (FsRtlLookupLastLargeMcbEntry(&Context->DataRunsMCB, &LastVbn, &LastLbn) &&
+        (ULONGLONG)(LastVbn + 1) > EndVcn)
+        EndVcn = (ULONGLONG)(LastVbn + 1);
+
+    while (Mapped < Length && Pos < EndVcn)
     {
-        DPRINT1("Not enough memory!\n");
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-    RtlZeroMemory(TempBuffer, Vcb->NtfsInfo.BytesPerFileRecord);
+        LONGLONG Vbn;
+        LONGLONG Lbn;
+        LONGLONG Count;
+        ULONGLONG RunVcn;
+        ULONGLONG RunCount;
+        ULONGLONG Need;
+        ULONGLONG ByteStart;
+        ULONGLONG ByteEnd;
+        ULONGLONG From;
+        ULONGLONG To;
+        ULONG Take;
 
-    ConvertLargeMCBToDataRuns(&Context->DataRunsMCB,
-                              Context->pRecord->NonResident.HighestVCN + 1,
-                              TempBuffer,
-                              Vcb->NtfsInfo.BytesPerFileRecord,
-                              &UsedBufferSize);
+        Need = Offset + Mapped;
 
-    DataRun = TempBuffer;
-
-    // I. Walk forward to the data run that holds Offset.
-    while (1)
-    {
-        DataRun = DecodeRun(DataRun, &DataRunOffset, &DataRunLength);
-        if (DataRunOffset != (LONGLONG)-1)
+        if (!FsRtlGetNextLargeMcbEntry(&Context->DataRunsMCB, Index, &Vbn, &Lbn, &Count))
         {
-            /* Normal data run. */
-            DataRunStartLCN = LastLCN + DataRunOffset;
-            LastLCN = DataRunStartLCN;
+            RunVcn = EndVcn;
+            RunCount = 0;
+            Lbn = -1;
         }
         else
         {
-            /* Sparse data run. */
-            DataRunStartLCN = -1;
+            Index++;
+            RunVcn = (ULONGLONG)Vbn;
+            RunCount = (ULONGLONG)Count;
         }
 
-        if (Offset >= CurrentOffset &&
-            Offset < CurrentOffset + (DataRunLength * Vcb->NtfsInfo.BytesPerCluster))
+        if (RunVcn > Pos)
         {
-            break;
+            ByteStart = Pos * Cluster;
+            ByteEnd = RunVcn * Cluster;
+            if (Need < ByteEnd)
+            {
+                From = max(Need, ByteStart);
+                To = min(Offset + Length, ByteEnd);
+                Take = (ULONG)(To - From);
+                Status = NtfsAddIoRun(RunList, NTFS_SPARSE_LBO, Take);
+                if (!NT_SUCCESS(Status))
+                    break;
+                Mapped += Take;
+            }
+            Pos = RunVcn;
+            if (Mapped >= Length || RunCount == 0)
+                break;
+            Need = Offset + Mapped;
         }
 
-        if (*DataRun == 0)
-        {
-            /* Offset is past the last cluster the attribute has allocated. */
-            Status = STATUS_END_OF_FILE;
-            goto Cleanup;
-        }
+        ByteStart = RunVcn * Cluster;
+        ByteEnd = (RunVcn + RunCount) * Cluster;
+        Pos = RunVcn + RunCount;
+        if (Need >= ByteEnd || RunCount == 0)
+            continue;
 
-        CurrentOffset += DataRunLength * Vcb->NtfsInfo.BytesPerCluster;
-    }
-
-    // II. Collect the runs. The first is special only in that the request
-    // usually starts partway into it.
-
-    RunLength = (ULONG)min(DataRunLength * Vcb->NtfsInfo.BytesPerCluster - (Offset - CurrentOffset), Length);
-
-    Status = NtfsAddIoRun(RunList,
-                          (DataRunStartLCN == -1) ? NTFS_SPARSE_LBO :
-                              DataRunStartLCN * Vcb->NtfsInfo.BytesPerCluster + Offset - CurrentOffset,
-                          RunLength);
-    if (!NT_SUCCESS(Status))
-        goto Cleanup;
-
-    Length -= RunLength;
-    Mapped += RunLength;
-
-    /* Did that consume the rest of this data run? */
-    if (RunLength == DataRunLength * Vcb->NtfsInfo.BytesPerCluster - (Offset - CurrentOffset))
-    {
-        /* Never decode past the terminator; the caller gets a short map */
-        if (*DataRun == 0)
-            goto Cleanup;
-
-        CurrentOffset += DataRunLength * Vcb->NtfsInfo.BytesPerCluster;
-        DataRun = DecodeRun(DataRun, &DataRunOffset, &DataRunLength);
-        if (DataRunOffset != (LONGLONG)-1)
-        {
-            DataRunStartLCN = LastLCN + DataRunOffset;
-            LastLCN = DataRunStartLCN;
-        }
+        From = max(Need, ByteStart);
+        To = min(Offset + Length, ByteEnd);
+        Take = (ULONG)(To - From);
+        if (Lbn == -1)
+            Status = NtfsAddIoRun(RunList, NTFS_SPARSE_LBO, Take);
         else
-            DataRunStartLCN = -1;
-    }
-
-    while (Length > 0)
-    {
-        RunLength = (ULONG)min(DataRunLength * Vcb->NtfsInfo.BytesPerCluster, Length);
-
-        Status = NtfsAddIoRun(RunList,
-                              (DataRunStartLCN == -1) ? NTFS_SPARSE_LBO :
-                                  DataRunStartLCN * Vcb->NtfsInfo.BytesPerCluster,
-                              RunLength);
+            Status = NtfsAddIoRun(RunList, (ULONGLONG)Lbn * Cluster + (From - ByteStart), Take);
         if (!NT_SUCCESS(Status))
-            goto Cleanup;
-
-        Length -= RunLength;
-        Mapped += RunLength;
-
-        /* We satisfied the request, but there is still data in this run. */
-        if (Length == 0 && RunLength != DataRunLength * Vcb->NtfsInfo.BytesPerCluster)
             break;
-
-        /* Last run the attribute has, so the caller gets a short map */
-        if (*DataRun == 0)
-            break;
-
-        CurrentOffset += DataRunLength * Vcb->NtfsInfo.BytesPerCluster;
-        DataRun = DecodeRun(DataRun, &DataRunOffset, &DataRunLength);
-        if (DataRunOffset != (LONGLONG)-1)
-        {
-            /* Normal data run. */
-            DataRunStartLCN = LastLCN + DataRunOffset;
-            LastLCN = DataRunStartLCN;
-        }
-        else
-        {
-            /* Sparse data run. */
-            DataRunStartLCN = -1;
-        }
+        Mapped += Take;
     }
 
-Cleanup:
-    Context->CacheRun = DataRun;
+    if (Mapped == 0 && Offset >= EndVcn * Cluster)
+        Status = STATUS_END_OF_FILE;
+
+    Context->CacheRun = NULL;
     Context->CacheRunOffset = Offset + Mapped;
-    Context->CacheRunStartLCN = DataRunStartLCN;
-    Context->CacheRunLength = DataRunLength;
-    Context->CacheRunLastLCN = LastLCN;
-    Context->CacheRunCurrentOffset = CurrentOffset;
-
-    //TEMPTEMP
-    ExFreePoolWithTag(TempBuffer, TAG_NTFS);
-
+    Context->CacheRunStartLCN = 0;
+    Context->CacheRunLength = 0;
+    Context->CacheRunLastLCN = 0;
+    Context->CacheRunCurrentOffset = Offset + Mapped;
     *MappedLength = Mapped;
-
     return Status;
 }
 
@@ -2188,9 +2252,9 @@ UpdateFileNameRecord(PDEVICE_EXTENSION Vcb,
     NTSTATUS Status;
 
     KeEnterCriticalRegion();
-    ExAcquireResourceExclusiveLite(&Vcb->IndexResource, TRUE);
+    ExAcquireResourceExclusiveLite(NtfsDirectoryResource(Vcb, ParentMFTIndex), TRUE);
     Status = UpdateFileNameRecordWorker(Vcb, ParentMFTIndex, FileName, DirSearch, Update, CaseSensitive);
-    ExReleaseResourceLite(&Vcb->IndexResource);
+    ExReleaseResourceLite(NtfsDirectoryResource(Vcb, ParentMFTIndex));
     KeLeaveCriticalRegion();
 
     return Status;
@@ -2387,6 +2451,8 @@ UpdateFileRecord(PDEVICE_EXTENSION Vcb,
 
     DPRINT("UpdateFileRecord(%p, 0x%I64x, %p)\n", Vcb, MftIndex, FileRecord);
 
+    NtfsLogFileRecord(Vcb, MftIndex, FileRecord);
+
     // Add the fixup array to prepare the data for writing to disk
     AddFixupArray(Vcb, &FileRecord->Ntfs);
 
@@ -2453,6 +2519,68 @@ FixupUpdateSequenceArray(PDEVICE_EXTENSION Vcb,
     }
 
     return STATUS_SUCCESS;
+}
+
+NTSTATUS
+NtfsLoadMftBitmap(PDEVICE_EXTENSION DeviceExt)
+{
+    ULONGLONG Size;
+    NTSTATUS Status;
+
+    if (DeviceExt->MftBitmap != NULL)
+    {
+        ExFreePoolWithTag(DeviceExt->MftBitmap, TAG_NTFS);
+        DeviceExt->MftBitmap = NULL;
+    }
+    if (DeviceExt->MftBitmapContext != NULL)
+    {
+        ReleaseAttributeContext(DeviceExt->MftBitmapContext);
+        DeviceExt->MftBitmapContext = NULL;
+    }
+
+    Status = FindAttribute(DeviceExt, DeviceExt->MasterFileTable, AttributeBitmap, L"", 0, &DeviceExt->MftBitmapContext, NULL);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Size = AttributeDataLength(DeviceExt->MftBitmapContext->pRecord);
+    if (Size == 0 || Size > MAXULONG)
+        return STATUS_FILE_CORRUPT_ERROR;
+
+    DeviceExt->MftBitmap = ExAllocatePoolWithTag(NonPagedPool, (ULONG)Size, TAG_NTFS);
+    if (DeviceExt->MftBitmap == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    if (ReadAttribute(DeviceExt, DeviceExt->MftBitmapContext, 0, (PCHAR)DeviceExt->MftBitmap, (ULONG)Size) != (ULONG)Size)
+    {
+        ExFreePoolWithTag(DeviceExt->MftBitmap, TAG_NTFS);
+        DeviceExt->MftBitmap = NULL;
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    DeviceExt->MftBitmapBytes = (ULONG)Size;
+    DeviceExt->MftNextFree = 24;
+    return STATUS_SUCCESS;
+}
+
+static
+NTSTATUS
+NtfsWriteMftBit(PDEVICE_EXTENSION DeviceExt, ULONGLONG Bit)
+{
+    ULONG Sector = DeviceExt->NtfsInfo.BytesPerSector;
+    ULONG Offset = (ULONG)(Bit / 8);
+    ULONG LengthWritten;
+
+    Offset = ROUND_DOWN(Offset, Sector);
+    if (Offset >= DeviceExt->MftBitmapBytes)
+        return STATUS_END_OF_FILE;
+
+    return WriteAttribute(DeviceExt,
+                          DeviceExt->MftBitmapContext,
+                          Offset,
+                          DeviceExt->MftBitmap + Offset,
+                          min(Sector, DeviceExt->MftBitmapBytes - Offset),
+                          &LengthWritten,
+                          NULL);
 }
 
 /**
@@ -2542,6 +2670,45 @@ AddNewMftEntry(PFILE_RECORD_HEADER FileRecord,
     UCHAR SystemReservedBits;
 
     DPRINT("AddNewMftEntry(%p, %p, %p, %s)\n", FileRecord, DeviceExt, DestinationIndex, CanWait ? "TRUE" : "FALSE");
+
+    if (DeviceExt->MftBitmap != NULL)
+    {
+        ULONGLONG Bits = AttributeDataLength(DeviceExt->MFTContext->pRecord) / DeviceExt->NtfsInfo.BytesPerFileRecord;
+        ULONGLONG Index;
+        ULONG LengthWritten;
+
+        KeEnterCriticalRegion();
+        ExAcquireResourceExclusiveLite(&DeviceExt->MftBitmapResource, TRUE);
+
+        Index = NtfsMftFindClearBit(DeviceExt->MftBitmap, Bits, DeviceExt->MftNextFree);
+        if (Index == ~0ULL)
+        {
+            ExReleaseResourceLite(&DeviceExt->MftBitmapResource);
+            KeLeaveCriticalRegion();
+            Status = IncreaseMftSize(DeviceExt, CanWait);
+            if (!NT_SUCCESS(Status))
+                return Status;
+            NtfsLoadMftBitmap(DeviceExt);
+            return AddNewMftEntry(FileRecord, DeviceExt, DestinationIndex, CanWait);
+        }
+
+        NtfsMftSetBit(DeviceExt->MftBitmap, Index, TRUE);
+        DeviceExt->MftNextFree = Index + 1;
+        Status = NtfsWriteMftBit(DeviceExt, Index);
+        ExReleaseResourceLite(&DeviceExt->MftBitmapResource);
+        KeLeaveCriticalRegion();
+        if (!NT_SUCCESS(Status))
+            return Status;
+
+        FileRecord->MFTRecordNumber = Index;
+        Status = UpdateFileRecord(DeviceExt, Index, FileRecord);
+        if (!NT_SUCCESS(Status))
+            return Status;
+
+        *DestinationIndex = Index;
+        UNREFERENCED_PARAMETER(LengthWritten);
+        return STATUS_SUCCESS;
+    }
 
     // First, we have to read the mft's $Bitmap attribute
 
@@ -3103,9 +3270,9 @@ NtfsAddFilenameToDirectory(PDEVICE_EXTENSION DeviceExt,
     NTSTATUS Status;
 
     KeEnterCriticalRegion();
-    ExAcquireResourceExclusiveLite(&DeviceExt->IndexResource, TRUE);
+    ExAcquireResourceExclusiveLite(NtfsDirectoryResource(DeviceExt, DirectoryMftIndex), TRUE);
     Status = AddFilenameToDirectoryWorker(DeviceExt, DirectoryMftIndex, FileReferenceNumber, FilenameAttribute, CaseSensitive);
-    ExReleaseResourceLite(&DeviceExt->IndexResource);
+    ExReleaseResourceLite(NtfsDirectoryResource(DeviceExt, DirectoryMftIndex));
     KeLeaveCriticalRegion();
 
     return Status;
@@ -3350,9 +3517,9 @@ NtfsRemoveFilenameFromDirectory(PDEVICE_EXTENSION DeviceExt,
     NTSTATUS Status;
 
     KeEnterCriticalRegion();
-    ExAcquireResourceExclusiveLite(&DeviceExt->IndexResource, TRUE);
+    ExAcquireResourceExclusiveLite(NtfsDirectoryResource(DeviceExt, DirectoryMftIndex), TRUE);
     Status = RemoveFilenameFromDirectoryWorker(DeviceExt, DirectoryMftIndex, FilenameAttribute, CaseSensitive);
-    ExReleaseResourceLite(&DeviceExt->IndexResource);
+    ExReleaseResourceLite(NtfsDirectoryResource(DeviceExt, DirectoryMftIndex));
     KeLeaveCriticalRegion();
 
     return Status;
@@ -3424,6 +3591,19 @@ FreeMftEntry(PDEVICE_EXTENSION DeviceExt,
     if (!NT_SUCCESS(Status))
     {
         DPRINT1("ERROR: Couldn't write file record %I64u while freeing it!\n", MftIndex);
+        return Status;
+    }
+
+    if (DeviceExt->MftBitmap != NULL && MftIndex / 8 < DeviceExt->MftBitmapBytes)
+    {
+        KeEnterCriticalRegion();
+        ExAcquireResourceExclusiveLite(&DeviceExt->MftBitmapResource, TRUE);
+        NtfsMftSetBit(DeviceExt->MftBitmap, MftIndex, FALSE);
+        if (MftIndex < DeviceExt->MftNextFree && MftIndex >= 24)
+            DeviceExt->MftNextFree = MftIndex;
+        Status = NtfsWriteMftBit(DeviceExt, MftIndex);
+        ExReleaseResourceLite(&DeviceExt->MftBitmapResource);
+        KeLeaveCriticalRegion();
         return Status;
     }
 
@@ -4041,6 +4221,11 @@ BrowseIndexEntries(PDEVICE_EXTENSION Vcb,
     PCHAR *BitmapMem;
     ULONG *BitmapPtr;
     RTL_BITMAP  Bitmap;
+
+    ULONG LocalStart = 0;
+
+    if (StartEntry == NULL)
+        StartEntry = &LocalStart;
 
     DPRINT("BrowseIndexEntries(%p, %p, %p, %lu, %p, %p, %wZ, %lu, %lu, %s, %s, %p)\n",
            Vcb,

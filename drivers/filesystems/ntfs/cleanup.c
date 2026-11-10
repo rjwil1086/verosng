@@ -119,9 +119,9 @@ NtfsCleanupFile(PDEVICE_EXTENSION DeviceExt,
                 BOOLEAN Empty;
 
                 KeEnterCriticalRegion();
-                ExAcquireResourceSharedLite(&DeviceExt->IndexResource, TRUE);
+                ExAcquireResourceSharedLite(NtfsDirectoryResource(DeviceExt, Fcb->MFTIndex), TRUE);
                 Status = NtfsIsDirectoryEmpty(DeviceExt, Fcb->MFTIndex, &Empty);
-                ExReleaseResourceLite(&DeviceExt->IndexResource);
+                ExReleaseResourceLite(NtfsDirectoryResource(DeviceExt, Fcb->MFTIndex));
                 KeLeaveCriticalRegion();
 
                 if (NT_SUCCESS(Status) && !Empty)
@@ -178,12 +178,6 @@ NtfsCleanup(PNTFS_IRP_CONTEXT IrpContext)
     FileObject = IrpContext->FileObject;
     DeviceExtension = DeviceObject->DeviceExtension;
 
-    if (!ExAcquireResourceExclusiveLite(&DeviceExtension->DirResource,
-                                        BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT)))
-    {
-        return NtfsMarkIrpContextForQueue(IrpContext);
-    }
-
     /* The handle is going away, and so are the locks it took */
     if (NtfsIsRegularFileObject(FileObject))
     {
@@ -194,8 +188,6 @@ NtfsCleanup(PNTFS_IRP_CONTEXT IrpContext)
     }
 
     Status = NtfsCleanupFile(DeviceExtension, FileObject, BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT));
-
-    ExReleaseResourceLite(&DeviceExtension->DirResource);
 
     if (Status == STATUS_PENDING)
     {

@@ -367,52 +367,48 @@ NtfsGetVolumeData(PDEVICE_OBJECT DeviceObject,
     }
 
     /*
-     * $MFTMirr stores the same first file record. A one-byte change in
-     * either copy means the volume cannot be trusted.
+     * A stale $MFTMirr is normal. Use it only when the primary record fails
+     * its update sequence or its attributes run past the record.
      */
-    MirrorRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
-    if (MirrorRecord == NULL)
-    {
-        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
-        ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    Status = NtfsReadSectors(DeviceObject,
-                             NtfsInfo->MftMirrStart.u.LowPart * NtfsInfo->SectorsPerCluster,
-                             NtfsInfo->BytesPerFileRecord / NtfsInfo->BytesPerSector,
-                             NtfsInfo->BytesPerSector,
-                             (PVOID)MirrorRecord,
-                             TRUE);
-    if (!NT_SUCCESS(Status) ||
-        RtlCompareMemory(MirrorRecord,
-                         DeviceExt->MasterFileTable,
-                         NtfsInfo->BytesPerFileRecord) != NtfsInfo->BytesPerFileRecord)
-    {
-        DPRINT1("MFT mirror does not match the first file record (Status %lx)\n", Status);
-        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, MirrorRecord);
-        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
-        ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
-        return NT_SUCCESS(Status) ? STATUS_FILE_CORRUPT_ERROR : Status;
-    }
-    ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, MirrorRecord);
-
     Status = FixupUpdateSequenceArray(DeviceExt, &DeviceExt->MasterFileTable->Ntfs);
-    if (!NT_SUCCESS(Status))
-    {
-        DPRINT1("MFT record failed its update sequence (Status %lx)\n", Status);
-        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
-        ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
-        return Status;
-    }
+    if (NT_SUCCESS(Status))
+        Status = NtfsFileRecordIsConsistent(DeviceExt, DeviceExt->MasterFileTable);
 
-    Status = NtfsFileRecordIsConsistent(DeviceExt, DeviceExt->MasterFileTable);
     if (!NT_SUCCESS(Status))
     {
-        DPRINT1("MFT record attributes are inconsistent (Status %lx)\n", Status);
-        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
-        ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
-        return Status;
+        DPRINT1("Primary MFT record is unusable (Status %lx), trying the mirror\n", Status);
+
+        MirrorRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+        if (MirrorRecord == NULL)
+        {
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
+            ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        Status = NtfsReadSectors(DeviceObject,
+                                 NtfsInfo->MftMirrStart.u.LowPart * NtfsInfo->SectorsPerCluster,
+                                 NtfsInfo->BytesPerFileRecord / NtfsInfo->BytesPerSector,
+                                 NtfsInfo->BytesPerSector,
+                                 (PVOID)MirrorRecord,
+                                 TRUE);
+        if (NT_SUCCESS(Status))
+        {
+            RtlCopyMemory(DeviceExt->MasterFileTable, MirrorRecord, NtfsInfo->BytesPerFileRecord);
+            Status = FixupUpdateSequenceArray(DeviceExt, &DeviceExt->MasterFileTable->Ntfs);
+            if (NT_SUCCESS(Status))
+                Status = NtfsFileRecordIsConsistent(DeviceExt, DeviceExt->MasterFileTable);
+        }
+
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, MirrorRecord);
+
+        if (!NT_SUCCESS(Status))
+        {
+            DPRINT1("MFT mirror cannot replace the primary record (Status %lx)\n", Status);
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, DeviceExt->MasterFileTable);
+            ExDeleteNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+            return Status;
+        }
     }
 
     /* A non-resident attribute list in $MFT is read through this */
@@ -505,7 +501,8 @@ NtfsGetVolumeData(PDEVICE_OBJECT DeviceObject,
     VolumeFcb->MFTIndex = 0;
     DeviceExt->VolumeFcb = VolumeFcb;
 
-    /* Get volume information */
+    /* Windows 10 leaves 8.3 generation off unless a volume asks for it. */
+    NtfsInfo->ShortNameCreation = FALSE;
     Status = FindAttribute(DeviceExt, VolumeRecord, AttributeVolumeInformation, L"", 0, &AttrCtxt, NULL);
 
     if (NT_SUCCESS(Status) && AttrCtxt->pRecord->Resident.ValueLength != 0)
@@ -517,6 +514,16 @@ NtfsGetVolumeData(PDEVICE_OBJECT DeviceObject,
         NtfsInfo->MajorVersion = VolumeInfo->MajorVersion;
         NtfsInfo->MinorVersion = VolumeInfo->MinorVersion;
         NtfsInfo->Flags = VolumeInfo->Flags;
+        if (VolumeInfo->Flags & NTFS_VOLUME_DIRTY)
+        {
+            DeviceExt->Flags |= VCB_VOLUME_READ_ONLY;
+            DPRINT1("Volume is dirty; mounting read-only until the log is replayed\n");
+        }
+
+        /* Volumes we format store 'SN' and a byte in the reserved field.
+         * A non-zero byte asks for 8.3 names. Anything else leaves them off. */
+        if ((VolumeInfo->Unknown1 & 0xFFFF) == 0x4E53)
+            NtfsInfo->ShortNameCreation = ((VolumeInfo->Unknown1 >> 16) & 0xFF) != 0;
     }
 
     if (NT_SUCCESS(Status))
@@ -683,9 +690,20 @@ NtfsMountVolume(PDEVICE_OBJECT DeviceObject,
     if (!NT_SUCCESS(Status))
         goto ByeBye;
 
+    NtfsLoadMftBitmap(Vcb);
+
     ExInitializeResourceLite(&Vcb->DirResource);
     ExInitializeResourceLite(&Vcb->IndexResource);
     ExInitializeResourceLite(&Vcb->BitmapResource);
+    ExInitializeResourceLite(&Vcb->MftBitmapResource);
+    {
+        ULONG Lock;
+        for (Lock = 0; Lock < 16; Lock++)
+            ExInitializeResourceLite(&Vcb->DirectoryLock[Lock]);
+    }
+
+    if (Vcb->Flags & VCB_VOLUME_READ_ONLY)
+        NtfsReplayLog(Vcb);
 
     KeInitializeSpinLock(&Vcb->FcbListLock);
 
@@ -977,9 +995,19 @@ GetVolumeBitmap(PDEVICE_EXTENSION DeviceExt,
     ExAcquireResourceSharedLite(&DeviceExt->BitmapResource, TRUE);
     _SEH2_TRY
     {
-        RtlCopyMemory(BitmapBuffer->Buffer, (PUCHAR)DeviceExt->BitmapBuffer + StartingLcn / 8, (SIZE_T)ToCopy);
-        Irp->IoStatus.Information += (ULONG_PTR)ToCopy;
-        Status = (Overflow ? STATUS_BUFFER_OVERFLOW : STATUS_SUCCESS);
+        if (ReadAttribute(DeviceExt,
+                          DeviceExt->BitmapContext,
+                          StartingLcn / 8,
+                          (PCHAR)BitmapBuffer->Buffer,
+                          (ULONG)ToCopy) != (ULONG)ToCopy)
+        {
+            Status = STATUS_UNSUCCESSFUL;
+        }
+        else
+        {
+            Irp->IoStatus.Information += (ULONG_PTR)ToCopy;
+            Status = (Overflow ? STATUS_BUFFER_OVERFLOW : STATUS_SUCCESS);
+        }
     }
     _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
     {
@@ -1132,7 +1160,6 @@ NtfsUserFsRequest(PDEVICE_OBJECT DeviceObject,
     DeviceExt = DeviceObject->DeviceExtension;
     switch (Stack->Parameters.FileSystemControl.FsControlCode)
     {
-        case FSCTL_DELETE_USN_JOURNAL:
         case FSCTL_ENUM_USN_DATA:
         case FSCTL_EXTEND_VOLUME:
         //case FSCTL_GET_RETRIEVAL_POINTER_BASE:
@@ -1140,14 +1167,38 @@ NtfsUserFsRequest(PDEVICE_OBJECT DeviceObject,
         //case FSCTL_LOOKUP_STREAM_FROM_CLUSTER:
         case FSCTL_MARK_HANDLE:
         case FSCTL_MOVE_FILE:
-        case FSCTL_QUERY_USN_JOURNAL:
         case FSCTL_READ_FILE_USN_DATA:
-        case FSCTL_READ_USN_JOURNAL:
         //case FSCTL_SHRINK_VOLUME:
-        case FSCTL_WRITE_USN_CLOSE_RECORD:
             UNIMPLEMENTED;
             DPRINT1("Unimplemented user request: %x\n", Stack->Parameters.FileSystemControl.FsControlCode);
             Status = STATUS_NOT_IMPLEMENTED;
+            break;
+
+        case FSCTL_WRITE_USN_CLOSE_RECORD:
+        {
+            PFILE_OBJECT FileObject = Stack->FileObject;
+            PNTFS_FCB Fcb = FileObject->FsContext;
+            UNICODE_STRING Name;
+            Name.Buffer = Fcb->ObjectName;
+            Name.Length = (USHORT)(wcslen(Fcb->ObjectName) * sizeof(WCHAR));
+            Name.MaximumLength = Name.Length;
+            Status = NtfsAppendUsn(DeviceExt, Fcb->MFTIndex, 0, USN_REASON_CLOSE, Fcb->Entry.FileAttributes, &Name);
+            break;
+        }
+
+        case FSCTL_DELETE_USN_JOURNAL:
+            Status = NtfsDeleteUsnJournal(DeviceExt);
+            break;
+
+        case FSCTL_QUERY_USN_JOURNAL:
+            Status = NtfsQueryUsnJournal(DeviceExt, Irp);
+            break;
+
+        case FSCTL_READ_USN_JOURNAL:
+            Status = NtfsReadUsnJournal(DeviceExt,
+                                        Irp->AssociatedIrp.SystemBuffer,
+                                        Stack->Parameters.FileSystemControl.InputBufferLength,
+                                        Irp);
             break;
 
         case FSCTL_LOCK_VOLUME:
@@ -1175,36 +1226,73 @@ NtfsUserFsRequest(PDEVICE_OBJECT DeviceObject,
             break;
 
         case FSCTL_CREATE_USN_JOURNAL:
-            /* METHOD_NEITHER. The caller only checks that this succeeds. */
-            Status = STATUS_SUCCESS;
+            /* METHOD_NEITHER keeps the caller's input in Type3InputBuffer.
+             * SystemBuffer is NULL, and reading it faults at address 0. */
+            Status = NtfsCreateUsnJournal(DeviceExt,
+                                          Stack->Parameters.FileSystemControl.Type3InputBuffer,
+                                          Stack->Parameters.FileSystemControl.InputBufferLength);
             break;
 
         case FSCTL_SET_COMPRESSION:
+            Status = NtfsSetCompression(DeviceExt,
+                                        Stack->FileObject,
+                                        Irp->AssociatedIrp.SystemBuffer,
+                                        Stack->Parameters.FileSystemControl.InputBufferLength);
+            break;
+
+        case FSCTL_GET_COMPRESSION:
+            Status = NtfsGetCompression(DeviceExt, Stack->FileObject, Irp);
+            break;
+
         case FSCTL_SET_REPARSE_POINT:
+            Status = NtfsSetReparsePoint(DeviceExt,
+                                         Stack->FileObject,
+                                         Irp->AssociatedIrp.SystemBuffer,
+                                         Stack->Parameters.FileSystemControl.InputBufferLength);
+            break;
+
+        case FSCTL_GET_REPARSE_POINT:
+            Status = NtfsGetReparsePoint(DeviceExt, Stack->FileObject, Irp);
+            break;
+
+        case FSCTL_DELETE_REPARSE_POINT:
+            Status = NtfsDeleteReparsePoint(DeviceExt,
+                                            Stack->FileObject,
+                                            Irp->AssociatedIrp.SystemBuffer,
+                                            Stack->Parameters.FileSystemControl.InputBufferLength);
+            break;
+
         case FSCTL_SET_SPARSE:
+            Status = NtfsSetSparse(DeviceExt,
+                                   Stack->FileObject,
+                                   Irp->AssociatedIrp.SystemBuffer,
+                                   Stack->Parameters.FileSystemControl.InputBufferLength);
+            break;
+
+        case FSCTL_SET_ZERO_DATA:
+            Status = NtfsSetZeroData(DeviceExt,
+                                     Stack->FileObject,
+                                     Irp->AssociatedIrp.SystemBuffer,
+                                     Stack->Parameters.FileSystemControl.InputBufferLength);
+            break;
+
         case FSCTL_SET_QUOTA:
-            /* Accept the request without marking the file compressed or
-             * sparse. A later read of the same file still uses the plain
-             * data attribute. */
-            Status = STATUS_SUCCESS;
+            Status = NtfsSetQuota(DeviceExt,
+                                  Irp->AssociatedIrp.SystemBuffer,
+                                  Stack->Parameters.FileSystemControl.InputBufferLength);
+            break;
+
+        case FSCTL_SET_ENCRYPTION:
+            Status = NtfsSetEncryption(DeviceExt,
+                                       Stack->FileObject,
+                                       Stack->Parameters.FileSystemControl.Type3InputBuffer,
+                                       Stack->Parameters.FileSystemControl.InputBufferLength);
             break;
 
         case FSCTL_CREATE_OR_GET_OBJECT_ID:
-        {
-            ULONG OutLength;
-            ULONG CopyLength;
-
-            OutLength = Stack->Parameters.FileSystemControl.OutputBufferLength;
-            CopyLength = min(OutLength, sizeof(FILE_OBJECTID_BUFFER));
-            if (Irp->AssociatedIrp.SystemBuffer != NULL && CopyLength != 0)
-            {
-                RtlZeroMemory(Irp->AssociatedIrp.SystemBuffer, CopyLength);
-            }
-
-            Irp->IoStatus.Information = CopyLength;
-            Status = STATUS_SUCCESS;
+        case FSCTL_GET_OBJECT_ID:
+            Status = NtfsQueryObjectId(DeviceExt, Stack->FileObject, Irp);
             break;
-        }
 
         default:
             DPRINT("Invalid user request: %x\n", Stack->Parameters.FileSystemControl.FsControlCode);

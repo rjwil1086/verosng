@@ -564,7 +564,8 @@ NtfsCreateNamedStream(PDEVICE_OBJECT DeviceObject,
         Status = NtfsCreateFileRecord(DeviceExt,
                                       FileObject,
                                       CaseSensitive,
-                                      BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT));
+                                      BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT),
+                                      NULL);
         if (NT_SUCCESS(Status))
         {
             Status = NtfsGetFCBForFile(DeviceExt,
@@ -645,6 +646,14 @@ NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
     if (DeviceExt->Flags & VCB_VOLUME_LOCKED)
     {
         return STATUS_ACCESS_DENIED;
+    }
+
+    /* A dirty volume is readable. Creating, replacing, or deleting is not. */
+    if ((DeviceExt->Flags & VCB_VOLUME_READ_ONLY) &&
+        (RequestedDisposition != FILE_OPEN ||
+         (RequestedOptions & FILE_DELETE_ON_CLOSE)))
+    {
+        return STATUS_MEDIA_WRITE_PROTECTED;
     }
 
     FileObject = Stack->FileObject;
@@ -911,7 +920,11 @@ NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
                 Status = NtfsCreateDirectory(DeviceExt,
                                              FileObject,
                                              BooleanFlagOn(Stack->Flags, SL_CASE_SENSITIVE),
-                                             BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT));
+                                             BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT),
+                                             (Stack->Parameters.Create.SecurityContext != NULL &&
+                                              Stack->Parameters.Create.SecurityContext->AccessState != NULL) ?
+                                                 Stack->Parameters.Create.SecurityContext->AccessState->SecurityDescriptor :
+                                                 NULL);
             }
             else
             {
@@ -919,7 +932,11 @@ NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
                 Status = NtfsCreateFileRecord(DeviceExt,
                                               FileObject,
                                               BooleanFlagOn(Stack->Flags, SL_CASE_SENSITIVE),
-                                              BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT));
+                                              BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT),
+                                              (Stack->Parameters.Create.SecurityContext != NULL &&
+                                               Stack->Parameters.Create.SecurityContext->AccessState != NULL) ?
+                                                  Stack->Parameters.Create.SecurityContext->AccessState->SecurityDescriptor :
+                                                  NULL);
             }
 
             if (!NT_SUCCESS(Status))
@@ -939,6 +956,11 @@ NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
             {
                 // We need to change Irp->IoStatus.Information to reflect creation
                 Irp->IoStatus.Information = FILE_CREATED;
+            }
+            else
+            {
+                DPRINT1("ERROR: Created '%wZ' but could not open it (Status %lx)\n",
+                        &FileObject->FileName, Status);
             }
             return Status;
         }
@@ -969,7 +991,6 @@ NtfsCreateFile(PDEVICE_OBJECT DeviceObject,
 NTSTATUS
 NtfsCreate(PNTFS_IRP_CONTEXT IrpContext)
 {
-    PDEVICE_EXTENSION DeviceExt;
     NTSTATUS Status;
     PDEVICE_OBJECT DeviceObject;
 
@@ -982,18 +1003,15 @@ NtfsCreate(PNTFS_IRP_CONTEXT IrpContext)
         return STATUS_SUCCESS;
     }
 
-    DeviceExt = DeviceObject->DeviceExtension;
-
     if (!(IrpContext->Flags & IRPCONTEXT_CANWAIT))
     {
         return NtfsMarkIrpContextForQueue(IrpContext);
     }
 
-    ExAcquireResourceExclusiveLite(&DeviceExt->DirResource,
-                                   TRUE);
+    /* Directory indexes take their own lock. The FCB table has its spinlock,
+     * so a create in one directory does not wait for a create in another. */
     Status = NtfsCreateFile(DeviceObject,
                             IrpContext);
-    ExReleaseResourceLite(&DeviceExt->DirResource);
 
     return Status;
 }
@@ -1029,13 +1047,15 @@ NTSTATUS
 NtfsCreateDirectory(PDEVICE_EXTENSION DeviceExt,
                     PFILE_OBJECT FileObject,
                     BOOLEAN CaseSensitive,
-                    BOOLEAN CanWait)
+                    BOOLEAN CanWait,
+                    PSECURITY_DESCRIPTOR ExplicitSecurity)
 {
 
     NTSTATUS Status = STATUS_SUCCESS;
     PFILE_RECORD_HEADER FileRecord;
     PNTFS_ATTR_RECORD NextAttribute;
     PFILENAME_ATTRIBUTE FilenameAttribute;
+    PFILENAME_ATTRIBUTE DosAttribute = NULL;
     ULONGLONG ParentMftIndex;
     ULONGLONG FileMftIndex;
     PB_TREE Tree;
@@ -1078,14 +1098,32 @@ NtfsCreateDirectory(PDEVICE_EXTENSION DeviceExt,
         return Status;
     }
 
-    /* A 72-byte parent contributes its security id. A short parent leaves 0x100. */
-    NtfsCopyParentSecurityId(DeviceExt, FileRecord, ParentMftIndex);
+    /* The child's security id comes from $Secure. */
+    NtfsAssignSecurity(DeviceExt, FileRecord, ParentMftIndex, ExplicitSecurity, TRUE);
 
     // save a pointer to the filename attribute
     FilenameAttribute = (PFILENAME_ATTRIBUTE)((ULONG_PTR)NextAttribute + NextAttribute->Resident.ValueOffset);
 
     // advance NextAttribute pointer to the next attribute
     NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)NextAttribute + (ULONG_PTR)NextAttribute->Length);
+
+    if (FilenameAttribute->NameType == NTFS_FILE_NAME_WIN32 &&
+        DeviceExt->NtfsInfo.ShortNameCreation)
+    {
+        Status = AddDosFileName(FileRecord,
+                                NextAttribute,
+                                DeviceExt,
+                                FilenameAttribute,
+                                ParentMftIndex,
+                                CaseSensitive);
+        if (NT_SUCCESS(Status))
+        {
+            DosAttribute = (PFILENAME_ATTRIBUTE)((ULONG_PTR)NextAttribute +
+                                                 NextAttribute->Resident.ValueOffset);
+            NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)NextAttribute +
+                                               (ULONG_PTR)NextAttribute->Length);
+        }
+    }
 
     // Create an empty b-tree to represent our new index
     Status = CreateEmptyBTree(&Tree);
@@ -1151,6 +1189,27 @@ NtfsCreateDirectory(PDEVICE_EXTENSION DeviceExt,
                                             FileMftIndex,
                                             FilenameAttribute,
                                             CaseSensitive);
+        if (NT_SUCCESS(Status) && DosAttribute != NULL)
+        {
+            Status = NtfsAddFilenameToDirectory(DeviceExt,
+                                                ParentMftIndex,
+                                                FileMftIndex,
+                                                DosAttribute,
+                                                CaseSensitive);
+        }
+        if (NT_SUCCESS(Status))
+        {
+            UNICODE_STRING FinalName;
+            FinalName.Buffer = FilenameAttribute->Name;
+            FinalName.Length = FilenameAttribute->NameLength * sizeof(WCHAR);
+            FinalName.MaximumLength = FinalName.Length;
+            NtfsAppendUsn(DeviceExt,
+                          FileMftIndex,
+                          ParentMftIndex,
+                          USN_REASON_FILE_CREATE,
+                          FilenameAttribute->FileAttributes,
+                          &FinalName);
+        }
     }
 
     ExFreePoolWithTag(NewIndexRoot, TAG_NTFS);
@@ -1243,7 +1302,8 @@ NTSTATUS
 NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
                      PFILE_OBJECT FileObject,
                      BOOLEAN CaseSensitive,
-                     BOOLEAN CanWait)
+                     BOOLEAN CanWait,
+                     PSECURITY_DESCRIPTOR ExplicitSecurity)
 {
     NTSTATUS Status = STATUS_SUCCESS;
     PFILE_RECORD_HEADER FileRecord;
@@ -1285,8 +1345,8 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
         return Status;
     }
 
-    /* A 72-byte parent contributes its security id. A short parent leaves 0x100. */
-    NtfsCopyParentSecurityId(DeviceExt, FileRecord, ParentMftIndex);
+    /* The child's security id comes from $Secure. */
+    NtfsAssignSecurity(DeviceExt, FileRecord, ParentMftIndex, ExplicitSecurity, FALSE);
 
     // save a pointer to the filename attribute
     FilenameAttribute = (PFILENAME_ATTRIBUTE)((ULONG_PTR)NextAttribute + NextAttribute->Resident.ValueOffset);
@@ -1294,8 +1354,10 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
     // advance NextAttribute pointer to the next attribute
     NextAttribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)NextAttribute + (ULONG_PTR)NextAttribute->Length);
 
-    /* A long name also gets an 8.3 name so FindFirstFile can report it. */
-    if (FilenameAttribute->NameType == NTFS_FILE_NAME_POSIX)
+    /* A Win32 name that is not itself 8.3 gets a DOS alias when this volume
+     * creates short names. POSIX creates do not. */
+    if (FilenameAttribute->NameType == NTFS_FILE_NAME_WIN32 &&
+        DeviceExt->NtfsInfo.ShortNameCreation)
     {
         Status = AddDosFileName(FileRecord,
                                 NextAttribute,
@@ -1350,6 +1412,19 @@ NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
                                                 FileMftIndex,
                                                 DosAttribute,
                                                 CaseSensitive);
+        }
+        if (NT_SUCCESS(Status))
+        {
+            UNICODE_STRING FinalName;
+            FinalName.Buffer = FilenameAttribute->Name;
+            FinalName.Length = FilenameAttribute->NameLength * sizeof(WCHAR);
+            FinalName.MaximumLength = FinalName.Length;
+            NtfsAppendUsn(DeviceExt,
+                          FileMftIndex,
+                          ParentMftIndex,
+                          USN_REASON_FILE_CREATE,
+                          FilenameAttribute->FileAttributes,
+                          &FinalName);
         }
     }
 

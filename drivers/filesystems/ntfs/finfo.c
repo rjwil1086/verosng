@@ -978,9 +978,9 @@ NtfsSetDispositionInformation(PDEVICE_EXTENSION DeviceExt,
         /* A lookup treats an unreadable sub-node as a miss, which here would
          * delete a directory that still has children. This check fails instead. */
         KeEnterCriticalRegion();
-        ExAcquireResourceSharedLite(&DeviceExt->IndexResource, TRUE);
+        ExAcquireResourceSharedLite(NtfsDirectoryResource(DeviceExt, Fcb->MFTIndex), TRUE);
         Status = NtfsIsDirectoryEmpty(DeviceExt, Fcb->MFTIndex, &Empty);
-        ExReleaseResourceLite(&DeviceExt->IndexResource);
+        ExReleaseResourceLite(NtfsDirectoryResource(DeviceExt, Fcb->MFTIndex));
         KeLeaveCriticalRegion();
 
         if (!NT_SUCCESS(Status))
@@ -1498,7 +1498,7 @@ NtfsBuildRenamedFileName(
     Value->NameLength = (UCHAR)(NewName->Length / sizeof(WCHAR));
     RtlCopyMemory(Value->Name, NewName->Buffer, NewName->Length);
 
-    if (CaseSensitive)
+    if (!DeviceExt->NtfsInfo.ShortNameCreation || CaseSensitive)
         Value->NameType = NTFS_FILE_NAME_POSIX;
     else if (RtlIsNameLegalDOS8Dot3(NewName, NULL, NULL))
         Value->NameType = NTFS_FILE_NAME_WIN32_AND_DOS;
@@ -1918,11 +1918,28 @@ NtfsSetLinkInformation(PDEVICE_EXTENSION DeviceExt,
     Attribute->Resident.Flags = RA_INDEXED;
 
     NewName = (PFILENAME_ATTRIBUTE)((PUCHAR)Attribute + ResidentHeader);
-    NewName->DirectoryFileReferenceNumber = ParentIndex;
-    if (ParentIndex == NTFS_FILE_ROOT)
-        NewName->DirectoryFileReferenceNumber |= (ULONGLONG)NTFS_FILE_ROOT << 48;
-    else
-        NewName->DirectoryFileReferenceNumber |= (ULONGLONG)FileRecord->SequenceNumber << 48;
+    {
+        PFILE_RECORD_HEADER ParentRecord;
+
+        ParentRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+        if (ParentRecord == NULL)
+        {
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        Status = ReadFileRecord(DeviceExt, ParentIndex, ParentRecord);
+        if (!NT_SUCCESS(Status))
+        {
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, ParentRecord);
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, FileRecord);
+            return Status;
+        }
+
+        NewName->DirectoryFileReferenceNumber =
+            ParentIndex | ((ULONGLONG)ParentRecord->SequenceNumber << 48);
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, ParentRecord);
+    }
 
     NewName->CreationTime = Existing->CreationTime;
     NewName->LastWriteTime = Existing->LastWriteTime;
@@ -1932,14 +1949,29 @@ NtfsSetLinkInformation(PDEVICE_EXTENSION DeviceExt,
     NewName->DataSize = Existing->DataSize;
     NewName->FileAttributes = Existing->FileAttributes;
     NewName->NameLength = (UCHAR)(FinalName.Length / sizeof(WCHAR));
-    if (!CaseSensitive && RtlIsNameLegalDOS8Dot3(&FinalName, NULL, NULL))
+    if (!DeviceExt->NtfsInfo.ShortNameCreation || CaseSensitive)
+        NewName->NameType = NTFS_FILE_NAME_POSIX;
+    else if (RtlIsNameLegalDOS8Dot3(&FinalName, NULL, NULL))
         NewName->NameType = NTFS_FILE_NAME_WIN32_AND_DOS;
     else
-        NewName->NameType = NTFS_FILE_NAME_POSIX;
+        NewName->NameType = NTFS_FILE_NAME_WIN32;
 
     RtlCopyMemory(NewName->Name, FinalName.Buffer, FinalName.Length);
     FileRecord->LinkCount++;
     FileRecord->BytesInUse += AttributeLength;
+
+    if (NewName->NameType == NTFS_FILE_NAME_WIN32 &&
+        DeviceExt->NtfsInfo.ShortNameCreation)
+    {
+        PNTFS_ATTR_RECORD EndAttr;
+
+        EndAttr = (PNTFS_ATTR_RECORD)((PUCHAR)FileRecord + FileRecord->AttributeOffset);
+        while (EndAttr->Type != AttributeEnd && EndAttr->Length != 0)
+            EndAttr = (PNTFS_ATTR_RECORD)((PUCHAR)EndAttr + EndAttr->Length);
+
+        if (EndAttr->Type == AttributeEnd)
+            AddDosFileName(FileRecord, EndAttr, DeviceExt, NewName, ParentIndex, CaseSensitive);
+    }
 
     FileReference = (Fcb->MFTIndex & NTFS_MFT_MASK) |
                     ((ULONGLONG)FileRecord->SequenceNumber << 48);
@@ -1952,6 +1984,34 @@ NtfsSetLinkInformation(PDEVICE_EXTENSION DeviceExt,
                                             FileReference,
                                             NewName,
                                             CaseSensitive);
+        if (NT_SUCCESS(Status) &&
+            NewName->NameType == NTFS_FILE_NAME_WIN32 &&
+            DeviceExt->NtfsInfo.ShortNameCreation)
+        {
+            PNTFS_ATTR_RECORD DosAttr;
+
+            DosAttr = (PNTFS_ATTR_RECORD)((PUCHAR)FileRecord + FileRecord->AttributeOffset);
+            while (DosAttr->Type != AttributeEnd && DosAttr->Length != 0)
+            {
+                if (DosAttr->Type == AttributeFileName && !DosAttr->IsNonResident)
+                {
+                    PFILENAME_ATTRIBUTE Candidate;
+
+                    Candidate = (PFILENAME_ATTRIBUTE)((PUCHAR)DosAttr + DosAttr->Resident.ValueOffset);
+                    if (Candidate->NameType == NTFS_FILE_NAME_DOS)
+                    {
+                        Status = NtfsAddFilenameToDirectory(DeviceExt,
+                                                            ParentIndex,
+                                                            FileReference,
+                                                            Candidate,
+                                                            CaseSensitive);
+                        break;
+                    }
+                }
+
+                DosAttr = (PNTFS_ATTR_RECORD)((PUCHAR)DosAttr + DosAttr->Length);
+            }
+        }
         if (NT_SUCCESS(Status))
             Fcb->LinkCount = FileRecord->LinkCount;
     }
@@ -1981,6 +2041,9 @@ NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
     Stack = IrpContext->Stack;
     DeviceObject = IrpContext->DeviceObject;
     DeviceExt = DeviceObject->DeviceExtension;
+    if (DeviceExt->Flags & VCB_VOLUME_READ_ONLY)
+        return STATUS_MEDIA_WRITE_PROTECTED;
+
     FileInformationClass = Stack->Parameters.QueryFile.FileInformationClass;
     FileObject = IrpContext->FileObject;
     Fcb = FileObject->FsContext;
@@ -2022,14 +2085,14 @@ NtfsSetInformation(PNTFS_IRP_CONTEXT IrpContext)
             }
 
             /* A directory's record carries its index, which a create in it
-             * could be changing; IndexResource keeps the two apart */
+             * could be changing. Lock that directory, not the whole volume. */
             KeEnterCriticalRegion();
-            ExAcquireResourceExclusiveLite(&DeviceExt->IndexResource, TRUE);
+            ExAcquireResourceExclusiveLite(NtfsDirectoryResource(DeviceExt, Fcb->MFTIndex), TRUE);
             Status = NtfsSetBasicInformation(DeviceExt,
                                              Fcb,
                                              BooleanFlagOn(Stack->Flags, SL_CASE_SENSITIVE),
                                              (PFILE_BASIC_INFORMATION)SystemBuffer);
-            ExReleaseResourceLite(&DeviceExt->IndexResource);
+            ExReleaseResourceLite(NtfsDirectoryResource(DeviceExt, Fcb->MFTIndex));
             KeLeaveCriticalRegion();
             break;
 

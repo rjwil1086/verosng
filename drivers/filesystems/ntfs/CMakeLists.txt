@@ -20,6 +20,7 @@ list(APPEND SOURCE
     lockctrl.c
     mft.c
     misc.c
+    ntfs3x.c
     ntfs.c
     rw.c
     volinfo.c

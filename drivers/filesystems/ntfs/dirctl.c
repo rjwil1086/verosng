@@ -649,8 +649,8 @@ NtfsQueryDirectory(PNTFS_IRP_CONTEXT IrpContext)
 
     DPRINT("Buffer=%p tofind=%S\n", Buffer, Ccb->DirectorySearchPattern);
 
-    if (!ExAcquireResourceExclusiveLite(&DeviceExtension->DirResource,
-                                        BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT)))
+    if (!ExAcquireResourceSharedLite(NtfsDirectoryResource(DeviceExtension, Fcb->MFTIndex),
+                                     BooleanFlagOn(IrpContext->Flags, IRPCONTEXT_CANWAIT)))
     {
         ExReleaseResourceLite(&Fcb->MainResource);
         return STATUS_PENDING;
@@ -782,7 +782,7 @@ NtfsQueryDirectory(PNTFS_IRP_CONTEXT IrpContext)
         IrpContext->Irp->IoStatus.Information = Written;
     }
 
-    ExReleaseResourceLite(&DeviceExtension->DirResource);
+    ExReleaseResourceLite(NtfsDirectoryResource(DeviceExtension, Fcb->MFTIndex));
     ExReleaseResourceLite(&Fcb->MainResource);
 
     return Status;

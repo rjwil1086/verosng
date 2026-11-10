@@ -296,25 +296,41 @@ AddFileName(PFILE_RECORD_HEADER FileRecord,
     FileNameAttribute->DirectoryFileReferenceNumber = CurrentMFTIndex;
     *ParentMftIndex = CurrentMFTIndex;
 
-    DPRINT("SequenceNumber: 0x%02x\n", FileRecord->SequenceNumber);
+    /* The high 16 bits are the parent's sequence number, including the root. */
+    {
+        PFILE_RECORD_HEADER ParentRecord;
+        NTSTATUS ParentStatus;
 
-    // The highest 2 bytes should be the sequence number, unless the parent happens to be root
-    if (CurrentMFTIndex == NTFS_FILE_ROOT)
-        FileNameAttribute->DirectoryFileReferenceNumber |= (ULONGLONG)NTFS_FILE_ROOT << 48;
-    else
-        FileNameAttribute->DirectoryFileReferenceNumber |= (ULONGLONG)FileRecord->SequenceNumber << 48;
+        ParentRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
+        if (ParentRecord == NULL)
+            return STATUS_INSUFFICIENT_RESOURCES;
+
+        ParentStatus = ReadFileRecord(DeviceExt, CurrentMFTIndex, ParentRecord);
+        if (!NT_SUCCESS(ParentStatus))
+        {
+            ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, ParentRecord);
+            return ParentStatus;
+        }
+
+        FileNameAttribute->DirectoryFileReferenceNumber |=
+            (ULONGLONG)ParentRecord->SequenceNumber << 48;
+        ExFreeToNPagedLookasideList(&DeviceExt->FileRecLookasideList, ParentRecord);
+    }
 
     DPRINT("FileNameAttribute->DirectoryFileReferenceNumber: 0x%016I64x\n", FileNameAttribute->DirectoryFileReferenceNumber);
 
     FileNameAttribute->NameLength = FilenameNoPath.Length / sizeof(WCHAR);
     RtlCopyMemory(FileNameAttribute->Name, FilenameNoPath.Buffer, FilenameNoPath.Length);
 
-    // For now, we're emulating the way Windows behaves when 8.3 name generation is disabled
-    // TODO: add DOS Filename as needed
-    if (!CaseSensitive && RtlIsNameLegalDOS8Dot3(&FilenameNoPath, NULL, NULL))
+    /* With 8.3 generation off, Windows stores the one name as POSIX and
+     * adds no DOS alias. A legal 8.3 name is otherwise one attribute in both
+     * namespaces. A longer name is Win32, and a DOS alias is added later. */
+    if (!DeviceExt->NtfsInfo.ShortNameCreation || CaseSensitive)
+        FileNameAttribute->NameType = NTFS_FILE_NAME_POSIX;
+    else if (RtlIsNameLegalDOS8Dot3(&FilenameNoPath, NULL, NULL))
         FileNameAttribute->NameType = NTFS_FILE_NAME_WIN32_AND_DOS;
     else
-        FileNameAttribute->NameType = NTFS_FILE_NAME_POSIX;
+        FileNameAttribute->NameType = NTFS_FILE_NAME_WIN32;
 
     FileRecord->LinkCount++;
 
@@ -366,8 +382,28 @@ NtfsDosChar(WCHAR Char)
     return TRUE;
 }
 
-/* Build BASE~N.EXT from a long name. BASE is at most six characters so the
- * tilde and digit fit in eight. The caller picks N. */
+/* Checksum of the long name. The first four tails use six characters plus
+ * ~1..~4. Later tails use two characters, four hex digits of this value,
+ * and ~N, which is how Windows keeps going after those four collide. */
+static
+USHORT
+NtfsShortNameHash(PCUNICODE_STRING LongName)
+{
+    ULONG Hash = 0;
+    ULONG Index;
+    ULONG Chars = LongName->Length / sizeof(WCHAR);
+
+    for (Index = 0; Index < Chars; Index++)
+    {
+        WCHAR Upper = RtlUpcaseUnicodeChar(LongName->Buffer[Index]);
+        Hash = ((Hash << 5) + Hash) + Upper;
+    }
+
+    return (USHORT)(Hash ^ (Hash >> 16));
+}
+
+/* Build an 8.3 alias. Generation 1..4 is BASE(6)~N. Generation 5 and up is
+ * the hash tail, and N continues from 1 inside that form. */
 static
 VOID
 NtfsBuildShortName(PCUNICODE_STRING LongName,
@@ -383,7 +419,11 @@ NtfsBuildShortName(PCUNICODE_STRING LongName,
     ULONG Dot;
     ULONG Index;
     ULONG Out;
+    ULONG Take;
+    USHORT Tail;
+    USHORT Hash;
     PCWSTR Source;
+    static CONST WCHAR Hex[] = L"0123456789ABCDEF";
 
     Chars = LongName->Length / sizeof(WCHAR);
     Source = LongName->Buffer;
@@ -419,11 +459,33 @@ NtfsBuildShortName(PCUNICODE_STRING LongName,
     }
 
     Out = 0;
-    for (Index = 0; Index < BaseChars; Index++)
+    if (Generation <= 4)
+    {
+        Take = min(BaseChars, 6);
+        Tail = Generation;
+    }
+    else
+    {
+        Take = min(BaseChars, 2);
+        Hash = NtfsShortNameHash(LongName);
+        Tail = (USHORT)(Generation - 4);
+        if (Tail > 9)
+            Tail = 9;
+    }
+
+    for (Index = 0; Index < Take; Index++)
         ShortName[Out++] = Base[Index];
 
+    if (Generation > 4)
+    {
+        ShortName[Out++] = Hex[(Hash >> 12) & 0xF];
+        ShortName[Out++] = Hex[(Hash >> 8) & 0xF];
+        ShortName[Out++] = Hex[(Hash >> 4) & 0xF];
+        ShortName[Out++] = Hex[Hash & 0xF];
+    }
+
     ShortName[Out++] = L'~';
-    ShortName[Out++] = (WCHAR)(L'0' + Generation);
+    ShortName[Out++] = (WCHAR)(L'0' + Tail);
 
     if (ExtChars != 0)
     {
@@ -472,7 +534,8 @@ AddDosFileName(PFILE_RECORD_HEADER FileRecord,
     LongString.Length = LongName->NameLength * sizeof(WCHAR);
     LongString.MaximumLength = LongString.Length;
 
-    for (Generation = 1; Generation <= 9; Generation++)
+    /* ~1 through ~4, then hash tails. Stop only when those are exhausted. */
+    for (Generation = 1; Generation <= 13; Generation++)
     {
         ULONG FirstEntry = 0;
         ULONGLONG Existing;
@@ -494,7 +557,7 @@ AddDosFileName(PFILE_RECORD_HEADER FileRecord,
             break;
     }
 
-    if (Generation > 9)
+    if (Generation > 13)
     {
         DPRINT1("No free 8.3 name for '%.*S'\n", LongName->NameLength, LongName->Name);
         return STATUS_OBJECT_NAME_COLLISION;
@@ -743,6 +806,207 @@ AddIndexRoot(PNTFS_VCB Vcb,
     return STATUS_SUCCESS;
 }
 
+static
+ULONG
+NtfsWriteListItem(PUCHAR Dest,
+                  ULONG Type,
+                  USHORT Instance,
+                  ULONGLONG FileReference,
+                  ULONGLONG StartingVcn,
+                  PCWSTR Name,
+                  UCHAR NameLength);
+
+static
+NTSTATUS
+NtfsInsertAttributeList(PFILE_RECORD_HEADER FileRecord);
+
+static
+NTSTATUS
+NtfsAppendListEntry(PDEVICE_EXTENSION Vcb,
+                    PFILE_RECORD_HEADER FileRecord,
+                    ULONG Type,
+                    USHORT Instance,
+                    ULONGLONG FileReference,
+                    ULONGLONG StartingVcn,
+                    PCWSTR Name,
+                    UCHAR NameLength)
+{
+    PNTFS_ATTR_RECORD Attribute;
+    PUCHAR Value;
+    ULONG ValueLength;
+    ULONG ItemLength;
+    PUCHAR Item;
+    NTSTATUS Status;
+
+    Status = NtfsInsertAttributeList(FileRecord);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)FileRecord + FileRecord->AttributeOffset);
+    while (Attribute->Type != AttributeEnd && Attribute->Length != 0 &&
+           Attribute->Type != AttributeAttributeList)
+    {
+        Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+    }
+    if (Attribute->Type != AttributeAttributeList || Attribute->IsNonResident)
+        return STATUS_NOT_IMPLEMENTED;
+
+    Value = (PUCHAR)Attribute + Attribute->Resident.ValueOffset;
+    ValueLength = Attribute->Resident.ValueLength;
+    if (ValueLength >= sizeof(ULONGLONG) && *(PULONGLONG)(Value + ValueLength - sizeof(ULONGLONG)) == 0)
+        ValueLength -= sizeof(ULONGLONG);
+
+    ItemLength = ALIGN_UP_BY(26 + NameLength * sizeof(WCHAR), ATTR_RECORD_ALIGNMENT);
+    if (Attribute->Resident.ValueOffset + ValueLength + ItemLength + sizeof(ULONGLONG) > Attribute->Length)
+    {
+        ULONG Need = ValueLength + ItemLength + sizeof(ULONGLONG) - Attribute->Resident.ValueLength;
+        ULONG Spare = FileRecord->BytesAllocated - FileRecord->BytesInUse;
+        PNTFS_ATTR_RECORD Next;
+
+        Need = ALIGN_UP_BY(Need, ATTR_RECORD_ALIGNMENT);
+        if (Need > Spare)
+            return STATUS_DISK_FULL;
+
+        Next = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
+        RtlMoveMemory((PUCHAR)Next + Need, Next, FileRecord->BytesInUse - ((ULONG_PTR)Next - (ULONG_PTR)FileRecord));
+        Attribute->Length += Need;
+        FileRecord->BytesInUse += Need;
+    }
+
+    Item = Value + ValueLength;
+    NtfsWriteListItem(Item, Type, Instance, FileReference, StartingVcn, Name, NameLength);
+    *(PULONGLONG)(Item + ItemLength) = 0;
+    Attribute->Resident.ValueLength = ValueLength + ItemLength + sizeof(ULONGLONG);
+    return UpdateFileRecord(Vcb, FileRecord->MFTRecordNumber, FileRecord);
+}
+
+static
+NTSTATUS
+NtfsAppendRunSegment(PDEVICE_EXTENSION Vcb,
+                     PNTFS_ATTR_CONTEXT AttrContext,
+                     PFILE_RECORD_HEADER FileRecord,
+                     ULONGLONG NextAssignedCluster,
+                     ULONG RunLength,
+                     ULONGLONG NextVbn)
+{
+    PFILE_RECORD_HEADER Extension;
+    PFILE_RECORD_HEADER Base;
+    PNTFS_ATTR_RECORD Source;
+    PNTFS_ATTR_RECORD Dest;
+    ULONGLONG ExtensionIndex;
+    ULONGLONG BaseIndex;
+    ULONGLONG BaseReference;
+    USHORT Instance;
+    ULONG NameBytes;
+    ULONG Header;
+    ULONG Pairs;
+    UCHAR Pair[16];
+    UCHAR LengthSize;
+    UCHAR OffsetSize;
+    NTSTATUS Status;
+    BOOLEAN FreeBase = FALSE;
+
+    Source = AttrContext->pRecord;
+    Extension = NtfsCreateEmptyFileRecord(Vcb);
+    if (Extension == NULL)
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    BaseIndex = FileRecord->BaseFileRecord & NTFS_MFT_MASK;
+    if (FileRecord->BaseFileRecord == 0)
+    {
+        Base = FileRecord;
+        BaseIndex = FileRecord->MFTRecordNumber;
+    }
+    else
+    {
+        Base = ExAllocateFromNPagedLookasideList(&Vcb->FileRecLookasideList);
+        if (Base == NULL)
+        {
+            ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Extension);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+        Status = ReadFileRecord(Vcb, BaseIndex, Base);
+        if (!NT_SUCCESS(Status))
+        {
+            ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Base);
+            ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Extension);
+            return Status;
+        }
+        FreeBase = TRUE;
+    }
+
+    BaseReference = BaseIndex | ((ULONGLONG)Base->SequenceNumber << 48);
+    Instance = Base->NextAttributeNumber++;
+    Extension->BaseFileRecord = BaseReference;
+    Extension->Flags = FRH_IN_USE;
+
+    Dest = (PNTFS_ATTR_RECORD)((ULONG_PTR)Extension + Extension->AttributeOffset);
+    NameBytes = Source->NameLength * sizeof(WCHAR);
+    Header = FIELD_OFFSET(NTFS_ATTR_RECORD, NonResident.Reserved);
+    if (Source->Flags & (NTFS_ATTR_COMPRESSION_MASK | NTFS_ATTR_SPARSE))
+        Header = FIELD_OFFSET(NTFS_ATTR_RECORD, NonResident.CompressedSize) + sizeof(LONGLONG);
+    Header = ALIGN_UP_BY(Header + NameBytes, DATA_RUN_ALIGNMENT);
+
+    LengthSize = GetPackedByteCount(RunLength, TRUE);
+    OffsetSize = GetPackedByteCount(NextAssignedCluster, TRUE);
+    Pairs = 1 + LengthSize + OffsetSize + 1;
+    if (Extension->AttributeOffset + ALIGN_UP_BY(Header + Pairs, ATTR_RECORD_ALIGNMENT) + sizeof(ULONG) * 2 >
+        Extension->BytesAllocated)
+    {
+        if (FreeBase)
+            ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Base);
+        ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Extension);
+        return STATUS_NOT_IMPLEMENTED;
+    }
+
+    RtlZeroMemory(Dest, Header + Pairs);
+    Dest->Type = Source->Type;
+    Dest->IsNonResident = 1;
+    Dest->NameLength = Source->NameLength;
+    Dest->NameOffset = (USHORT)(Header - NameBytes);
+    Dest->Flags = Source->Flags;
+    Dest->Instance = Instance;
+    Dest->NonResident.LowestVCN = NextVbn;
+    Dest->NonResident.HighestVCN = NextVbn + RunLength - 1;
+    Dest->NonResident.MappingPairsOffset = (USHORT)Header;
+    Dest->NonResident.CompressionUnit = Source->NonResident.CompressionUnit;
+    if (NameBytes != 0)
+        RtlCopyMemory((PUCHAR)Dest + Dest->NameOffset, (PUCHAR)Source + Source->NameOffset, NameBytes);
+
+    Pair[0] = (UCHAR)((OffsetSize << 4) | LengthSize);
+    RtlCopyMemory(Pair + 1, &RunLength, LengthSize);
+    RtlCopyMemory(Pair + 1 + LengthSize, &NextAssignedCluster, OffsetSize);
+    Pair[1 + LengthSize + OffsetSize] = 0;
+    RtlCopyMemory((PUCHAR)Dest + Header, Pair, Pairs);
+    Dest->Length = ALIGN_UP_BY(Header + Pairs, ATTR_RECORD_ALIGNMENT);
+
+    {
+        PNTFS_ATTR_RECORD End = (PNTFS_ATTR_RECORD)((ULONG_PTR)Dest + Dest->Length);
+        SetFileRecordEnd(Extension, End, FILE_RECORD_END);
+    }
+
+    Status = AddNewMftEntry(Extension, Vcb, &ExtensionIndex, TRUE);
+    ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Extension);
+    if (!NT_SUCCESS(Status))
+    {
+        if (FreeBase)
+            ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Base);
+        return Status;
+    }
+
+    Status = NtfsAppendListEntry(Vcb,
+                                 Base,
+                                 Source->Type,
+                                 Instance,
+                                 ExtensionIndex | (1ULL << 48),
+                                 NextVbn,
+                                 Source->NameLength ? (PCWSTR)((PUCHAR)Source + Source->NameOffset) : NULL,
+                                 Source->NameLength);
+    if (FreeBase)
+        ExFreeToNPagedLookasideList(&Vcb->FileRecLookasideList, Base);
+    return Status;
+}
+
 /**
 * @name AddRun
 * @implemented
@@ -808,6 +1072,68 @@ AddRun(PNTFS_VCB Vcb,
     /* The run goes on the end, so it holds the new last VCN */
     HighestVcn = NextVBN + RunLength - 1;
 
+    /* A contiguous tail grows the last pair in place when this record holds it. */
+    {
+        LONGLONG LastVbn = 0;
+        LONGLONG LastLbn = -1;
+        BOOLEAN Tail = TRUE;
+        BOOLEAN HaveLast = FALSE;
+
+        /* An empty stream, including a sparse $J with HighestVCN -1, has no
+         * tail to extend. Looking one up walks an MCB that may hold no runs. */
+        if (AttrContext->pRecord->NonResident.AllocatedSize != 0)
+            HaveLast = FsRtlLookupLastLargeMcbEntry(&AttrContext->DataRunsMCB, &LastVbn, &LastLbn);
+        if (HaveLast &&
+            AttrContext->pRecord->NonResident.HighestVCN != (ULONGLONG)-1 &&
+            (ULONGLONG)(LastVbn + 1) > AttrContext->pRecord->NonResident.HighestVCN + 1)
+            Tail = FALSE;
+
+        if (Tail && HaveLast && LastLbn != -1 && (ULONGLONG)LastLbn + 1 == NextAssignedCluster)
+        {
+            PUCHAR Run = (PUCHAR)DestinationAttribute + DestinationAttribute->NonResident.MappingPairsOffset;
+            PUCHAR LastPair = NULL;
+            UCHAR LastLenSize = 0;
+            ULONGLONG Length = 0;
+            BOOLEAN Sparse = FALSE;
+
+            while (*Run != 0)
+            {
+                UCHAR Header = *Run;
+                UCHAR LenSize = Header & 0x0F;
+                UCHAR OffSize = Header >> 4;
+                LONGLONG Off = 0;
+
+                LastPair = Run;
+                LastLenSize = LenSize;
+                Run++;
+                Length = 0;
+                RtlCopyMemory(&Length, Run, LenSize);
+                Run += LenSize;
+                if (OffSize != 0)
+                {
+                    RtlCopyMemory(&Off, Run, OffSize);
+                    if (Run[OffSize - 1] & 0x80)
+                        Off |= ~0LL << (OffSize * 8);
+                    Run += OffSize;
+                    Sparse = FALSE;
+                }
+                else
+                    Sparse = TRUE;
+            }
+
+            if (LastPair != NULL && !Sparse &&
+                GetPackedByteCount(Length + RunLength, TRUE) == LastLenSize)
+            {
+                Length += RunLength;
+                RtlCopyMemory(LastPair + 1, &Length, LastLenSize);
+                DestinationAttribute->NonResident.HighestVCN = HighestVcn;
+                AttrContext->pRecord->NonResident.HighestVCN = HighestVcn;
+                FsRtlAddLargeMcbEntry(&AttrContext->DataRunsMCB, NextVBN, NextAssignedCluster, RunLength);
+                return UpdateFileRecord(Vcb, FileRecord->MFTRecordNumber, FileRecord);
+            }
+        }
+    }
+
     // Add newly-assigned clusters to mcb
     _SEH2_TRY
     {
@@ -837,10 +1163,8 @@ AddRun(PNTFS_VCB Vcb,
     Status = ConvertLargeMCBToDataRuns(&AttrContext->DataRunsMCB, HighestVcn + 1, RunBuffer, Vcb->NtfsInfo.BytesPerFileRecord, &RunBufferSize);
     if (Status == STATUS_BUFFER_TOO_SMALL)
     {
-        // Runs won't fit in a single record; migrating to an $ATTRIBUTE_LIST isn't supported yet.
-        DPRINT1("Data runs too large for one file record - $ATTRIBUTE_LIST needed (not implemented)\n");
         ExFreePoolWithTag(RunBuffer, TAG_NTFS);
-        return STATUS_NOT_IMPLEMENTED;
+        return NtfsAppendRunSegment(Vcb, AttrContext, FileRecord, NextAssignedCluster, RunLength, NextVBN);
     }
     else if (!NT_SUCCESS(Status))
     {
@@ -864,9 +1188,8 @@ AddRun(PNTFS_VCB Vcb,
         // Can we resize the attribute?
         if (DataRunMaxLength < RunBufferSize)
         {
-            DPRINT1("FIXME: Need to create attribute list! Max Data Run Length available: %d, RunBufferSize: %d\n", DataRunMaxLength, RunBufferSize);
             ExFreePoolWithTag(RunBuffer, TAG_NTFS);
-            return STATUS_NOT_IMPLEMENTED;
+            return NtfsAppendRunSegment(Vcb, AttrContext, FileRecord, NextAssignedCluster, RunLength, NextVBN);
         }
 
         // Are there more attributes after the one we're resizing?
@@ -896,6 +1219,12 @@ AddRun(PNTFS_VCB Vcb,
 
         // Create a new copy of the attribute record
         NewRecord = ExAllocatePoolWithTag(NonPagedPool, DestinationAttribute->Length, TAG_NTFS);
+        if (NewRecord == NULL)
+        {
+            DPRINT1("ERROR: Couldn't allocate attribute record!\n");
+            ExFreePoolWithTag(RunBuffer, TAG_NTFS);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
         RtlCopyMemory(NewRecord, AttrContext->pRecord, AttrContext->pRecord->Length);
         NewRecord->Length = DestinationAttribute->Length;
 
@@ -1408,7 +1737,12 @@ FreeClusters(PNTFS_VCB Vcb,
             LargeLbn != -1)
         {
             // deallocate this cluster
-            RtlClearBits(&Vcb->ClusterBitmap, (ULONG)LargeLbn, 1);
+            if (NT_SUCCESS(NtfsBringClusterWindow(Vcb, (ULONGLONG)LargeLbn)))
+            {
+                ULONG BaseBit = (ULONG)(Vcb->ClusterWindowBase * 8);
+                RtlClearBits(&Vcb->ClusterBitmap, (ULONG)LargeLbn - BaseBit, 1);
+                Vcb->ClusterWindowDirty = TRUE;
+            }
             LowestFreed = min(LowestFreed, (ULONG)LargeLbn);
             HighestFreed = max(HighestFreed, (ULONG)LargeLbn);
             Freed++;
@@ -2323,6 +2657,7 @@ NtfsWriteListItem(PUCHAR Dest,
                   ULONG Type,
                   USHORT Instance,
                   ULONGLONG FileReference,
+                  ULONGLONG StartingVcn,
                   PCWSTR Name,
                   UCHAR NameLength)
 {
@@ -2334,6 +2669,7 @@ NtfsWriteListItem(PUCHAR Dest,
     *(PUSHORT)(Dest + 4) = (USHORT)Length;
     Dest[6] = NameLength;
     Dest[7] = 26;
+    *(PULONGLONG)(Dest + 8) = StartingVcn;
     *(PULONGLONG)(Dest + 16) = FileReference;
     *(PUSHORT)(Dest + 24) = Instance;
 
@@ -2413,6 +2749,7 @@ NtfsInsertAttributeList(PFILE_RECORD_HEADER FileRecord)
                                         Attribute->Type,
                                         Attribute->Instance,
                                         FileReference,
+                                        0,
                                         Name,
                                         Attribute->NameLength);
         Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);
@@ -2429,6 +2766,7 @@ NtfsInsertAttributeList(PFILE_RECORD_HEADER FileRecord)
                                     AttributeAttributeList,
                                     ListInstance,
                                     FileReference,
+                                    0,
                                     NULL,
                                     0);
 
@@ -2450,6 +2788,7 @@ NtfsInsertAttributeList(PFILE_RECORD_HEADER FileRecord)
                                         Attribute->Type,
                                         Attribute->Instance,
                                         FileReference,
+                                        0,
                                         Name,
                                         Attribute->NameLength);
         Attribute = (PNTFS_ATTR_RECORD)((ULONG_PTR)Attribute + Attribute->Length);

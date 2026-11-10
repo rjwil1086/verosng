@@ -3,8 +3,7 @@
  * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
  * FILE:        sdk/lib/fslib/ntfslib/files.c
  * PURPOSE:     NTFS metadata builder
- * COPYRIGHT:   See COPYING in the top level directory
- *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROGRAMMERS: Ryan Wilson
  */
 /*
@@ -1001,8 +1000,13 @@ WriteMetafiles(VOID)
             }
             MkAddResident(&Rec, AttributeVolumeName, NULL, 0, 0, VName, VLen);
         }
-        /* $VOLUME_INFORMATION: version 3.1, flags 0 (the 0x80 dirty bit left clear). */
+        /* $VOLUME_INFORMATION: version 3.1, flags 0 (the dirty bit left clear).
+         * The reserved field starts with 'SN' and a byte: 1 creates 8.3 names.
+         * Windows 10 FormatEx leaves that off, so new files are POSIX names. */
         RtlZeroMemory(Val, 12);
+        Val[0x00] = 0x53;
+        Val[0x01] = 0x4E;
+        Val[0x02] = 0;
         Val[0x08] = NTFS_MAJOR_VERSION;
         Val[0x09] = NTFS_MINOR_VERSION;
         MkAddResident(&Rec, AttributeVolumeInformation, NULL, 0, 0, Val, 12);
@@ -1352,7 +1356,11 @@ WriteMetafiles(VOID)
         Len = MkFileName(Val, MFT_REFERENCE(MREC_EXTEND), FA_HIDDEN | FA_SYSTEM,
                          0, 0, Now, L"$UsnJrnl", FILE_NAME_POSIX);
         MkAddResident(&Rec, AttributeFileName, NULL, 0, RA_INDEXED, Val, Len);
-        MkAddResident(&Rec, AttributeData, NULL, 0, 0, NULL, 0);
+        /* No unnamed data. $J is a sparse stream and $Max is the journal
+         * parameters. CREATE_USN_JOURNAL fills $Max in when a caller asks. */
+        MkAddNonResident(&Rec, AttributeData, L"$J", 2, 0x8000, NULL, 0, (ULONGLONG)-1, 0, 0, 0);
+        RtlZeroMemory(Val, 32);
+        MkAddResident(&Rec, AttributeData, L"$Max", 4, 0, Val, 32);
         MkFinalize(&Rec);
 
         /* Record 11: $Extend directory, indexing all children (collation order

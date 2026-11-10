@@ -91,6 +91,10 @@ typedef struct _NTFS_INFO
     UCHAR MinorVersion;
     USHORT Flags;
 
+    /* Set at format. Absent on a Windows volume, where short names stay on
+     * so a system volume keeps the names Windows would have created. */
+    BOOLEAN ShortNameCreation;
+
     ULONG MftZoneReservation;
 
     /* Cluster range held back for $MFT growth. End is exclusive. */
@@ -127,8 +131,22 @@ typedef struct
     struct _NTFS_ATTR_CONTEXT* BitmapContext;
     PULONG BitmapBuffer;
     ULONG BitmapSize;
+    /* Byte offset of BitmapBuffer within $Bitmap. The buffer is one window. */
+    ULONGLONG ClusterWindowBase;
+    ULONG ClusterWindowBytes;
+    BOOLEAN ClusterWindowDirty;
     RTL_BITMAP ClusterBitmap;
     ULONGLONG FreeClusterCount;
+
+    /* Resident $MFT:$Bitmap. MftBitmapResource is separate from BitmapResource. */
+    ERESOURCE MftBitmapResource;
+    struct _NTFS_ATTR_CONTEXT* MftBitmapContext;
+    PUCHAR MftBitmap;
+    ULONG MftBitmapBytes;
+    ULONGLONG MftNextFree;
+
+    /* One resource per directory hash, so two directories do not share a lock. */
+    ERESOURCE DirectoryLock[16];
 
     KSPIN_LOCK FcbListLock;
     LIST_ENTRY FcbListHead;
@@ -159,6 +177,13 @@ typedef struct
 #define VCB_VOLUME_LOCKED       0x0001
 /* Volume dismounted: everything but raw volume access is refused */
 #define VCB_VOLUME_DISMOUNTED   0x0002
+/* Dirty $LogFile has not been replayed. Reads proceed. Writes do not. */
+#define VCB_VOLUME_READ_ONLY    0x0004
+
+/* $VOLUME_INFORMATION flag. Set until log replay finishes. */
+#define NTFS_VOLUME_DIRTY       0x0001
+
+#define NtfsDirectoryResource(Vcb, Index) (&(Vcb)->DirectoryLock[(Index) & 15])
 
 typedef struct
 {
@@ -637,6 +662,13 @@ typedef struct _FCB
 
     ERESOURCE PagingIoResource;
     ERESOURCE MainResource;
+    /* Held for this directory's index. Taken after MainResource. */
+    ERESOURCE IndexLock;
+
+    /* Unwrapped EFS file key. Absent means a read or write returns no plaintext. */
+    UCHAR FileKey[32];
+    UCHAR FileKeyLength;
+    BOOLEAN HasFileKey;
 
     /* Byte range locks taken through LockFileEx() */
     FILE_LOCK FileLock;
@@ -1043,7 +1075,8 @@ NTSTATUS
 NtfsCreateDirectory(PDEVICE_EXTENSION DeviceExt,
                     PFILE_OBJECT FileObject,
                     BOOLEAN CaseSensitive,
-                    BOOLEAN CanWait);
+                    BOOLEAN CanWait,
+                    PSECURITY_DESCRIPTOR ExplicitSecurity);
 
 PFILE_RECORD_HEADER
 NtfsCreateEmptyFileRecord(PDEVICE_EXTENSION DeviceExt);
@@ -1052,7 +1085,8 @@ NTSTATUS
 NtfsCreateFileRecord(PDEVICE_EXTENSION DeviceExt,
                      PFILE_OBJECT FileObject,
                      BOOLEAN CaseSensitive,
-                     BOOLEAN CanWait);
+                     BOOLEAN CanWait,
+                     PSECURITY_DESCRIPTOR ExplicitSecurity);
 
 /* devctl.c */
 
@@ -1566,6 +1600,13 @@ NtfsWrite(PNTFS_IRP_CONTEXT IrpContext);
 /* volinfo.c */
 
 NTSTATUS
+NtfsLoadMftBitmap(PDEVICE_EXTENSION DeviceExt);
+
+NTSTATUS
+NtfsBringClusterWindow(PDEVICE_EXTENSION DeviceExt,
+                       ULONGLONG Bit);
+
+NTSTATUS
 NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
                      ULONG FirstDesiredCluster,
                      ULONG DesiredClusters,
@@ -1606,5 +1647,140 @@ CODE_SEG("INIT")
 VOID
 NTAPI
 NtfsInitializeFunctionPointers(PDRIVER_OBJECT DriverObject);
+
+/* ntfs3x.c */
+
+NTSTATUS
+NtfsReplayLog(PDEVICE_EXTENSION Vcb);
+
+VOID
+NtfsLogFileRecord(PDEVICE_EXTENSION Vcb,
+                  ULONGLONG MftIndex,
+                  PFILE_RECORD_HEADER FileRecord);
+
+NTSTATUS
+NtfsAssignSecurity(PDEVICE_EXTENSION Vcb,
+                   PFILE_RECORD_HEADER FileRecord,
+                   ULONGLONG ParentMftIndex,
+                   PSECURITY_DESCRIPTOR Explicit,
+                   BOOLEAN IsDirectory);
+
+NTSTATUS
+NtfsQueryObjectId(PDEVICE_EXTENSION Vcb,
+                  PFILE_OBJECT FileObject,
+                  PIRP Irp);
+
+NTSTATUS
+NtfsSetReparsePoint(PDEVICE_EXTENSION Vcb,
+                    PFILE_OBJECT FileObject,
+                    PVOID Buffer,
+                    ULONG Length);
+
+NTSTATUS
+NtfsGetReparsePoint(PDEVICE_EXTENSION Vcb,
+                    PFILE_OBJECT FileObject,
+                    PIRP Irp);
+
+NTSTATUS
+NtfsDeleteReparsePoint(PDEVICE_EXTENSION Vcb,
+                       PFILE_OBJECT FileObject,
+                       PVOID Buffer,
+                       ULONG Length);
+
+ULONG
+NtfsGetReparseTag(PDEVICE_EXTENSION Vcb,
+                  ULONGLONG MftIndex);
+
+NTSTATUS
+NtfsSetQuota(PDEVICE_EXTENSION Vcb,
+             PVOID Buffer,
+             ULONG Length);
+
+NTSTATUS
+NtfsSetSparse(PDEVICE_EXTENSION Vcb,
+              PFILE_OBJECT FileObject,
+              PVOID Buffer,
+              ULONG Length);
+
+NTSTATUS
+NtfsSetZeroData(PDEVICE_EXTENSION Vcb,
+                PFILE_OBJECT FileObject,
+                PVOID Buffer,
+                ULONG Length);
+
+NTSTATUS
+NtfsSetCompression(PDEVICE_EXTENSION Vcb,
+                   PFILE_OBJECT FileObject,
+                   PVOID Buffer,
+                   ULONG Length);
+
+NTSTATUS
+NtfsGetCompression(PDEVICE_EXTENSION Vcb,
+                   PFILE_OBJECT FileObject,
+                   PIRP Irp);
+
+NTSTATUS
+NtfsCreateUsnJournal(PDEVICE_EXTENSION Vcb,
+                     PVOID Buffer,
+                     ULONG Length);
+
+NTSTATUS
+NtfsQueryUsnJournal(PDEVICE_EXTENSION Vcb,
+                    PIRP Irp);
+
+NTSTATUS
+NtfsReadUsnJournal(PDEVICE_EXTENSION Vcb,
+                   PVOID Buffer,
+                   ULONG Length,
+                   PIRP Irp);
+
+NTSTATUS
+NtfsDeleteUsnJournal(PDEVICE_EXTENSION Vcb);
+
+NTSTATUS
+NtfsAppendUsn(PDEVICE_EXTENSION Vcb,
+              ULONGLONG FileReference,
+              ULONGLONG ParentReference,
+              ULONG Reason,
+              ULONG Attributes,
+              PCUNICODE_STRING Name);
+
+NTSTATUS
+NtfsReadCompressed(PDEVICE_EXTENSION Vcb,
+                   PNTFS_FCB Fcb,
+                   PUCHAR Buffer,
+                   ULONG Length,
+                   ULONGLONG Offset,
+                   PULONG LengthRead);
+
+NTSTATUS
+NtfsWriteCompressed(PDEVICE_EXTENSION Vcb,
+                    PNTFS_FCB Fcb,
+                    const PUCHAR Buffer,
+                    ULONG Length,
+                    ULONGLONG Offset,
+                    PULONG LengthWritten);
+
+NTSTATUS
+NtfsReadEncrypted(PDEVICE_EXTENSION Vcb,
+                  PNTFS_FCB Fcb,
+                  PUCHAR Buffer,
+                  ULONG Length,
+                  ULONGLONG Offset,
+                  PULONG LengthRead);
+
+NTSTATUS
+NtfsWriteEncrypted(PDEVICE_EXTENSION Vcb,
+                   PNTFS_FCB Fcb,
+                   const PUCHAR Buffer,
+                   ULONG Length,
+                   ULONGLONG Offset,
+                   PULONG LengthWritten);
+
+NTSTATUS
+NtfsSetEncryption(PDEVICE_EXTENSION Vcb,
+                  PFILE_OBJECT FileObject,
+                  PVOID Buffer,
+                  ULONG Length);
 
 #endif /* NTFS_H */

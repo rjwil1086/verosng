@@ -1,28 +1,15 @@
 /*
- *  ReactOS kernel
- *  Copyright (C) 2002, 2014 ReactOS Team
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
- *
- * COPYRIGHT:        See COPYING in the top level directory
- * PROJECT:          ReactOS kernel
- * FILE:             drivers/filesystem/ntfs/rw.c
- * PURPOSE:          NTFS filesystem driver
- * PROGRAMMERS:      Art Yerkes
- *                   Pierre Schweitzer (pierre@reactos.org)
- *                   Trevor Thompson
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/filesystems/ntfs/rw.c
+ * PURPOSE:     NTFS filesystem driver
+ * COPYRIGHT:   Copyright (C) 2002, 2014 ReactOS Team
+ *              See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Art Yerkes
+ *              Pierre Schweitzer (pierre@reactos.org)
+ *              Trevor Thompson
+ *              Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/
@@ -155,18 +142,10 @@ NtfsReadFile(PDEVICE_EXTENSION DeviceExt,
     Fcb = (PNTFS_FCB)FileObject->FsContext;
 
     if (NtfsFCBIsCompressed(Fcb))
-    {
-        DPRINT1("Compressed file!\n");
-        UNIMPLEMENTED;
-        return STATUS_NOT_IMPLEMENTED;
-    }
+        return NtfsReadCompressed(DeviceExt, Fcb, Buffer, Length, ReadOffset, LengthRead);
 
     if (NtfsFCBIsEncrypted(Fcb))
-    {
-        DPRINT1("Encrypted file!\n");
-        UNIMPLEMENTED;
-        return STATUS_NOT_IMPLEMENTED;
-    }
+        return NtfsReadEncrypted(DeviceExt, Fcb, Buffer, Length, ReadOffset, LengthRead);
 
     FileRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
     if (FileRecord == NULL)
@@ -340,11 +319,11 @@ NtfsCachedRead(
 
     *LengthRead = 0;
 
-    if (NtfsFCBIsCompressed(Fcb) || NtfsFCBIsEncrypted(Fcb))
-    {
-        UNIMPLEMENTED;
-        return STATUS_NOT_IMPLEMENTED;
-    }
+    if (NtfsFCBIsCompressed(Fcb))
+        return NtfsReadCompressed(IrpContext->DeviceObject->DeviceExtension, Fcb, Buffer, Length, ReadOffset->QuadPart, LengthRead);
+
+    if (NtfsFCBIsEncrypted(Fcb))
+        return NtfsReadEncrypted(IrpContext->DeviceObject->DeviceExtension, Fcb, Buffer, Length, ReadOffset->QuadPart, LengthRead);
 
     if (!ExAcquireResourceSharedLite(&Fcb->MainResource, CanWait))
         goto Post;
@@ -655,13 +634,11 @@ NTSTATUS NtfsWriteFile(PDEVICE_EXTENSION DeviceExt,
     DPRINT("Fcb->PathName: %wS\n", Fcb->PathName);
     DPRINT("Fcb->ObjectName: %wS\n", Fcb->ObjectName);
 
-    // we don't yet handle compression
     if (NtfsFCBIsCompressed(Fcb))
-    {
-        DPRINT("Compressed file!\n");
-        UNIMPLEMENTED;
-        return STATUS_NOT_IMPLEMENTED;
-    }
+        return NtfsWriteCompressed(DeviceExt, Fcb, Buffer, Length, WriteOffset, LengthWritten);
+
+    if (NtfsFCBIsEncrypted(Fcb))
+        return NtfsWriteEncrypted(DeviceExt, Fcb, Buffer, Length, WriteOffset, LengthWritten);
 
     // allocate non-paged memory for the FILE_RECORD_HEADER
     FileRecord = ExAllocateFromNPagedLookasideList(&DeviceExt->FileRecLookasideList);
@@ -877,10 +854,10 @@ NtfsCachedWrite(
     *LengthWritten = 0;
 
     if (NtfsFCBIsCompressed(Fcb))
-    {
-        UNIMPLEMENTED;
-        return STATUS_NOT_IMPLEMENTED;
-    }
+        return NtfsWriteCompressed(IrpContext->DeviceObject->DeviceExtension, Fcb, Buffer, Length, WriteOffset->QuadPart, LengthWritten);
+
+    if (NtfsFCBIsEncrypted(Fcb))
+        return NtfsWriteEncrypted(IrpContext->DeviceObject->DeviceExtension, Fcb, Buffer, Length, WriteOffset->QuadPart, LengthWritten);
 
     /* Let Cc throttle us before we hold anything */
     CcCanIWrite(FileObject, Length, TRUE, FALSE);
@@ -990,6 +967,13 @@ NtfsWrite(PNTFS_IRP_CONTEXT IrpContext)
 
         Irp->IoStatus.Information = 0;
         return STATUS_INVALID_DEVICE_REQUEST;
+    }
+
+    DeviceExt = IrpContext->DeviceObject->DeviceExtension;
+    if (DeviceExt->Flags & VCB_VOLUME_READ_ONLY)
+    {
+        Irp->IoStatus.Information = 0;
+        return STATUS_MEDIA_WRITE_PROTECTED;
     }
 
     // get the File control block

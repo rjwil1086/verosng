@@ -20,6 +20,10 @@
 
 /* FUNCTIONS ****************************************************************/
 
+NTSTATUS
+NtfsBringClusterWindow(PDEVICE_EXTENSION DeviceExt,
+                       ULONGLONG Bit);
+
 /**
 * @name NtfsLoadVolumeBitmap
 *
@@ -72,8 +76,18 @@ NtfsLoadVolumeBitmap(
         goto Fail;
     }
 
-    /* Whole sectors, so write back never reads first */
-    BufferSize = ROUND_UP((ULONG)BitmapSize, DeviceExt->NtfsInfo.BytesPerSector);
+    /* One window, not the whole $Bitmap. A large volume must not need one
+     * contiguous allocation of every cluster bit. */
+    DeviceExt->BitmapSize = (ULONG)BitmapSize;
+    DeviceExt->ClusterWindowBytes = 64 * 1024;
+    if (DeviceExt->ClusterWindowBytes > DeviceExt->BitmapSize)
+        DeviceExt->ClusterWindowBytes = DeviceExt->BitmapSize;
+    DeviceExt->ClusterWindowBytes = ROUND_UP(DeviceExt->ClusterWindowBytes,
+                                            DeviceExt->NtfsInfo.BytesPerSector);
+    if (DeviceExt->ClusterWindowBytes > DeviceExt->BitmapSize)
+        DeviceExt->ClusterWindowBytes = DeviceExt->BitmapSize;
+
+    BufferSize = DeviceExt->ClusterWindowBytes;
     DeviceExt->BitmapBuffer = ExAllocatePoolWithTag(PagedPool, BufferSize, TAG_NTFS);
     if (DeviceExt->BitmapBuffer == NULL)
     {
@@ -81,21 +95,58 @@ NtfsLoadVolumeBitmap(
         goto Fail;
     }
     RtlZeroMemory(DeviceExt->BitmapBuffer, BufferSize);
+    DeviceExt->ClusterWindowBase = 0;
 
-    if (ReadAttribute(DeviceExt, DeviceExt->BitmapContext, 0, (PCHAR)DeviceExt->BitmapBuffer, (ULONG)BitmapSize) != (ULONG)BitmapSize)
+    if (ReadAttribute(DeviceExt, DeviceExt->BitmapContext, 0, (PCHAR)DeviceExt->BitmapBuffer, BufferSize) != BufferSize)
     {
         DPRINT1("Unable to read $Bitmap\n");
         Status = STATUS_UNSUCCESSFUL;
         goto Fail;
     }
 
-    DeviceExt->BitmapSize = (ULONG)BitmapSize;
+    {
+        ULONG WindowBits = BufferSize * 8;
+        PUCHAR Scan;
+        ULONG ScanBytes;
+        ULONGLONG Free = 0;
+        ULONGLONG Offset = 0;
 
-    /* $Bitmap is rounded up to a cluster and covers a few clusters more than
-     * the volume has. Bounding by ClusterCount ignores the surplus bits, but
-     * write back still preserves them on disk. */
-    RtlInitializeBitMap(&DeviceExt->ClusterBitmap, DeviceExt->BitmapBuffer, (ULONG)DeviceExt->NtfsInfo.ClusterCount);
-    DeviceExt->FreeClusterCount = RtlNumberOfClearBits(&DeviceExt->ClusterBitmap);
+        if ((ULONGLONG)WindowBits > DeviceExt->NtfsInfo.ClusterCount)
+            WindowBits = (ULONG)DeviceExt->NtfsInfo.ClusterCount;
+        RtlInitializeBitMap(&DeviceExt->ClusterBitmap, DeviceExt->BitmapBuffer, WindowBits);
+
+        Scan = ExAllocatePoolWithTag(PagedPool, BufferSize, TAG_NTFS);
+        if (Scan == NULL)
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            goto Fail;
+        }
+
+        while (Offset < BitmapSize)
+        {
+            ULONG Bit;
+            ScanBytes = BufferSize;
+            if (Offset + ScanBytes > BitmapSize)
+                ScanBytes = (ULONG)(BitmapSize - Offset);
+            if (ReadAttribute(DeviceExt, DeviceExt->BitmapContext, Offset, (PCHAR)Scan, ScanBytes) != ScanBytes)
+            {
+                ExFreePoolWithTag(Scan, TAG_NTFS);
+                Status = STATUS_UNSUCCESSFUL;
+                goto Fail;
+            }
+            for (Bit = 0; Bit < ScanBytes * 8; Bit++)
+            {
+                ULONGLONG Cluster = Offset * 8 + Bit;
+                if (Cluster >= DeviceExt->NtfsInfo.ClusterCount)
+                    break;
+                if ((Scan[Bit / 8] & (1 << (Bit % 8))) == 0)
+                    Free++;
+            }
+            Offset += ScanBytes;
+        }
+        ExFreePoolWithTag(Scan, TAG_NTFS);
+        DeviceExt->FreeClusterCount = Free;
+    }
 
     DPRINT("Volume bitmap loaded: %I64u of %I64u clusters free\n",
            DeviceExt->FreeClusterCount, DeviceExt->NtfsInfo.ClusterCount);
@@ -157,23 +208,54 @@ NtfsWriteVolumeBitmap(
     _In_ ULONG ClusterCount)
 {
     ULONG SectorSize = DeviceExt->NtfsInfo.BytesPerSector;
-    ULONG Start;
-    ULONG End;
-    ULONG LengthWritten;
+    ULONG Cursor = FirstCluster;
+    ULONG Last = FirstCluster + ClusterCount;
 
     ASSERT(ClusterCount != 0);
 
-    Start = ROUND_DOWN(FirstCluster / 8, SectorSize);
-    End = ROUND_UP((FirstCluster + ClusterCount - 1) / 8 + 1, SectorSize);
-    End = min(End, ROUND_UP(DeviceExt->BitmapSize, SectorSize));
+    while (Cursor < Last)
+    {
+        ULONG BaseBit;
+        ULONG WindowBits;
+        ULONG ByteStart;
+        ULONG ByteEnd;
+        ULONG LengthWritten;
+        NTSTATUS Status;
 
-    return WriteAttribute(DeviceExt,
-                          DeviceExt->BitmapContext,
-                          Start,
-                          (PUCHAR)DeviceExt->BitmapBuffer + Start,
-                          End - Start,
-                          &LengthWritten,
-                          NULL);
+        Status = NtfsBringClusterWindow(DeviceExt, Cursor);
+        if (!NT_SUCCESS(Status))
+            return Status;
+
+        BaseBit = (ULONG)(DeviceExt->ClusterWindowBase * 8);
+        WindowBits = DeviceExt->ClusterBitmap.SizeOfBitMap;
+        ByteStart = ROUND_DOWN((Cursor - BaseBit) / 8, SectorSize);
+        if (BaseBit + WindowBits >= Last)
+            ByteEnd = (Last - BaseBit + 7) / 8;
+        else
+            ByteEnd = WindowBits / 8;
+        ByteEnd = ROUND_UP(ByteEnd, SectorSize);
+        if (ByteEnd > WindowBits / 8)
+            ByteEnd = WindowBits / 8;
+        if (ByteEnd <= ByteStart)
+            return STATUS_UNSUCCESSFUL;
+
+        Status = WriteAttribute(DeviceExt,
+                                DeviceExt->BitmapContext,
+                                DeviceExt->ClusterWindowBase + ByteStart,
+                                (PUCHAR)DeviceExt->BitmapBuffer + ByteStart,
+                                ByteEnd - ByteStart,
+                                &LengthWritten,
+                                NULL);
+        if (!NT_SUCCESS(Status))
+            return Status;
+
+        Cursor = BaseBit + WindowBits;
+        if (Cursor <= BaseBit)
+            break;
+    }
+
+    DeviceExt->ClusterWindowDirty = FALSE;
+    return STATUS_SUCCESS;
 }
 
 ULONGLONG
@@ -256,6 +338,101 @@ Next:
     return FALSE;
 }
 
+/* Load the window that contains Bit. The caller holds BitmapResource.
+ * The previous window is already on disk: every allocation writes its bits
+ * back before it returns. */
+NTSTATUS
+NtfsBringClusterWindow(PDEVICE_EXTENSION DeviceExt,
+                       ULONGLONG Bit)
+{
+    ULONGLONG Byte;
+    ULONGLONG Base;
+    ULONG Window;
+    ULONG Bits;
+    ULONG Got;
+
+    Window = DeviceExt->ClusterWindowBytes;
+    if (Window == 0 || DeviceExt->BitmapBuffer == NULL)
+        return STATUS_UNSUCCESSFUL;
+
+    Byte = Bit / 8;
+    Base = Byte - (Byte % Window);
+    if (Base == DeviceExt->ClusterWindowBase)
+        return STATUS_SUCCESS;
+
+    if (DeviceExt->ClusterWindowDirty)
+    {
+        ULONG LengthWritten;
+        ULONG Have = (ULONG)min((ULONGLONG)Window, DeviceExt->BitmapSize - DeviceExt->ClusterWindowBase);
+
+        if (WriteAttribute(DeviceExt,
+                           DeviceExt->BitmapContext,
+                           DeviceExt->ClusterWindowBase,
+                           (PUCHAR)DeviceExt->BitmapBuffer,
+                           Have,
+                           &LengthWritten,
+                           NULL) != STATUS_SUCCESS)
+            return STATUS_UNSUCCESSFUL;
+        DeviceExt->ClusterWindowDirty = FALSE;
+    }
+
+    if (Base >= DeviceExt->BitmapSize)
+        return STATUS_END_OF_FILE;
+
+    RtlZeroMemory(DeviceExt->BitmapBuffer, Window);
+    Got = (ULONG)min((ULONGLONG)Window, DeviceExt->BitmapSize - Base);
+    if (ReadAttribute(DeviceExt, DeviceExt->BitmapContext, Base, (PCHAR)DeviceExt->BitmapBuffer, Got) != Got)
+        return STATUS_UNSUCCESSFUL;
+
+    DeviceExt->ClusterWindowBase = Base;
+    Bits = Got * 8;
+    if (Base * 8 + Bits > DeviceExt->NtfsInfo.ClusterCount)
+        Bits = (ULONG)(DeviceExt->NtfsInfo.ClusterCount - Base * 8);
+    RtlInitializeBitMap(&DeviceExt->ClusterBitmap, DeviceExt->BitmapBuffer, Bits);
+    return STATUS_SUCCESS;
+}
+
+static
+BOOLEAN
+NtfsClaimAbsolute(PDEVICE_EXTENSION DeviceExt,
+                  ULONG From,
+                  ULONG To,
+                  ULONG Want,
+                  PULONG Assigned,
+                  PULONG Count)
+{
+    ULONG Cursor = From;
+
+    while (Cursor < To)
+    {
+        ULONG Base;
+        ULONG Size;
+        ULONG LocalFrom;
+        ULONG LocalTo;
+
+        if (!NT_SUCCESS(NtfsBringClusterWindow(DeviceExt, Cursor)))
+            return FALSE;
+
+        Base = (ULONG)(DeviceExt->ClusterWindowBase * 8);
+        Size = DeviceExt->ClusterBitmap.SizeOfBitMap;
+        LocalFrom = (From <= Base) ? 0 : From - Base;
+        LocalTo = (To >= Base + Size) ? Size : To - Base;
+        if (LocalFrom < LocalTo &&
+            NtfsClaimRun(&DeviceExt->ClusterBitmap, LocalFrom, LocalTo, Want, Assigned, Count))
+        {
+            *Assigned += Base;
+            DeviceExt->ClusterWindowDirty = TRUE;
+            return TRUE;
+        }
+
+        if (Base + Size <= Cursor)
+            return FALSE;
+        Cursor = Base + Size;
+    }
+
+    return FALSE;
+}
+
 /**
 * NtfsAllocateClusters
 * Allocates a run of clusters. The run allocated might be smaller than DesiredClusters.
@@ -271,7 +448,6 @@ NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
                      BOOLEAN ForMft)
 {
     NTSTATUS Status;
-    PRTL_BITMAP Bitmap = &DeviceExt->ClusterBitmap;
     ULONG BitmapSize;
     ULONG ZoneStart;
     ULONG ZoneEnd;
@@ -292,7 +468,7 @@ NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
     }
 
     /* The hint is just past the file's last cluster, which can be past the volume end */
-    BitmapSize = Bitmap->SizeOfBitMap;
+    BitmapSize = (ULONG)DeviceExt->NtfsInfo.ClusterCount;
     if (FirstDesiredCluster >= BitmapSize)
         FirstDesiredCluster = 0;
 
@@ -307,25 +483,25 @@ NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
 
         if (Hint < ZoneStart || Hint >= ZoneEnd)
             Hint = ZoneStart;
-        Claimed = NtfsClaimRun(Bitmap, Hint, ZoneEnd, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+        Claimed = NtfsClaimAbsolute(DeviceExt, Hint, ZoneEnd, DesiredClusters, FirstAssignedCluster, AssignedClusters);
         if (!Claimed)
-            Claimed = NtfsClaimRun(Bitmap, ZoneEnd, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+            Claimed = NtfsClaimAbsolute(DeviceExt, ZoneEnd, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
         if (!Claimed)
-            Claimed = NtfsClaimRun(Bitmap, 0, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+            Claimed = NtfsClaimAbsolute(DeviceExt, 0, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
     }
     else
     {
         if (FirstDesiredCluster < ZoneStart)
-            Claimed = NtfsClaimRun(Bitmap, FirstDesiredCluster, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+            Claimed = NtfsClaimAbsolute(DeviceExt, FirstDesiredCluster, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
         else if (FirstDesiredCluster >= ZoneEnd)
-            Claimed = NtfsClaimRun(Bitmap, FirstDesiredCluster, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+            Claimed = NtfsClaimAbsolute(DeviceExt, FirstDesiredCluster, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
 
         if (!Claimed)
-            Claimed = NtfsClaimRun(Bitmap, ZoneEnd, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+            Claimed = NtfsClaimAbsolute(DeviceExt, ZoneEnd, BitmapSize, DesiredClusters, FirstAssignedCluster, AssignedClusters);
         if (!Claimed)
-            Claimed = NtfsClaimRun(Bitmap, 0, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+            Claimed = NtfsClaimAbsolute(DeviceExt, 0, ZoneStart, DesiredClusters, FirstAssignedCluster, AssignedClusters);
         if (!Claimed)
-            Claimed = NtfsClaimRun(Bitmap, ZoneStart, ZoneEnd, DesiredClusters, FirstAssignedCluster, AssignedClusters);
+            Claimed = NtfsClaimAbsolute(DeviceExt, ZoneStart, ZoneEnd, DesiredClusters, FirstAssignedCluster, AssignedClusters);
     }
 
     if (!Claimed)
@@ -342,7 +518,12 @@ NtfsAllocateClusters(PDEVICE_EXTENSION DeviceExt,
     else
     {
         /* Keep the copy in step with what the disk says */
-        RtlClearBits(Bitmap, *FirstAssignedCluster, *AssignedClusters);
+        if (NT_SUCCESS(NtfsBringClusterWindow(DeviceExt, *FirstAssignedCluster)))
+        {
+            ULONG Base = (ULONG)(DeviceExt->ClusterWindowBase * 8);
+            RtlClearBits(&DeviceExt->ClusterBitmap, *FirstAssignedCluster - Base, *AssignedClusters);
+            DeviceExt->ClusterWindowDirty = TRUE;
+        }
         *AssignedClusters = 0;
     }
 
