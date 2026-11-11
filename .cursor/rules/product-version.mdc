@@ -7,12 +7,14 @@ alwaysApply: true
 
 The product version is `KERNEL_VERSION_MAJOR`, `KERNEL_VERSION_MINOR`, and `KERNEL_VERSION_PATCH_LEVEL` in `sdk/include/reactos/version.cmake`. This trunk keeps `KERNEL_VERSION_BUILD_TYPE` as `dev`. The runtime report in `sdk/include/reactos/runtimever.h` stays 10.0.19045. Do not copy it into the product version. Leave the DLL offset at major plus 42.
 
+A ReactOS pull appends one entry to `REACTOS_LINEAGE_IMPORTS` in that file, in the same commit. The entry is that ReactOS version and its full commit, oldest first. A pull does not move `KERNEL_VERSION_MAJOR`, `KERNEL_VERSION_MINOR`, or `KERNEL_VERSION_PATCH_LEVEL`.
+
 Bump in the same commit that newly meets a gate below. The subject starts with `[VER]` and names the new version. Add the code's module tag after it. The body names the gate, then why the code changed.
 
 ```text
-[VER] [SETUPLIB] Open 0.4.18-dev
+[VER] [SETUPLIB] Open 0.1.1-dev
 
-0.4.17's release gate is the in-place upgrade. The kept disk
+0.1.0's release gate is the in-place upgrade. The kept disk
 takes this build without a format, and 7-Zip still opens.
 ```
 
@@ -22,30 +24,30 @@ Milestones 34 through 40 do not move this number. A dashboard score, one matchin
 
 ## Patch
 
-Each gate below moves the patch once, from `0.4.N-dev` to `0.4.(N+1)-dev`, the first time it becomes true. One commit that newly meets two gates moves the patch by two.
+Each gate below moves the patch once, from `0.1.N-dev` to `0.1.(N+1)-dev`, the first time it becomes true. One commit that newly meets two gates moves the patch by two.
 
-- Milestone 13 is closed. The kept disk upgrades in place, the desktop appears, and 7-Zip still opens. `0.4.17-dev` becomes `0.4.18-dev`.
+- Milestone 13 is closed. The kept disk upgrades in place, the desktop appears, and 7-Zip still opens. `0.1.0-dev` becomes `0.1.1-dev`.
 - Milestones 18 and 19 are both closed.
 - Milestone 28 is closed.
 - Milestone 31 is closed.
-- Milestone 33 is closed and the minor gate below is not met. Do not open another 0.4 patch after the minor moves.
+- Milestone 33 is closed and the minor gate below is not met. Do not open another 0.1 patch after the minor moves.
 
 ## Minor
 
-Set `0.5.0-dev` in the commit where every line below is true. The patch resets to 0. Do not also add a 0.4 patch in that commit.
+Set `0.2.0-dev` in the commit where every line below is true. The patch resets to 0. Do not also add a 0.1 patch in that commit.
 
 - Milestone 33 is closed. The root build is `_WIN32_WINNT=0x0A00` and `NTDDI_VERSION=0x0A00000B`.
-- Milestone 13 upgrades the last 0.4 install without formatting, the desktop appears, and 7-Zip still opens.
+- Milestone 13 upgrades the last 0.1 install without formatting, the desktop appears, and 7-Zip still opens.
 - Milestone 15 service numbers are in the tree, and milestone 33 has frozen `sysfuncs64.h`.
 - Page-table write and dirty bits stay where milestone 32 left them.
 - `KmWin2k3VersionLie` still reports 5.2.3790. In-tree PE stamps stay 5.2.
 
 ## Major
 
-Set `1.0.0-dev` only after a 0.5 version is already on trunk. Do not jump from 0.4.
+Set `1.0.0-dev` only after a 0.2 version is already on trunk. Do not jump from 0.1.
 
 - Milestones 24, 28, and 31 are closed.
-- Milestone 13 upgrades a 0.5 install without formatting, and the catalog programs still complete their one action.
+- Milestone 13 upgrades a 0.2 install without formatting, and the catalog programs still complete their one action.
 - `sysfuncs64.h` and the shared layouts from milestone 22 stay frozen on the 1.0 line.
 
 A later 1.x patch or minor is a release cut on purpose. The next major is the commit that forces a format, or that breaks those frozen service numbers or shared layouts. DLL file versions follow the existing plus-42 rule, so 1.0.0 publishes 43.0.0.

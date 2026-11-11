@@ -7,13 +7,27 @@ else()
 endif()
 
 set(KERNEL_VERSION_MAJOR "0")
-set(KERNEL_VERSION_MINOR "4")
-set(KERNEL_VERSION_PATCH_LEVEL "17")
+set(KERNEL_VERSION_MINOR "1")
+set(KERNEL_VERSION_PATCH_LEVEL "0")
 set(COPYRIGHT_YEAR "2026")
 
 # KERNEL_VERSION_BUILD_TYPE is "dev" for Git builds
 # or "RC1", "RC2", "" for releases.
 set(KERNEL_VERSION_BUILD_TYPE "dev")
+
+# ReactOS lineage. These are not the VerOS NT product version.
+# FORK is the ReactOS commit this tree was taken from, and the
+# version.cmake label on that commit.
+# Each later pull appends one IMPORTS entry, oldest first:
+#   "<reactos version>-<build type> <full commit>"
+set(REACTOS_LINEAGE_FORK_VERSION "0.4.17-dev")
+set(REACTOS_LINEAGE_FORK_COMMIT "b7b13d12524e19e5c51484c4a7b8f9d5927406a3")
+set(REACTOS_LINEAGE_IMPORTS "")
+if(REACTOS_LINEAGE_IMPORTS)
+    string(JOIN "; " REACTOS_LINEAGE_IMPORTS_STR ${REACTOS_LINEAGE_IMPORTS})
+else()
+    set(REACTOS_LINEAGE_IMPORTS_STR "")
+endif()
 
 set(KERNEL_VERSION "${KERNEL_VERSION_MAJOR}.${KERNEL_VERSION_MINOR}.${KERNEL_VERSION_PATCH_LEVEL}-${WINARCH}")
 if(NOT KERNEL_VERSION_BUILD_TYPE STREQUAL "")
