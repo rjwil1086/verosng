@@ -18,11 +18,13 @@
  */
 /*
  * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROJECT:     ReactOS "Welcome"/AutoRun application
  * FILE:        base/setup/welcome/welcome.c
  * PROGRAMMERS: Eric Kohl
  *              Casper S. Hornstrup (chorns@users.sourceforge.net)
  *              Hermes Belusca-Maito
+ *              Ryan Wilson
  *
  * NOTE:
  *   This utility can be customized by using localized INI configuration files.
@@ -464,7 +466,7 @@ AddNewTopicEx(
 static VOID
 LoadLocalizedResourcesInternal(VOID)
 {
-#define MAX_NUMBER_INTERNAL_TOPICS  3
+#define MAX_NUMBER_INTERNAL_TOPICS  4
 
     UINT i;
     LPTSTR lpszCommand, lpszAction;

@@ -1,9 +1,11 @@
 /*
  * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROJECT:     ReactOS text-mode setup
  * FILE:        base/setup/usetup/cabinet.c
  * PURPOSE:     Cabinet routines
  * PROGRAMMERS: Casper S. Hornstrup (chorns@users.sourceforge.net)
+ *              Ryan Wilson
  * REVISIONS:
  *   CSH 15/08-2003 Created
  */
@@ -961,6 +963,37 @@ Validate(VOID)
  * RETURNS
  *     Status of operation
  */
+/* A folder walk that runs past the mapped cabinet reads unmapped memory. */
+static BOOLEAN
+CabinetDataBlockInView(
+    IN PCABINET_CONTEXT CabinetContext,
+    IN PCFDATA Block)
+{
+    PUCHAR Base;
+    PUCHAR End;
+    PUCHAR Cursor;
+    ULONG_PTR Need;
+
+    if (CabinetContext->FileBuffer == NULL || Block == NULL)
+        return FALSE;
+
+    Base = (PUCHAR)CabinetContext->FileBuffer;
+    End = Base + CabinetContext->FileSize;
+    Cursor = (PUCHAR)Block;
+    if (Cursor < Base || Cursor >= End)
+        return FALSE;
+
+    Need = sizeof(CFDATA);
+    if ((ULONG_PTR)(End - Cursor) < Need)
+        return FALSE;
+
+    Need += CabinetContext->DataReserved + Block->CompSize;
+    if ((ULONG_PTR)(End - Cursor) < Need)
+        return FALSE;
+
+    return TRUE;
+}
+
 ULONG
 CabinetExtractFile(
     IN PCABINET_CONTEXT CabinetContext,
@@ -1193,12 +1226,30 @@ CabinetExtractFile(
         CFData = (PCFDATA)(CabinetContext->CabinetFolders[Search->File->FolderIndex].DataOffset + CabinetContext->FileBuffer);
 
     CurrentOffset = Search->Offset;
+    if (!CabinetDataBlockInView(CabinetContext, CFData))
+    {
+        Status = CAB_STATUS_INVALID_CAB;
+        goto UnmapDestFile;
+    }
     while (CurrentOffset + CFData->UncompSize <= Search->File->FileOffset)
     {
+        PCFDATA Next;
+
         /* walk the data blocks until we reach
            the one containing the start of the file */
+        if (CFData->UncompSize == 0)
+        {
+            Status = CAB_STATUS_INVALID_CAB;
+            goto UnmapDestFile;
+        }
+        Next = (PCFDATA)((char *)(CFData + 1) + CabinetContext->DataReserved + CFData->CompSize);
+        if (!CabinetDataBlockInView(CabinetContext, Next))
+        {
+            Status = CAB_STATUS_INVALID_CAB;
+            goto UnmapDestFile;
+        }
         CurrentOffset += CFData->UncompSize;
-        CFData = (PCFDATA)((char *)(CFData + 1) + CabinetContext->DataReserved + CFData->CompSize);
+        CFData = Next;
     }
 
     Search->CFData = CFData;
@@ -1278,6 +1329,11 @@ CabinetExtractFile(
             /* used up this block, move on to the next */
             DPRINT("Out of block data\n");
             CFData = (PCFDATA)CurrentBuffer;
+            if (!CabinetDataBlockInView(CabinetContext, CFData))
+            {
+                Status = CAB_STATUS_INVALID_CAB;
+                goto UnmapDestFile;
+            }
             RemainingBlock = CFData->CompSize;
             CurrentBuffer = (unsigned char *)(CFData + 1) + CabinetContext->DataReserved;
             InputLength = RemainingBlock;

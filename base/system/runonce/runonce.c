@@ -1,8 +1,10 @@
 /*
  * COPYRIGHT:       See COPYING in the top level directory
+ *                  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROJECT:         ReactOS runonce.exe
  * FILE:            base/system/runonce/runonce.c
- * PROGRAMMER:      Dmitry Chapyshev (dmitry@reactos.org)
+ * PROGRAMMERS:     Dmitry Chapyshev (dmitry@reactos.org)
+ *                  Ryan Wilson
  */
 
 #include "runonce.h"
@@ -133,40 +135,48 @@ _tWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPTSTR lpCmdLine, INT nCmdShow)
         if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
                          _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce"),
                          0,
-                         KEY_QUERY_VALUE,
+                         KEY_QUERY_VALUE | KEY_SET_VALUE,
                          &hKey) == ERROR_SUCCESS)
         {
-            for (dwIndex = 0; ; dwIndex++)
+            /* Enumerating by index never stops: a failed lookup is
+             * not a break, so userinit waits forever and Explorer
+             * never starts. Deleting the value shifts the rest, so
+             * always read index 0. */
+            for (;;)
             {
                 dwSize = sizeof(szAppPath);
                 dwData = sizeof(szData) / sizeof(TCHAR);
 
                 if (RegEnumValue(hKey,
-                                 dwIndex,
+                                 0,
                                  szAppPath,
                                  &dwSize,
                                  NULL,
                                  &dwType,
                                  (LPBYTE)szData,
-                                 &dwData) == ERROR_SUCCESS)
+                                 &dwData) != ERROR_SUCCESS)
                 {
-                    RegDeleteValue(hKey, szAppPath);
-
-                    if (dwType != REG_SZ) continue;
-
-                    ZeroMemory(&si, sizeof(si));
-                    si.cb = sizeof(si);
-                    si.dwFlags = STARTF_USESHOWWINDOW;
-                    si.wShowWindow = SW_SHOW;
-
-                    if (!CreateProcess(NULL, szData, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
-                        continue;
-
-                    WaitForSingleObjectEx(pi.hProcess, INFINITE, TRUE);
-
-                    CloseHandle(pi.hProcess);
-                    CloseHandle(pi.hThread);
+                    break;
                 }
+
+                if (RegDeleteValue(hKey, szAppPath) != ERROR_SUCCESS)
+                    break;
+
+                if (dwType != REG_SZ)
+                    continue;
+
+                ZeroMemory(&si, sizeof(si));
+                si.cb = sizeof(si);
+                si.dwFlags = STARTF_USESHOWWINDOW;
+                si.wShowWindow = SW_SHOW;
+
+                if (!CreateProcess(NULL, szData, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+                    continue;
+
+                WaitForSingleObjectEx(pi.hProcess, INFINITE, TRUE);
+
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
             }
 
             RegCloseKey(hKey);

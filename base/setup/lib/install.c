@@ -1,10 +1,12 @@
 /*
  * COPYRIGHT:       See COPYING in the top level directory
+ *                  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROJECT:         ReactOS Setup Library
  * FILE:            base/setup/lib/install.c
  * PURPOSE:         Installation functions
  * PROGRAMMERS:     Hervé Poussineau (hpoussin@reactos.org)
  *                  Hermes Belusca-Maito (hermes.belusca@sfr.fr)
+ *                  Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/
@@ -452,6 +454,21 @@ AddSectionToCopyQueue(
             return FALSE;
             // break;
         }
+
+        /* An upgrade keeps the hives already on the volume. */
+        if (pSetupData->UpgradeInstall &&
+            TargetDirectory != NULL &&
+            _wcsnicmp(TargetDirectory, L"system32\\config", 15) == 0 &&
+            (TargetDirectory[15] == UNICODE_NULL || TargetDirectory[15] == L'\\'))
+        {
+            INF_FreeData(SourceFileName);
+            INF_FreeData(SourceRootPath);
+            INF_FreeData(SourcePath);
+            INF_FreeData(TargetDirectory);
+            INF_FreeData(TargetFileName);
+            continue;
+        }
+
         /*
          * SourcePath: '\Device\CdRom0\I386'
          * SourceRootPath: '\Device\CdRom0'

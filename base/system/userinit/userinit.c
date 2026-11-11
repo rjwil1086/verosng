@@ -570,6 +570,34 @@ Restart:
                 WARN("CreateEnvironmentBlock() failed, fall back to default (error %lu)\n",
                      GetLastError());
             }
+            /*
+             * Run HKLM RunOnce before the shell. The upgrade commit and the
+             * following delete of <SystemRoot>\upgrade are stored there.
+             */
+            if (!bIsLiveCD)
+            {
+                STARTUPINFOW RunOnceStart;
+                PROCESS_INFORMATION RunOnceProcess;
+                WCHAR RunOnceCmd[] = L"runonce.exe /r";
+
+                ZeroMemory(&RunOnceStart, sizeof(RunOnceStart));
+                RunOnceStart.cb = sizeof(RunOnceStart);
+                if (CreateProcessW(NULL,
+                                   RunOnceCmd,
+                                   NULL,
+                                   NULL,
+                                   FALSE,
+                                   0,
+                                   NULL,
+                                   NULL,
+                                   &RunOnceStart,
+                                   &RunOnceProcess))
+                {
+                    WaitForSingleObject(RunOnceProcess.hProcess, INFINITE);
+                    CloseHandle(RunOnceProcess.hThread);
+                    CloseHandle(RunOnceProcess.hProcess);
+                }
+            }
             Success = StartShell(pEnvironment);
             if (pEnvironment)
                 DestroyEnvironmentBlock(pEnvironment);

@@ -114,4 +114,51 @@ Write-Host "Serial log: $serial"
 if ($result -eq "hang") {
     exit 2
 }
+
+$installedDisk = Join-Path (Split-Path $SourceRoot -Parent) "virtual-machines\veros-ntfs\disk.qcow2"
+if (-not (Test-Path $installedDisk)) {
+    Write-Host "Installed disk was not found at $installedDisk"
+    exit 0
+}
+
+$installedStamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+$installedSerial = Join-Path $OutputDir "installed-$installedStamp.log"
+$installedQemuLog = Join-Path $OutputDir "qemu-installed-$installedStamp.log"
+$installedArgs = "-accel tcg -L `"$bios`" -m 8192 -smp 4 -drive `"file=$installedDisk,format=qcow2,if=ide,index=0,media=disk`" -boot c -no-reboot -serial `"file:$installedSerial`""
+if ($ShowWindow) {
+    $installedArgs += " -display gtk -name `"VerOS NT`""
+} else {
+    $installedArgs += " -display none"
+}
+Write-Host "Installed disk: $installedDisk"
+$installedStart = @{
+    FilePath = $Qemu
+    ArgumentList = $installedArgs
+    PassThru = $true
+    RedirectStandardError = $installedQemuLog
+}
+if (-not $ShowWindow) {
+    $installedStart.WindowStyle = "Hidden"
+}
+$installedProc = Start-Process @installedStart
+$installedFinished = $installedProc.WaitForExit($TimeoutSec * 1000)
+if (-not $installedFinished) {
+    Stop-Process -Id $installedProc.Id -Force -ErrorAction SilentlyContinue
+    $installedResult = "hang"
+} else {
+    $installedResult = "exited"
+}
+$installedSummary = [ordered]@{
+    accelerator = "tcg"
+    disk        = $installedDisk
+    serialLog   = $installedSerial
+    qemuLog     = $installedQemuLog
+    result      = $installedResult
+    timeoutSec  = $TimeoutSec
+}
+$installedSummary | ConvertTo-Json | Set-Content -Path (Join-Path $OutputDir "installed-boot-latest.json")
+Write-Host "Installed serial log: $installedSerial"
+if ($installedResult -eq "hang") {
+    exit 2
+}
 exit 0

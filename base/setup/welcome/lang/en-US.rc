@@ -19,6 +19,7 @@ BEGIN
     IDS_TOPIC_BUTTON0 "&Install VerOS NT"
     IDS_TOPIC_BUTTON1 "&Browse this CD"
     IDS_TOPIC_BUTTON2 "&Exit"
+    IDS_TOPIC_BUTTON3 "&Upgrade VerOS NT"
 END
 
 /* Topic titles */
@@ -27,6 +28,7 @@ BEGIN
     IDS_TOPIC_TITLE0 "Install VerOS NT"
     IDS_TOPIC_TITLE1 "Browse this CD"
     IDS_TOPIC_TITLE2 "Exit"
+    IDS_TOPIC_TITLE3 "Upgrade VerOS NT"
 END
 
 /* Topic descriptions */
@@ -35,4 +37,5 @@ BEGIN
     IDS_TOPIC_DESC0 "Create a new VerOS NT installation on your computer or upgrade an existing installation."
     IDS_TOPIC_DESC1 "Browse the CD."
     IDS_TOPIC_DESC2 "Click to exit this application."
+    IDS_TOPIC_DESC3 "Copy a newer build onto this install and reboot. The programs and settings already on the disk stay."
 END

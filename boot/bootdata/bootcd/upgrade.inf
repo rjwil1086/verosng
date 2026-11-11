@@ -1,0 +1,29 @@
+[Unattend]
+Signature = "$VerOS$"
+
+; The upgrade boot entry reads this file. The fresh installer keeps unattend.inf.
+UnattendSetupEnabled = yes
+
+; The installation list supplies the disk, partition, and directory.
+DestinationDiskNumber = 0
+DestinationPartitionNumber = 1
+InstallationDirectory=VerOS
+
+; BootLoaderLocation=2 installs the MBR and the volume boot code.
+BootLoaderLocation=2
+
+FullName="MyName"
+ComputerName="MYCOMPUTERNAME"
+TimeZoneIndex=85
+
+; An upgrade does not format the existing volume.
+FormatPartition=0
+
+; yes keeps the hives, profiles, and Program Files.
+UpgradeInstall = yes
+
+AutoPartition = 0
+FsType = 2
+RappsDownload = no
+LocaleID = 409
+InstallationType = 0

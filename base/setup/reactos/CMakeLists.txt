@@ -4,6 +4,7 @@ list(APPEND SOURCE
     spapisup/infsupp.c
     drivepage.c
     reactos.c
+    stage.c
     treelist.c
     reactos.h)
 

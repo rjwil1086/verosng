@@ -131,6 +131,7 @@ typedef struct _USETUP_DATA
 
     LONG BootLoaderLocation;
     LONG FormatPartition;
+    LONG UpgradeInstall;
     LONG AutoPartition;
     LONG FsType;
 
@@ -247,6 +248,11 @@ typedef enum _REGISTRY_STATUS
 
 typedef VOID
 (__cdecl *PREGISTRY_STATUS_ROUTINE)(IN REGISTRY_STATUS, ...);
+
+VOID
+NTAPI
+ResetUpgradePackageDatabase(
+    IN OUT PUSETUP_DATA pSetupData);
 
 ERROR_NUMBER
 NTAPI

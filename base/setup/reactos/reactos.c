@@ -5,6 +5,7 @@
  * COPYRIGHT:   Copyright 2008-2010 Matthias Kupfer <mkupfer@reactos.org>
  *              Copyright 2008-2009 Dmitry Chapyshev <dmitry@reactos.org>
  *              Copyright 2018-2026 Hermès Bélusca-Maïto <hermes.belusca-maito@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  */
 
 #include "reactos.h"
@@ -3806,6 +3807,14 @@ _tWinMain(HINSTANCE hInst,
     /* Load extra setup data (HW lists etc...) */
     if (!LoadSetupData(&SetupData))
         goto Quit;
+
+    /* The welcome topic stages the new files and reboots. It does not open the wizard. */
+    if (lpszCmdLine != NULL && wcsstr(lpszCmdLine, L"/stage") != NULL)
+    {
+        if (StageExistingInstall())
+            SetupData.bMustReboot = TRUE;
+        goto Quit;
+    }
 
     /* Start the hotkey thread */
     CloseHandle(CreateThread(NULL, 0, HotkeyThread, NULL, 0, &dwHotkeyThreadId));

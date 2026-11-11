@@ -15,6 +15,7 @@
 #include "precomp.h"
 #include "filesup.h"
 #include "infsupp.h"
+#include "utils/regutil.h"
 #include "inicache.h"
 
 #include "setuplib.h"
@@ -95,6 +96,99 @@ Quit:
     return Result;
 }
 
+/*
+ * Read one NAME=value token from the system start options. NAME includes
+ * the equals sign. The value runs until the next space or slash.
+ */
+static BOOLEAN
+QuerySystemStartOption(
+    _In_ PCWSTR Name,
+    _Out_writes_z_(cchValue) PWSTR Value,
+    _In_ ULONG cchValue)
+{
+    UNICODE_STRING KeyName = RTL_CONSTANT_STRING(
+        L"\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control");
+    UNICODE_STRING ValueName = RTL_CONSTANT_STRING(L"SystemStartOptions");
+    OBJECT_ATTRIBUTES ObjectAttributes;
+    HANDLE KeyHandle;
+    NTSTATUS Status;
+    UCHAR Buffer[1024];
+    PKEY_VALUE_PARTIAL_INFORMATION Info;
+    ULONG ResultLength;
+    ULONG NameLength;
+    PWSTR Options;
+    PWSTR Cursor;
+    PWSTR Match;
+    PWSTR End;
+
+    Value[0] = UNICODE_NULL;
+
+    InitializeObjectAttributes(&ObjectAttributes,
+                               &KeyName,
+                               OBJ_CASE_INSENSITIVE,
+                               NULL,
+                               NULL);
+    Status = NtOpenKey(&KeyHandle, KEY_QUERY_VALUE, &ObjectAttributes);
+    if (!NT_SUCCESS(Status))
+        return FALSE;
+
+    Info = (PKEY_VALUE_PARTIAL_INFORMATION)Buffer;
+    Status = NtQueryValueKey(KeyHandle,
+                             &ValueName,
+                             KeyValuePartialInformation,
+                             Info,
+                             sizeof(Buffer),
+                             &ResultLength);
+    NtClose(KeyHandle);
+    if (!NT_SUCCESS(Status) ||
+        Info->Type != REG_SZ ||
+        Info->DataLength < sizeof(WCHAR))
+    {
+        return FALSE;
+    }
+
+    Options = (PWSTR)Info->Data;
+    Options[(Info->DataLength / sizeof(WCHAR)) - 1] = UNICODE_NULL;
+    NameLength = (ULONG)wcslen(Name);
+    Match = NULL;
+
+    for (Cursor = Options; *Cursor != UNICODE_NULL; )
+    {
+        while (*Cursor == L' ' || *Cursor == L'\t' || *Cursor == L'/')
+            Cursor++;
+        if (*Cursor == UNICODE_NULL)
+            break;
+
+        if (_wcsnicmp(Cursor, Name, NameLength) == 0)
+        {
+            Match = Cursor + NameLength;
+            break;
+        }
+
+        while (*Cursor != UNICODE_NULL &&
+               *Cursor != L' ' &&
+               *Cursor != L'\t' &&
+               *Cursor != L'/')
+        {
+            Cursor++;
+        }
+    }
+
+    if (Match == NULL || *Match == UNICODE_NULL)
+        return FALSE;
+
+    End = Match;
+    while (*End != UNICODE_NULL && *End != L' ' && *End != L'\t' && *End != L'/')
+        End++;
+
+    if ((ULONG)(End - Match) == 0 || (ULONG)(End - Match) >= cchValue)
+        return FALSE;
+
+    RtlCopyMemory(Value, Match, (End - Match) * sizeof(WCHAR));
+    Value[End - Match] = UNICODE_NULL;
+    return TRUE;
+}
+
 static BOOLEAN
 GetUnattendInfPath(
     _In_ PUSETUP_DATA pSetupData,
@@ -112,6 +206,25 @@ GetUnattendInfPath(
         goto Quit;
 
     UnattendInfLookedUp = TRUE;
+
+    /*
+     * The upgrade boot entry names its inf with /UNATTEND=upgrade.inf.
+     * That file wins over the fresh-install unattend.inf on the CD.
+     */
+    {
+        WCHAR UnattendName[64];
+
+        if (QuerySystemStartOption(L"UNATTEND=", UnattendName, ARRAYSIZE(UnattendName)))
+        {
+            Status = CombinePaths(UnattendInfPath, _countof(UnattendInfPath), 2,
+                                  pSetupData->SourcePath.Buffer, UnattendName);
+            if (NT_SUCCESS(Status) && DoesFileExist(NULL, UnattendInfPath) &&
+                IsInfUnattendSetupEnabled(pSetupData, UnattendInfPath, FALSE))
+            {
+                return NT_SUCCESS(RtlStringCchCopyW(InfPath, cch, UnattendInfPath));
+            }
+        }
+    }
 
     /* Find first the default unattend.inf file on the installation media.
      * If it specifies an unattended setup, we have found it. */
@@ -303,6 +416,19 @@ CheckUnattendedSetup(
         if (SpInfGetIntField(&Context, 1, &IntValue))
             pSetupData->FormatPartition = IntValue;
     }
+
+    /* yes selects the existing installation and does not format it */
+    if (SpInfFindFirstLine(UnattendInf, L"Unattend", L"UpgradeInstall", &Context))
+    {
+        if (INF_GetData(&Context, NULL, &Value))
+        {
+            if (_wcsicmp(Value, L"yes") == 0 || _wcsicmp(Value, L"1") == 0)
+                pSetupData->UpgradeInstall = TRUE;
+            INF_FreeData(Value);
+        }
+    }
+    if (pSetupData->UpgradeInstall)
+        pSetupData->FormatPartition = 0;
 
     /* Search for 'AutoPartition' (optional) */
     if (SpInfFindFirstLine(UnattendInf, L"Unattend", L"AutoPartition", &Context))
@@ -1281,6 +1407,255 @@ FinishSetup(
  *  Calls SetDefaultPagefile
  *  Calls SetMountedDeviceValues
  */
+static NTSTATUS
+DeleteOneDirectory(
+    _In_ PCWSTR Directory)
+{
+    NTSTATUS Status;
+    HANDLE Handle;
+    OBJECT_ATTRIBUTES Attributes;
+    IO_STATUS_BLOCK IoStatus;
+    UNICODE_STRING Name;
+    FILE_DISPOSITION_INFORMATION Disposition;
+
+    RtlInitUnicodeString(&Name, Directory);
+    InitializeObjectAttributes(&Attributes,
+                               &Name,
+                               OBJ_CASE_INSENSITIVE,
+                               NULL,
+                               NULL);
+    Status = NtOpenFile(&Handle,
+                        DELETE | SYNCHRONIZE,
+                        &Attributes,
+                        &IoStatus,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT);
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    Disposition.DeleteFile = TRUE;
+    Status = NtSetInformationFile(Handle,
+                                  &IoStatus,
+                                  &Disposition,
+                                  sizeof(Disposition),
+                                  FileDispositionInformation);
+    NtClose(Handle);
+    return Status;
+}
+
+static NTSTATUS
+DeleteDirectoryTree(
+    _In_ PCWSTR Directory)
+{
+    NTSTATUS Status;
+    HANDLE Handle;
+    OBJECT_ATTRIBUTES Attributes;
+    IO_STATUS_BLOCK IoStatus;
+    UNICODE_STRING Name;
+    UCHAR Buffer[1024];
+    BOOLEAN Restart = TRUE;
+
+    RtlInitUnicodeString(&Name, Directory);
+    InitializeObjectAttributes(&Attributes,
+                               &Name,
+                               OBJ_CASE_INSENSITIVE,
+                               NULL,
+                               NULL);
+    Status = NtOpenFile(&Handle,
+                        FILE_LIST_DIRECTORY | SYNCHRONIZE,
+                        &Attributes,
+                        &IoStatus,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT);
+    if (Status == STATUS_OBJECT_NAME_NOT_FOUND || Status == STATUS_OBJECT_PATH_NOT_FOUND)
+        return STATUS_SUCCESS;
+    if (!NT_SUCCESS(Status))
+        return Status;
+
+    for (;;)
+    {
+        PFILE_DIRECTORY_INFORMATION Info = (PFILE_DIRECTORY_INFORMATION)Buffer;
+        ULONG NameChars;
+        WCHAR Child[512];
+        PWSTR Separator;
+
+        Status = NtQueryDirectoryFile(Handle,
+                                      NULL,
+                                      NULL,
+                                      NULL,
+                                      &IoStatus,
+                                      Buffer,
+                                      sizeof(Buffer),
+                                      FileDirectoryInformation,
+                                      TRUE,
+                                      NULL,
+                                      Restart);
+        Restart = FALSE;
+        if (Status == STATUS_NO_MORE_FILES)
+            break;
+        if (!NT_SUCCESS(Status))
+        {
+            NtClose(Handle);
+            return Status;
+        }
+
+        NameChars = Info->FileNameLength / sizeof(WCHAR);
+        if ((NameChars == 1 && Info->FileName[0] == L'.') ||
+            (NameChars == 2 && Info->FileName[0] == L'.' && Info->FileName[1] == L'.'))
+        {
+            continue;
+        }
+
+        if (FAILED(RtlStringCchCopyW(Child, ARRAYSIZE(Child), Directory)) ||
+            FAILED(RtlStringCchCatW(Child, ARRAYSIZE(Child), L"\\")))
+        {
+            continue;
+        }
+        Separator = Child + wcslen(Child);
+        if ((ULONG)(ARRAYSIZE(Child) - (Separator - Child)) <= NameChars)
+            continue;
+        RtlCopyMemory(Separator, Info->FileName, Info->FileNameLength);
+        Separator[NameChars] = UNICODE_NULL;
+
+        if (Info->FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            Status = DeleteDirectoryTree(Child);
+        else
+            Status = SetupDeleteFile(Child, TRUE);
+        if (NT_SUCCESS(Status) || Status == STATUS_OBJECT_NAME_NOT_FOUND)
+            Restart = TRUE;
+    }
+
+    NtClose(Handle);
+    Status = DeleteOneDirectory(Directory);
+    if (Status == STATUS_OBJECT_NAME_NOT_FOUND)
+        Status = STATUS_SUCCESS;
+    return Status;
+}
+
+static VOID
+RemovePackageStore(
+    _In_ PCWSTR SystemRoot)
+{
+    static const PCWSTR Tails[] =
+    {
+        L"\\System32\\config\\verosupd\\pkgdb.db",
+        L"\\System32\\config\\verosupd\\pkgdb.db-journal",
+        L"\\System32\\config\\verosupd\\pkgdb.db-wal",
+        L"\\System32\\config\\verosupd\\pkgdb.db-shm"
+    };
+    static const PCWSTR Trees[] =
+    {
+        L"\\System32\\config\\verosupd\\chunks",
+        L"\\System32\\config\\verosupd\\RollbackStore"
+    };
+    ULONG Index;
+    WCHAR Path[512];
+
+    for (Index = 0; Index < ARRAYSIZE(Tails); Index++)
+    {
+        if (FAILED(RtlStringCchCopyW(Path, ARRAYSIZE(Path), SystemRoot)) ||
+            FAILED(RtlStringCchCatW(Path, ARRAYSIZE(Path), Tails[Index])))
+        {
+            continue;
+        }
+        SetupDeleteFile(Path, TRUE);
+    }
+
+    for (Index = 0; Index < ARRAYSIZE(Trees); Index++)
+    {
+        if (FAILED(RtlStringCchCopyW(Path, ARRAYSIZE(Path), SystemRoot)) ||
+            FAILED(RtlStringCchCatW(Path, ARRAYSIZE(Path), Trees[Index])))
+        {
+            continue;
+        }
+        DeleteDirectoryTree(Path);
+    }
+}
+
+static VOID
+SchedulePackageReset(
+    _In_ PUSETUP_DATA pSetupData)
+{
+    static const WCHAR Command[] =
+        L"cmd.exe /c set VEROSUPD_STATE=%SystemRoot%\\System32\\config\\verosupd& "
+        L"set VEROSUPD_SCAN=%SystemRoot%\\System32& "
+        L"set VEROSUPD_ROOT=%SystemRoot%& "
+        L"verosupd.exe /resetdb";
+    static const PCWSTR Mount = L"\\Registry\\Machine\\VerosUpgradeReset";
+    NTSTATUS Status;
+    BOOLEAN WasEnabled = FALSE;
+    HANDLE Key;
+    OBJECT_ATTRIBUTES Attributes;
+    UNICODE_STRING KeyName;
+    UNICODE_STRING ValueName;
+    WCHAR ExePath[512];
+
+    if (pSetupData->DestinationPath.Buffer == NULL)
+        return;
+
+    if (FAILED(RtlStringCchCopyW(ExePath, ARRAYSIZE(ExePath), pSetupData->DestinationPath.Buffer)) ||
+        FAILED(RtlStringCchCatW(ExePath, ARRAYSIZE(ExePath), L"\\System32\\verosupd.exe")) ||
+        !DoesFileExist(NULL, ExePath))
+    {
+        return;
+    }
+
+    Status = RtlAdjustPrivilege(SE_RESTORE_PRIVILEGE, TRUE, FALSE, &WasEnabled);
+    if (!NT_SUCCESS(Status))
+        return;
+
+    Status = ConnectRegistry(NULL,
+                             Mount,
+                             &pSetupData->DestinationPath,
+                             L"SOFTWARE");
+    if (!NT_SUCCESS(Status))
+    {
+        if (!WasEnabled)
+            RtlAdjustPrivilege(SE_RESTORE_PRIVILEGE, FALSE, FALSE, &WasEnabled);
+        return;
+    }
+
+    RtlInitUnicodeString(&KeyName,
+                         L"\\Registry\\Machine\\VerosUpgradeReset\\Microsoft\\Windows\\CurrentVersion\\RunOnce");
+    InitializeObjectAttributes(&Attributes, &KeyName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    Status = CreateNestedKey(&Key, KEY_SET_VALUE, &Attributes, REG_OPTION_NON_VOLATILE);
+    if (NT_SUCCESS(Status))
+    {
+        RtlInitUnicodeString(&ValueName, L"ResetUpdateDb");
+        NtSetValueKey(Key,
+                      &ValueName,
+                      0,
+                      REG_SZ,
+                      (PVOID)Command,
+                      sizeof(Command));
+        NtFlushKey(Key);
+        NtClose(Key);
+    }
+
+    DisconnectRegistry(NULL, Mount, 0);
+    if (!WasEnabled)
+        RtlAdjustPrivilege(SE_RESTORE_PRIVILEGE, FALSE, FALSE, &WasEnabled);
+}
+
+VOID
+NTAPI
+ResetUpgradePackageDatabase(
+    IN OUT PUSETUP_DATA pSetupData)
+{
+    if (pSetupData == NULL || !pSetupData->UpgradeInstall)
+        return;
+    if (pSetupData->DestinationPath.Buffer == NULL)
+        return;
+
+    /*
+     * verosupd.exe /resetdb rebuilds the baseline. This session is native
+     * text-mode setup, so the installed boot runs that command. The stale
+     * database is removed here, before that boot can roll the old files back.
+     */
+    SchedulePackageReset(pSetupData);
+    RemovePackageStore(pSetupData->DestinationPath.Buffer);
+}
+
 ERROR_NUMBER
 NTAPI
 UpdateRegistry(

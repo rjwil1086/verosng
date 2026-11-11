@@ -5,6 +5,7 @@
  * PURPOSE:     Command-line parsing and global settings management
  * COPYRIGHT:   Copyright 2008-2010 ReactOS Portable Systems Group <ros.arm@reactos.org>
  *              Copyright 2015-2024 Hermès Bélusca-Maïto <hermes.belusca-maito@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  */
 
 /* INCLUDES *******************************************************************/
@@ -206,6 +207,10 @@ LoadSettings(
         if (IniReadSettingByName(BootMgrInfo.FrLdrSection, "DefaultOS",
                                  DefaultOs, sizeof(DefaultOs)))
         {
+            PSTR End = DefaultOs + strlen(DefaultOs);
+
+            while (End > DefaultOs && (End[-1] == ' ' || End[-1] == '\t'))
+                *--End = ANSI_NULL;
             BootMgrInfo.DefaultOs = DefaultOs;
         }
     }

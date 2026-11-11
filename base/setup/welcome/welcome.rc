@@ -26,6 +26,8 @@ BEGIN
     IDS_TOPIC_COMMAND0  "VerOS NT.exe"
     IDS_TOPIC_COMMAND1  "explorer.exe"
     IDS_TOPIC_ACTION2   "<exit>"   /* Quits the program */
+    IDS_TOPIC_COMMAND3  "reactos.exe"
+    IDS_TOPIC_CMD_ARGS3 "/stage"
 END
 
 /* UTF-8 */

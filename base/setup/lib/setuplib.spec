@@ -67,6 +67,7 @@
 @ stdcall InitSystemPartition(ptr ptr ptr ptr ptr)
 @ stdcall InstallSetupInfFile(ptr)
 @ stdcall UpdateRegistry(ptr long ptr long wstr ptr ptr)
+@ stdcall ResetUpgradePackageDatabase(ptr)
 
 ;; fsutil
 @ stdcall FsVolCommitOpsQueue(ptr ptr ptr ptr ptr)
@@ -79,3 +80,8 @@
 ;; bootsup
 @ stdcall InstallBootManagerAndBootEntries(long ptr ptr ptr ptr)
 @ stdcall InstallBootcodeToRemovable(long ptr ptr ptr)
+@ stdcall OpenBootStore(ptr wstr long long long)
+@ stdcall CloseBootStore(ptr)
+@ stdcall AddBootStoreEntry(ptr ptr ptr)
+@ stdcall QueryBootStoreOptions(ptr ptr)
+@ stdcall SetBootStoreOptions(ptr ptr long)

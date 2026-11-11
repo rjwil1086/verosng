@@ -302,6 +302,14 @@ SetWindowResPrintfW(
     _In_ UINT uID,
     ...);
 
+BOOL
+EnablePrivilege(
+    IN LPCWSTR lpszPrivilegeName,
+    IN BOOL bEnablePrivilege);
+
+BOOL
+StageExistingInstall(VOID);
+
 #endif /* _REACTOS_PCH_ */
 
 /* EOF */

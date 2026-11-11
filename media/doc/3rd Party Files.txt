@@ -13,6 +13,12 @@ Used Version: 1.8.3
 License: GPL-3.0-or-later (https://spdx.org/licenses/GPL-3.0-or-later.html)
 URL: https://github.com/rdesktop/rdesktop
 
+Title: VerOS update client crates
+Path: base/applications/verosupd
+Used Version: hex 0.4, rcgen 0.13, reqwest 0.12, rusqlite 0.32, serde 1, sha2 0.10, windows-sys 0.59, x509-parser 0.16, zstd 0.13
+License: MIT OR Apache-2.0, BSD-3-Clause (zstd), and SQLite public domain (bundled by rusqlite)
+URL: https://crates.io
+
 Title: TreeList
 Path: base/setup/reactos/treelist.c
 Path: base/setup/reactos/treelist.h

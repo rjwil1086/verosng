@@ -542,6 +542,47 @@ USetupErrorRoutine(
     va_end(arg_ptr);
 }
 
+static BOOLEAN
+SelectUpgradeInstall(PINPUT_RECORD Ir)
+{
+    PGENERIC_LIST_ENTRY Entry;
+
+    UNREFERENCED_PARAMETER(Ir);
+
+    if (PartitionList == NULL)
+    {
+        PartitionList = CreatePartitionList();
+        if (PartitionList == NULL || IsListEmpty(&PartitionList->DiskListHead))
+        {
+            DPRINT1("UpgradeInstall: no disk\n");
+            return FALSE;
+        }
+    }
+
+    if (NtOsInstallsList == NULL)
+        NtOsInstallsList = CreateNTOSInstallationsList(PartitionList);
+
+    if (NtOsInstallsList == NULL || GetNumberOfListEntries(NtOsInstallsList) == 0)
+    {
+        DPRINT1("UpgradeInstall: no existing installation\n");
+        return FALSE;
+    }
+
+    Entry = GetCurrentListEntry(NtOsInstallsList);
+    CurrentInstallation = (PNTOS_INSTALLATION)GetListEntryData(Entry);
+    if (CurrentInstallation == NULL || CurrentInstallation->PathComponent == NULL)
+        return FALSE;
+
+    RepairUpdateFlag = TRUE;
+    USetupData.FormatPartition = 0;
+    USetupData.DestinationDiskNumber = CurrentInstallation->DiskNumber;
+    USetupData.DestinationPartitionNumber = CurrentInstallation->PartitionNumber;
+    RtlStringCchCopyW(USetupData.InstallationDirectory,
+                      ARRAYSIZE(USetupData.InstallationDirectory),
+                      CurrentInstallation->PathComponent);
+    return TRUE;
+}
+
 /*
  * Start page
  *
@@ -637,6 +678,9 @@ SetupStartPage(PINPUT_RECORD Ir)
         }
 
         SetConsoleCodePage();
+
+        if (USetupData.UpgradeInstall && !SelectUpgradeInstall(Ir))
+            return QUIT_PAGE;
 
         return INSTALL_INTRO_PAGE;
     }
@@ -3312,6 +3356,13 @@ FileCopyPage(PINPUT_RECORD Ir)
     /* Do the file copying */
     DoFileCopy(&USetupData, FileCopyCallback, &CopyContext);
 
+    /*
+     * The copied files no longer match pkgdb.db. Text-mode setup cannot
+     * host verosupd.exe, so the database is removed now and the installed
+     * boot runs verosupd.exe /resetdb when that program is present.
+     */
+    ResetUpgradePackageDatabase(&USetupData);
+
     /* If we get here, we're done, so cleanup the progress bar */
     DestroyProgressBar(CopyContext.ProgressBar);
     DestroyProgressBar(CopyContext.MemoryBars[0]);
@@ -3424,7 +3475,8 @@ BootLoaderSelectPage(PINPUT_RECORD Ir)
      */
     if (RepairUpdateFlag)
     {
-        USetupData.BootLoaderLocation = 0;
+        /* An upgrade replaces freeldr and the volume boot code. A repair does not. */
+        USetupData.BootLoaderLocation = USetupData.UpgradeInstall ? 2 : 0;
         goto Quit;
     }
 
