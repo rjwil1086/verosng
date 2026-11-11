@@ -4,7 +4,7 @@
   "allowedInputs": [
     "drivers/filesystems/ntfs/fsctl.c and ntfs.h already in this tree",
     "unittests/ntfs/host/ntfs_fuzz.c and ntfs_check.c",
-    "The fuzz guest result logs and the host checker output for images 5 and 6"
+    "unittests/ntfs/out/share-fuzz-5/result.log. Image 6 was named in the note, and no separate log path was recorded for it."
   ],
   "forbiddenInputsNotUsed": true,
   "harness": {

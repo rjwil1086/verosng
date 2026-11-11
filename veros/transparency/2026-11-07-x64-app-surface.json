@@ -2,11 +2,20 @@
   "spdx": "GPL-2.0-or-later",
   "question": "Why do Git, Python, 7-Zip, and Notepad++ start on the amd64 live CD?",
   "allowedInputs": [
-    "The tree as it stood before this change, including the kernel32, user32, ntdll, and comctl32 specs and the API-set table",
-    "Public contracts for the DPI, timer, locale, loader, wheel-scroll, and subclass calls those programs use",
-    "Wine 10.0 GetWindowSubclass, already the basis of dll/win32/comctl32/commctrl.c",
-    "Serial logs from booting this tree: output/m7-npp-boot.log",
-    "The user report that git --version, python print(1), 7-Zip, and Notepad++ each completed one ordinary action"
+    "dll/win32/kernel32/kernel32.spec, win32ss/user/user32/user32.spec, dll/ntdll/def/ntdll.spec, dll/win32/iphlpapi/iphlpapi.spec, and sdk/lib/apisets/apisets.table.c",
+    "dll/win32/comctl32/commctrl.c GetWindowSubclass, and https://learn.microsoft.com/en-us/windows/win32/api/commctrl/nf-commctrl-getwindowsubclass",
+    "https://gitlab.winehq.org/wine/wine/-/blob/wine-10.0/dlls/comctl32/commctrl.c",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdpiforwindow",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcoalescabletimer",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-localenametolcid",
+    "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-setdefaultdlldirectories",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2w",
+    "https://learn.microsoft.com/en-us/windows/win32/api/netioapi/nf-netioapi-if_nametoindex",
+    "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimepreciseasfiletime",
+    "dll/win32/kernel32/kernel32.spec publishes FlsGetValue2. No public page for that name was found.",
+    "win32ss/user/ntuser/sysparams.c for the wheel-scroll change. No separate public page was found for that edit.",
+    "output/m7-npp-boot.log",
+    "Reported: git --version, python print(1), 7-Zip, and Notepad++ each completed one ordinary action"
   ],
   "forbiddenInputsNotUsed": true,
   "harness": {

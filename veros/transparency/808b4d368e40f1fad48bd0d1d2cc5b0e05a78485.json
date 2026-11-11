@@ -3,11 +3,15 @@
   "commit": "808b4d368e40f1fad48bd0d1d2cc5b0e05a78485",
   "question": "Why does FreeLoader reset on the Acer and the ThinkPad when the same boot CD reaches the kernel in QEMU?",
   "allowedInputs": [
-    "User reports that both laptops reset in FreeLoader and that QEMU still boots",
-    "Acer Linux 5.15 dump supplied by the user: e820 reserved hole, Insyde WDAT table, NM10 LPC 8086:27bc",
-    "Public ACPI WDAT layout and the Linux iTCO watchdog register description for NM10",
-    "This tree's FreeLoader boot page tables, UEFI memory map, and amd64 handoff",
-    "UEFI requirement to refresh the memory map key before retrying ExitBootServices"
+    "Reported: both laptops reset in FreeLoader and QEMU still boots",
+    "Reported: an Acer Linux 5.15 dump with an e820 reserved hole, an Insyde WDAT table, and NM10 LPC 8086:27bc. The dump was not given a path.",
+    "https://github.com/torvalds/linux/blob/master/include/acpi/actbl3.h struct acpi_table_wdat",
+    "https://github.com/tianocore/edk2/blob/master/MdePkg/Include/IndustryStandard/WatchdogActionTable.h",
+    "https://github.com/torvalds/linux/blob/master/drivers/watchdog/iTCO_wdt.c names Intel document 322896-001 for NM10",
+    "boot/freeldr/freeldr/arch/i386/hwacpi.c",
+    "boot/freeldr/freeldr/arch/uefi/uefimem.c",
+    "boot/freeldr/freeldr/ntldr/arch/amd64/winldr.c",
+    "https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html ExitBootServices returns EFI_INVALID_PARAMETER when MapKey is stale, and GetMemoryMap must be called again"
   ],
   "forbiddenInputsNotUsed": true,
   "harness": {

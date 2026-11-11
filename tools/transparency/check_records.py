@@ -52,6 +52,13 @@ def require_text(record, field, errors, path):
     return value
 
 
+def cites_source(item):
+    lowered = item.lower()
+    if "https://" in lowered or "http://" in lowered or "/" in item:
+        return True
+    return lowered.startswith("reported:")
+
+
 def validate_record(record, path):
     errors = []
     if not isinstance(record, dict):
@@ -70,6 +77,11 @@ def validate_record(record, path):
         or not all(isinstance(item, str) and item.strip() for item in inputs)
     ):
         errors.append("%s: allowedInputs must name the sources that were used" % path)
+    elif not all(cites_source(item) for item in inputs):
+        errors.append(
+            "%s: each allowedInputs entry needs a URL, a path, or a Reported: citation"
+            % path
+        )
     if "harness" in record:
         harness = record["harness"]
         if not isinstance(harness, dict):

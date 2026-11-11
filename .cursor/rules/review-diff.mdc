@@ -1,0 +1,26 @@
+---
+description: Re-read the diff before committing and stop if a patch looks copied
+alwaysApply: true
+---
+
+# Review the diff before committing
+
+Before `git commit`, read the whole staged diff. If nothing is staged yet, read the diff that would be committed. Do not commit until this review is done.
+
+A patch may contain a size, an offset, or a return code taken from a public document, a public specification, code already in this tree, or a log from booting this tree. Stop when a hunk looks like it came from somewhere else.
+
+Stop when a hunk has any of these:
+
+- A whole function that was not asked for
+- A comment that describes Windows internals the log, the docs, and the conversation never mentioned
+- Header text
+- The shape of decompiled code
+
+```c
+/* Right: returning STATUS_INVALID_PARAMETER because the probe log showed that status. */
+/* Wrong: an unrequested function, a comment about Windows internals nobody mentioned, pasted header text, or decompiled code. */
+```
+
+When a hunk matches, do not commit and do not delete or rewrite it. Show Ryan the patches and wait.
+
+For each match, open that file in the editor at the first suspicious line, then quote the hunk in the chat with the path. Say which sign above it matched. Leave the commit unmade so he can review those patches.

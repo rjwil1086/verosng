@@ -11,7 +11,11 @@ A Cursor commit that changes boot, the kernel, the HAL, a driver, NTFS, or a Win
 
 - The new file is named beforehand. Its name cannot be this commit's SHA, because the SHA covers the file.
 - A missed record for an earlier commit may be added in the next real commit as `veros/transparency/<full sha>.json`. Do not make a commit whose only change is a notice.
-- Required fields are `question`, `allowedInputs`, and `"spdx": "GPL-2.0-or-later"`. `allowedInputs` names the public docs, the tree, the guest log, or the user report that was actually used.
+- Required fields are `question`, `allowedInputs`, and `"spdx": "GPL-2.0-or-later"`. `allowedInputs` lists only sources that were actually used. Each entry cites one source and where to open it.
+  - A public document or another project's file includes its title and an `https://` URL.
+  - A file in this tree includes its path from the source root.
+  - A guest log includes its path under `output/` and the marker that makes it count, such as `DIFF END OK`. Do not paste the log.
+  - Something said in the conversation starts with `Reported:` and states what was said.
 - Add `harness` (`guest`, `name`, `traceOrReplayId`) only when a guest ran.
 - Add `measuredEffect` (`metric`, `before`, `after`) only when both numbers come from a committed log or dashboard snapshot. Leave the object out when nothing was measured.
 - Do not record `forbiddenInputsNotUsed`, `humanReview`, or the prompt.
@@ -20,6 +24,7 @@ A Cursor commit that changes boot, the kernel, the HAL, a driver, NTFS, or a Win
 `tools/transparency/check_records.py` rejects a `Co-authored-by: Cursor` commit that touches those paths and does not add that file. The Transparency workflow runs it on the commits in a push or a pull request.
 
 ```text
-Right: veros/transparency/2026-11-08-runtime-nt-version.json naming the public 10.0.19045 contract and the live-CD log.
+Right: veros/transparency/2026-11-08-runtime-nt-version.json citing https://learn.microsoft.com/en-us/windows/release-health/release-information and output/syscall-diff/windows.log DIFF END OK.
+Wrong: an entry that names "the public spec" or "Linux" and gives no URL or path.
 Wrong: a file for a docs-only commit, a boolean attestation, or a commit that only adds the notice.
 ```

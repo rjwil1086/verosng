@@ -3,12 +3,12 @@
   "question": "What NT version does the amd64 live CD report to an application?",
   "allowedInputs": [
     "docs/MILESTONES.md milestone 10",
-    "The public Windows 10 22H2 version 10.0.19045",
+    "https://learn.microsoft.com/en-us/windows/release-health/release-information lists Windows 10 version 22H2 as OS build 19045",
     "sdk/include/psdk/ntverp.h VER_PRODUCT macros already in this tree, left at 5.2.3790",
     "sdk/include/reactos/version.cmake product version already in this tree, left at 0.4.x",
     "ntoskrnl/kse/versionlie.c KmWin2k3VersionLie already in this tree, left at 5.2.3790 Service Pack 2",
-    "The live CD boot log reporting PsGetVersion 10.0.19045, SharedUserData 10.0.19045, and verreport GetVersion 6.2.9200",
-    "The user report that git, Python, 7-Zip, and Notepad++ started",
+    "Reported: 10.0.19045 is the Windows 10 22H2 build from the release-information page, not from a saved boot log",
+    "Reported: git, Python, 7-Zip, and Notepad++ started",
     "output/syscall-diff/windows.log and output/syscall-diff/reactos.log, both containing DIFF END OK",
     "veros/dashboard/latest.json overall 87.1 before this publish"
   ],
@@ -32,6 +32,6 @@
     "metric": "dashboard exact-match percent after the runtime version change",
     "before": 87.1,
     "after": 87.1,
-    "note": "Both scores are the committed dashboard overall. The live CD log reports 10.0.19045. The previous 5.2.3790 value is the product macros, not a captured log. Both probe logs contain DIFF END OK. 88 of 101 names match, and no previously matched name was lost. The 5.2 shim was read from source and was not loaded in a driver."
+    "note": "Both scores are the committed dashboard overall. 10.0.19045 is the OS build on the Windows 10 release-information page. The previous 5.2.3790 value is the product macros, not a captured log. Both probe logs contain DIFF END OK. 88 of 101 names match, and no previously matched name was lost. The 5.2 shim was read from source and was not loaded in a driver."
   }
 }

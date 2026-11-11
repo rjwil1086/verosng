@@ -2211,8 +2211,11 @@ NtfsWriteCompressed(PDEVICE_EXTENSION Vcb,
     return Status;
 }
 
-/* AES-256, one 512-byte sector at a time. The IV is the sector offset.
+/* AES-256-CBC, one 512-byte sector at a time. The IV is the two values
+ * published in ntfs-3g ntfsdecrypt.c, each added to the sector's byte offset.
  * A file with no unwrapped key never returns or accepts plaintext. */
+#define NTFS_EFS_AES_IV0 0x5816657be9161312ULL
+#define NTFS_EFS_AES_IV1 0x1989adbe44918961ULL
 static const UCHAR AesSbox[256] = {
     0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
     0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0,
@@ -2393,33 +2396,55 @@ AesBlock(const UCHAR *Round, const UCHAR *In, UCHAR *Out, BOOLEAN Decrypt)
 
 static
 VOID
+NtfsEfsSectorIv(UCHAR Iv[16], ULONGLONG Offset)
+{
+    ULONGLONG Lo = NTFS_EFS_AES_IV0 + Offset;
+    ULONGLONG Hi = NTFS_EFS_AES_IV1 + Offset;
+
+    RtlCopyMemory(Iv, &Lo, sizeof(Lo));
+    RtlCopyMemory(Iv + sizeof(Lo), &Hi, sizeof(Hi));
+}
+
+static
+VOID
 NtfsCryptBuffer(PNTFS_FCB Fcb, PUCHAR Data, ULONG Length, ULONGLONG Offset, BOOLEAN Decrypt)
 {
     UCHAR Round[15 * 16];
-    UCHAR Iv[16];
+    UCHAR Chain[16];
     UCHAR Block[16];
+    UCHAR Plain[16];
     ULONG Index;
 
     AesExpand(Fcb->FileKey, Round);
-    while (Length >= 16)
+    while (Length >= NTFS_EFS_BLOCK)
     {
-        RtlZeroMemory(Iv, sizeof(Iv));
-        *(PULONGLONG)Iv = Offset;
+        NtfsEfsSectorIv(Chain, Offset);
         if (!Decrypt)
         {
-            for (Index = 0; Index < 16; Index++)
-                Data[Index] ^= Iv[Index];
-            AesBlock(Round, Data, Data, FALSE);
+            for (Index = 0; Index < NTFS_EFS_BLOCK; Index += 16)
+            {
+                ULONG Byte;
+                for (Byte = 0; Byte < 16; Byte++)
+                    Block[Byte] = (UCHAR)(Data[Index + Byte] ^ Chain[Byte]);
+                AesBlock(Round, Block, Data + Index, FALSE);
+                RtlCopyMemory(Chain, Data + Index, 16);
+            }
         }
         else
         {
-            AesBlock(Round, Data, Block, TRUE);
-            for (Index = 0; Index < 16; Index++)
-                Data[Index] = (UCHAR)(Block[Index] ^ Iv[Index]);
+            for (Index = 0; Index < NTFS_EFS_BLOCK; Index += 16)
+            {
+                ULONG Byte;
+                RtlCopyMemory(Block, Data + Index, 16);
+                AesBlock(Round, Block, Plain, TRUE);
+                for (Byte = 0; Byte < 16; Byte++)
+                    Data[Index + Byte] = (UCHAR)(Plain[Byte] ^ Chain[Byte]);
+                RtlCopyMemory(Chain, Block, 16);
+            }
         }
-        Data += 16;
-        Length -= 16;
-        Offset += 16;
+        Data += NTFS_EFS_BLOCK;
+        Length -= NTFS_EFS_BLOCK;
+        Offset += NTFS_EFS_BLOCK;
     }
 }
 

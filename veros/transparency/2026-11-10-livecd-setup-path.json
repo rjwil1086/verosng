@@ -2,10 +2,10 @@
   "spdx": "GPL-2.0-or-later",
   "question": "Why did the live CD open the text-mode setup language screen after the system directory was renamed to \\VerOS?",
   "allowedInputs": [
-    "The user screenshot of the VerOS NT text-mode language screen",
+    "Reported: a screenshot of the VerOS NT text-mode language screen",
     "boot/bootdata/bootcd.ini, the default LiveImg_Debug entry, and setupldr SourcePaths",
     "sdk/cmake/CMakeMacros.cmake ISO layout and the generated bootcd.cmake.lst",
-    "The rebuilt bootcd.iso listing of VerOS\\system32\\smss.exe and amd64\\system32\\smss.exe"
+    "source/build-amd64/bootcd.iso listing of VerOS/system32/smss.exe and amd64/system32/smss.exe"
   ],
   "forbiddenInputsNotUsed": true,
   "harness": {

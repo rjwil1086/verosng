@@ -3,9 +3,10 @@
   "question": "Why did the VerOS kernel ABI guest stop in the debugger after IoCallDriver, and what must a read or write IRP do with a null offset?",
   "allowedInputs": [
     "ntoskrnl/io/iomgr/irp.c already in this tree",
-    "The optional StartingOffset parameter on IoBuildSynchronousFsdRequest in sdk/include/xdk/iofuncs.h",
-    "The Windows 10 22H2 kernel ABI log, which recorded IoBuildSynchronousFsdRequest RETURNED",
-    "The VerOS kernel debugger log for the page fault at address 0 after IoCallDriver"
+    "sdk/include/xdk/iofuncs.h IoBuildSynchronousFsdRequest StartingOffset",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-iobuildsynchronousfsdrequest",
+    "output/kernel-abi/windows.log recorded IoBuildSynchronousFsdRequest RETURNED",
+    "output/kernel-abi/reactos.log page fault at address 0 after IoCallDriver"
   ],
   "forbiddenInputsNotUsed": true,
   "harness": {

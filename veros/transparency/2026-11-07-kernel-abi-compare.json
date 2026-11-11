@@ -2,8 +2,10 @@
   "spdx": "GPL-2.0-or-later",
   "question": "What share of the public ntoskrnl and HAL names return the same status from the Windows 10 22H2 kernel and the VerOS kernel?",
   "allowedInputs": [
-    "The tree, including compat/reference/win10-22h2-ntoskrnl.txt, compat/reference/win10-22h2-hal.txt, and the syscall probe's DIFF comparison",
-    "Public contracts for the probed exports already declared in this tree"
+    "compat/reference/win10-22h2-ntoskrnl.txt",
+    "compat/reference/win10-22h2-hal.txt",
+    "output/kernel-abi/windows.log DIFF comparison",
+    "compat/reference/win10-22h2-ntoskrnl.txt and compat/reference/win10-22h2-hal.txt are the probe output. There is no separate public page for that generated list."
   ],
   "forbiddenInputsNotUsed": true,
   "harness": {
