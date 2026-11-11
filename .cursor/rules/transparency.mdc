@@ -1,5 +1,5 @@
 ---
-description: Every generated commit records where its information came from
+description: Windows-behavior commits record where their information came from
 alwaysApply: true
 ---
 
@@ -7,17 +7,19 @@ alwaysApply: true
 
 SPDX-License-Identifier: GPL-2.0-or-later
 
-Each generated commit includes its own record of where the information for that change came from. The same commit may also add `veros/transparency/<full sha>.json` for an earlier commit that has none.
+A Cursor commit that changes boot, the kernel, the HAL, a driver, NTFS, or a Windows-facing DLL includes one `veros/transparency/<yyyy-mm-dd>-<slug>.json` in that same commit. Docs, branding, GitHub workflows, and cursor rules do not get a file.
 
-- The new commit's own file is named beforehand: `veros/transparency/<yyyy-mm-dd>-<slug>.json`. That name cannot be the commit's own SHA, because the SHA covers the file.
-- A record for a commit that already landed uses that commit's full SHA as the file name.
-- Required fields are `question`, `allowedInputs`, `forbiddenInputsNotUsed`, `harness` (`guest`, `name`, `traceOrReplayId`), `cursor` (`prompt`, `model`, `date`), `humanReview` (`noVerbatimMicrosoftSource`, `licenseHeadersKept`, `tiedToHarnessMismatch`), and `measuredEffect` (`metric`, `before`, `after`). The file carries `"spdx": "GPL-2.0-or-later"`. `commit`, `session`, and `note` may be added.
-- `allowedInputs` names the public docs, the tree, the guest log, or the user report that was actually used. `forbiddenInputsNotUsed` is true only when the forbidden inputs in the clean-room rule were not used.
-- `cursor.prompt` is the user instruction that caused the change. `cursor.model` is the model that wrote it. When the session log does not name the model, write `unrecorded`.
-- `measuredEffect.before` and `measuredEffect.after` come from a committed snapshot, a catalog, or a log. Leave a value null when it was not measured. `note` says when two numbers use different rules.
+- The new file is named beforehand. Its name cannot be this commit's SHA, because the SHA covers the file.
+- A missed record for an earlier commit may be added in the next real commit as `veros/transparency/<full sha>.json`. Do not make a commit whose only change is a notice.
+- Required fields are `question`, `allowedInputs`, and `"spdx": "GPL-2.0-or-later"`. `allowedInputs` names the public docs, the tree, the guest log, or the user report that was actually used.
+- Add `harness` (`guest`, `name`, `traceOrReplayId`) only when a guest ran.
+- Add `measuredEffect` (`metric`, `before`, `after`) only when both numbers come from a committed log or dashboard snapshot. Leave the object out when nothing was measured.
+- Do not record `forbiddenInputsNotUsed`, `humanReview`, or the prompt.
 - Do not paste a trace body, a header, a disassembly, or a Windows ordinal into the record.
 
+`tools/transparency/check_records.py` rejects a `Co-authored-by: Cursor` commit that touches those paths and does not add that file. The Transparency workflow runs it on the commits in a push or a pull request.
+
 ```text
-Right: veros/transparency/2026-11-07-ntcreate-section.json with before 33.3 and after 81.7 taken from dashboard snapshots.
-Wrong: a file named with this commit's own SHA, an invented percent, or a pasted WDK declaration.
+Right: veros/transparency/2026-11-08-runtime-nt-version.json naming the public 10.0.19045 contract and the live-CD log.
+Wrong: a file for a docs-only commit, a boolean attestation, or a commit that only adds the notice.
 ```

@@ -4,7 +4,7 @@ VerOS NT is Ryan Wilson's hobby project: a one-person fork of [ReactOS](https://
 
 These are alpha builds for the harness, experiments, and watching compatibility scores move. Run them in a virtual machine. A daily machine or a production environment needs a finished OS.
 
-Cursor and Grok write most of the patches. Ryan reviews them before they land. Each generated change ships with a public note under [`veros/transparency/`](veros/transparency/). A prompt may use QEMU harness traces, public documentation, this tree under GPL-2.0, and Wine code under the license already on the file. Leaked or proprietary Windows source, and decompiled or disassembled Microsoft binaries, stay out of the notes and out of the prompts.
+Cursor and Grok write most of the patches. Ryan reviews them before they land. Notes under [`veros/transparency/`](veros/transparency/) record the sources for a Windows-behavior change. A prompt may use QEMU harness traces, public documentation, this tree under GPL-2.0, and Wine code under the license already on the file. Leaked or proprietary Windows source, and decompiled or disassembled Microsoft binaries, stay out of the notes and out of the prompts.
 
 VerOS NT is a trademark of Ryan Wilson. Windows is a registered trademark of Microsoft Corporation. Microsoft and the ReactOS Project have not licensed or endorsed this fork.
 

@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+name: Transparency
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  records:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Source checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check Cursor commits
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "New branch; no earlier commit to compare."
+            exit 0
+          else
+            range="${{ github.event.before }}..${{ github.sha }}"
+          fi
+          python3 tools/transparency/check_records.py "$range"
