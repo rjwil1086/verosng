@@ -2,6 +2,8 @@
  * VideoPort driver
  *
  * Copyright (C) 2002, 2003, 2004 ReactOS Team
+ * Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Ryan Wilson
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -80,14 +82,14 @@ IntVideoPortResetDisplayParametersEx(
     PVIDEO_PORT_DEVICE_EXTENSION DeviceExtension;
     PVIDEO_PORT_DRIVER_EXTENSION DriverExtension;
 
-    /* Check if we are at dispatch level or lower, and acquire the lock */
+    /* Check if we are at dispatch level or lower, and acquire the lock.
+     * A display reset can re-enter while this lock is still held. Waiting
+     * until it is free then spins forever on the same processor. */
     OldIrql = KeGetCurrentIrql();
+    if (!KeTestSpinLock(&HwResetAdaptersLock))
+        return FALSE;
     if (OldIrql <= DISPATCH_LEVEL)
-    {
-        /* Loop until the lock is free, then raise IRQL to dispatch level */
-        while (!KeTestSpinLock(&HwResetAdaptersLock));
         KeRaiseIrql(DISPATCH_LEVEL, &OldIrql);
-    }
     KeAcquireSpinLockAtDpcLevel(&HwResetAdaptersLock);
 
     /* Bail out early if we don't have any resettable adapter */
