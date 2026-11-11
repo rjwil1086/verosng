@@ -1,0 +1,35 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "commit": "808b4d368e40f1fad48bd0d1d2cc5b0e05a78485",
+  "question": "Why does FreeLoader reset on the Acer and the ThinkPad when the same boot CD reaches the kernel in QEMU?",
+  "allowedInputs": [
+    "User reports that both laptops reset in FreeLoader and that QEMU still boots",
+    "Acer Linux 5.15 dump supplied by the user: e820 reserved hole, Insyde WDAT table, NM10 LPC 8086:27bc",
+    "Public ACPI WDAT layout and the Linux iTCO watchdog register description for NM10",
+    "This tree's FreeLoader boot page tables, UEFI memory map, and amd64 handoff",
+    "UEFI requirement to refresh the memory map key before retrying ExitBootServices"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "QEMU SeaBIOS, amd64 boot CD, TCG",
+    "name": "local qemu",
+    "traceOrReplayId": "source/output/freeldr-tco-smoke2.log reached the kernel on the watchdog-halt image. The final notice change was not booted."
+  },
+  "cursor": {
+    "prompt": "Implement the Acer watchdog and reserved-hole changes so the boot CD can be tested, then halt the watchdog before the last BIOS call. Commit and push the laptop handoff once QEMU still boots.",
+    "model": "Grok 4.7",
+    "date": "2026-11-11",
+    "session": "f962e825-28f4-42b7-bfd6-f5cc4b3d8c1f"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "Acer reaches KiSystemStartup",
+    "before": null,
+    "after": null,
+    "note": "The user reported that QEMU still boots and that the Acer still resets after the debugger notice. No committed harness score."
+  }
+}

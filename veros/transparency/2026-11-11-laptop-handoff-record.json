@@ -1,0 +1,33 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Where did the information for the laptop FreeLoader handoff commit come from?",
+  "allowedInputs": [
+    "Commit 808b4d368e40f1fad48bd0d1d2cc5b0e05a78485",
+    "The user asking whether the transparency record for that push was included",
+    "veros/transparency/808b4d368e40f1fad48bd0d1d2cc5b0e05a78485.json, added in this commit",
+    ".cursor/rules/transparency.mdc"
+  ],
+  "forbiddenInputsNotUsed": true,
+  "harness": {
+    "guest": "none",
+    "name": "none",
+    "traceOrReplayId": "none"
+  },
+  "cursor": {
+    "prompt": "Did you push the transparency data that you are supposed to?",
+    "model": "Grok 4.7",
+    "date": "2026-11-11",
+    "session": "f962e825-28f4-42b7-bfd6-f5cc4b3d8c1f"
+  },
+  "humanReview": {
+    "noVerbatimMicrosoftSource": true,
+    "licenseHeadersKept": true,
+    "tiedToHarnessMismatch": false
+  },
+  "measuredEffect": {
+    "metric": "transparency record for 808b4d368e40f1fad48bd0d1d2cc5b0e05a78485",
+    "before": null,
+    "after": 1,
+    "note": "The handoff commit had already been pushed with no record. This commit adds veros/transparency/<full sha>.json for it. This file is the record for the commit that adds it, so its name is a date and a slug. before is null because the missing record was not a measured harness value."
+  }
+}
