@@ -24,3 +24,5 @@ Stop when a hunk has any of these:
 When a hunk matches, do not commit and do not delete or rewrite it. Show Ryan the patches and wait.
 
 For each match, open that file in the editor at the first suspicious line, then quote the hunk in the chat with the path. Say which sign above it matched. Leave the commit unmade so he can review those patches.
+
+Ryan checks where that hunk came from. He commits it when he can cite a public document, a public specification, code already in this tree, or a log from booting this tree, or when the information was obtained without Windows source, leaked NT source, the Windows Research Kernel, a decompiler listing, a disassembly, a WDK or SDK header, or other object code. If he cannot cite a source, rewrite the hunk from one of those allowed sources. Do not rewrite it from the material that made it suspicious.

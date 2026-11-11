@@ -1,6 +1,6 @@
 # VerOS NT™
 
-VerOS NT is my hobby. It's my fork of [ReactOS](https://github.com/reactos/reactos), and I'm the only person on it. I want a general-purpose operating system that can install and run what Windows 10 22H2 can, x64 first. 32-bit programs on that same boot come later. Cursor and Grok write most of the patches. I don't read them.
+VerOS NT is my hobby. It's my fork of [ReactOS](https://github.com/reactos/reactos), and I'm the only person on it. I want a general-purpose operating system that can install and run what Windows 10 22H2 can, x64 first. 32-bit programs on that same boot come later. Cursor and Grok write most of the patches. Before one is committed, the diff is read again, and a hunk that looks copied is shown to me. I check its sources before it is committed.
 
 These builds are alpha. I run them in a virtual machine so I can see what breaks. Don't install this on a machine you use.
 
@@ -20,7 +20,7 @@ If the change is about how Windows behaves, it can only come from public docs, p
 
 If any of this shows up, that piece of work stops: Windows source, leaked NT source, or the Windows Research Kernel; a decompiler listing, or a disassembly of a Microsoft binary; WDK or SDK headers, a `.lib`, a `.sys`, or other object code. That stays out of the repo and out of the patch. Once it has shown up, the work stops there.
 
-I'm not aware of Cursor or Grok using any unauthorized code. Before a commit, the diff is read again. If a hunk has a whole function I didn't ask for, a comment about Windows internals nobody mentioned, header text, or code that looks decompiled, the commit stops and those hunks are shown to me.
+Before a commit, the diff is read again. If a hunk has a whole function I didn't ask for, a comment about Windows internals nobody mentioned, header text, or code that looks decompiled, the commit stops and that hunk is shown to me. I look up where it came from. I commit it when I can cite a public document, a public spec, code already in this tree, or a log from booting this tree, or when Cursor, Grok, and I got it without using the list above. If I can't cite a source, we rewrite that hunk from one of those allowed sources. I'm not aware of Cursor or Grok using any unauthorized code.
 
 ## Source notes
 
