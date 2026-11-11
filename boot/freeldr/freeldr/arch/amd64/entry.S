@@ -178,6 +178,10 @@ CallRealMode:
     lea rax, [CallRealMode_return]
     mov qword ptr [ContinueAddress], rax
 
+    /* The return path reloads this. Do not force the boot PML4. */
+    mov rax, cr3
+    mov qword ptr [BSS_SavedCr3], rax
+
 SwitchToReal:
     /* Set sane segments */
     mov ax, LMODE_DS

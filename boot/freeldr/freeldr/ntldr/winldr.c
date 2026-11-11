@@ -1,8 +1,12 @@
 /*
  * PROJECT:     FreeLoader
- * LICENSE:     GPL-2.0+ (https://spdx.org/licenses/GPL-2.0+)
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/freeldr/ntldr/winldr.c
  * PURPOSE:     Windows-compatible NT OS Loader.
  * COPYRIGHT:   Copyright 2006-2019 Aleksey Bragin <aleksey@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Aleksey Bragin
+ *              Ryan Wilson
  */
 
 #include <freeldr.h>
@@ -1372,6 +1376,44 @@ LoadAndBootWindows(
                                     BootPath);
 }
 
+#ifndef UEFIBOOT
+static VOID
+WinLdrWriteDebugNotice(_In_ PCSTR Port, _In_ ULONG PortLength)
+{
+    PUSHORT Cell = (PUSHORT)0xB8000;
+    CHAR Line[80];
+    ULONG Index;
+    ULONG Used;
+    static const CHAR Prefix[] = "You need to connect a debugger on port ";
+    static const CHAR Second[] = "For more information, visit https://reactos.org/wiki/Debugging.";
+
+    for (Index = 0; Index < sizeof(Line); Index++)
+        Line[Index] = ' ';
+
+    Used = 0;
+    while (Prefix[Used] != '\0' && Used < sizeof(Line))
+    {
+        Line[Used] = Prefix[Used];
+        Used++;
+    }
+    if (PortLength > sizeof(Line) - Used)
+        PortLength = (ULONG)(sizeof(Line) - Used);
+    for (Index = 0; Index < PortLength; Index++)
+        Line[Used + Index] = Port[Index];
+
+    for (Index = 0; Index < 80; Index++)
+        Cell[Index] = (USHORT)(0x0700 | (UCHAR)Line[Index]);
+    for (Index = 0; Index < 80; Index++)
+    {
+        UCHAR Character = ' ';
+
+        if (Index < sizeof(Second) - 1)
+            Character = (UCHAR)Second[Index];
+        Cell[80 + Index] = (USHORT)(0x0700 | Character);
+    }
+}
+#endif
+
 ARC_STATUS
 LoadAndBootWindowsCommon(
     _In_ USHORT OperatingSystemVersion,
@@ -1450,6 +1492,16 @@ LoadAndBootWindowsCommon(
     /* "Stop all motors", change videomode */
     MachPrepareForReactOS();
 
+#ifndef UEFIBOOT
+    /*
+     * The video call above is the last firmware call. It reloads the
+     * chipset watchdog. Stop that timer before drawing the notice, and
+     * leave interrupts off so a BIOS tick cannot arm it again.
+     */
+    _disable();
+    PcStopFirmwareWatchdog();
+#endif
+
     /* Show the "debug mode" notice if needed */
     /* Match KdInitSystem() conditions */
     if (!NtLdrGetOption(BootOptions, "CRASHDEBUG") &&
@@ -1471,11 +1523,21 @@ LoadAndBootWindowsCommon(
             DebugPort = "COM"; DebugPortLength = 3;
         }
 
+#ifdef UEFIBOOT
         /* It is booting in debug mode, show the banner */
         TuiPrintf("You need to connect a debugger on port %.*s\n"
                   "For more information, visit https://reactos.org/wiki/Debugging.\n",
                   DebugPortLength, DebugPort);
+#else
+        /* The text buffer is already the 80x25 screen. Do not call the BIOS. */
+        WinLdrWriteDebugNotice(DebugPort, DebugPortLength);
+#endif
     }
+
+#ifdef UEFIBOOT
+    _disable();
+    PcStopFirmwareWatchdog();
+#endif
 
     /* Debugging... */
     //DumpMemoryAllocMap();

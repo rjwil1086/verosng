@@ -79,6 +79,9 @@ Msg_Starting:
     /* Store real mode entry point in shared memory */
     mov dword ptr ds:[BSS_RealModeEntry], offset RealModeEntryPoint
 
+    /* First return to long mode uses the boot page tables. */
+    mov dword ptr ds:[BSS_SavedCr3], PML4_ADDRESS
+
     /* Address the image with es segment */
     mov ax, FREELDR_PE_BASE / 16
     mov es, ax
@@ -322,8 +325,8 @@ ExitToLongMode:
     or eax, HEX(00A0)
     mov cr4, eax
 
-    /* Point cr3 at the PML4 */
-    mov eax, PML4_ADDRESS
+    /* Restore whichever PML4 was active when the BIOS call started. */
+    mov eax, dword ptr ds:[BSS_SavedCr3]
     mov cr3, eax
 
     /* Enable long mode */
@@ -351,11 +354,6 @@ InLongMode:
     nop
 LongModeEntryPoint:
     .long 0, 0
-
-    /* Wait for a keypress */
-    xor ah, ah
-    int HEX(16)
-    jmp Reboot
 
 /* FNID_* functions */
 CallbackTable:

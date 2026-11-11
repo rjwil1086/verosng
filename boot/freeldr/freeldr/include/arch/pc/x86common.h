@@ -53,6 +53,7 @@
 #define BSS_BootDrive                   (BSS_START + 108) // 1 byte
 #define BSS_BootPartition               (BSS_START + 109) // 1 byte
 #define BSS_CurrentSegmentBaseAddress   (BSS_START + 110) // 2 bytes
+#define BSS_SavedCr3                    (BSS_START + 112) // 8 bytes. BIOS return reloads this.
 
 
 /* Realmode function IDs */

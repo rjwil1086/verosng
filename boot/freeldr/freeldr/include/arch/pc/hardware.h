@@ -1,21 +1,12 @@
 /*
- *  FreeLoader
- *
- *  Copyright (C) 2003  Eric Kohl
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/freeldr/include/arch/pc/hardware.h
+ * PURPOSE:     PC hardware detection prototypes
+ * COPYRIGHT:   Copyright 2003 Eric Kohl
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Eric Kohl
+ *              Ryan Wilson
  */
 
 #pragma once
@@ -79,6 +70,8 @@ DetectBiosDisks(PCONFIGURATION_COMPONENT_DATA SystemKey,
 
 /* hwacpi.c */
 VOID DetectAcpiBios(PCONFIGURATION_COMPONENT_DATA SystemKey, ULONG *BusNumber);
+VOID PcStopFirmwareWatchdog(VOID);
+VOID PcUnmapReservedBootRanges(VOID);
 
 /* hwapm.c */
 VOID DetectApmBios(PCONFIGURATION_COMPONENT_DATA SystemKey, ULONG *BusNumber);

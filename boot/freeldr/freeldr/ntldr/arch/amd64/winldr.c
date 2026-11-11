@@ -1,9 +1,11 @@
 /*
- * PROJECT:         EFI Windows Loader
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            boot/freeldr/freeldr/arch/amd64/winldr.c
- * PURPOSE:         Memory related routines
- * PROGRAMMERS:     Timo Kreuzer (timo.kreuzer@reactos.org)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/freeldr/ntldr/arch/amd64/winldr.c
+ * PURPOSE:     Memory related routines
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Timo Kreuzer
+ *              Ryan Wilson
  */
 
 /* INCLUDES ***************************************************************/
@@ -167,35 +169,69 @@ MempMapRangeOfPages(ULONG64 VirtualAddress, ULONG64 PhysicalAddress, PFN_NUMBER 
     return i;
 }
 
+static
+BOOLEAN
+MempBootPagePresent(PFN_NUMBER Page)
+{
+    ULONGLONG Address = (ULONGLONG)Page << MM_PAGE_SHIFT;
+    PULONGLONG Pd;
+
+    /* The boot map covers the first 1 GB. Higher pages are mapped below. */
+    if (Address >= 0x40000000ULL)
+        return TRUE;
+
+    Pd = (PULONGLONG)(ULONG_PTR)PD_ADDRESS;
+    return (Pd[Address >> 21] & 1) != 0;
+}
+
 BOOLEAN
 MempSetupPaging(IN PFN_NUMBER StartPage,
                 IN PFN_NUMBER NumberOfPages,
                 IN BOOLEAN KernelMapping)
 {
+    PFN_NUMBER Page = StartPage;
+    PFN_NUMBER Remaining = NumberOfPages;
+
     TRACE(">>> MempSetupPaging(0x%lx, %ld, %p)\n",
             StartPage, NumberOfPages, StartPage * PAGE_SIZE + KSEG0_BASE);
 
-    /* Identity mapping */
-    if (MempMapRangeOfPages(StartPage * PAGE_SIZE,
-                            StartPage * PAGE_SIZE,
-                            NumberOfPages) != NumberOfPages)
+    /*
+     * Reserved runs such as the Acer 720 MB hole are absent from the boot
+     * map. Filling kernel page tables for them is a long stretch with no
+     * BIOS call, which is when that firmware's watchdog resets the CPU.
+     */
+    while (Remaining != 0)
     {
-        ERR("Failed to map pages %ld, %ld\n",
-                StartPage, NumberOfPages);
-        return FALSE;
-    }
+        PFN_NUMBER Run = 0;
 
-    /* Kernel mapping */
-    if (KernelMapping)
-    {
-        if (MempMapRangeOfPages(StartPage * PAGE_SIZE + KSEG0_BASE,
-                                StartPage * PAGE_SIZE,
-                                NumberOfPages) != NumberOfPages)
+        while (Run < Remaining && MempBootPagePresent(Page + Run))
+            Run++;
+        if (Run == 0)
         {
-            ERR("Failed to map pages %ld, %ld\n",
-                    StartPage, NumberOfPages);
+            Page++;
+            Remaining--;
+            continue;
+        }
+
+        if (MempMapRangeOfPages(Page * PAGE_SIZE,
+                                Page * PAGE_SIZE,
+                                Run) != Run)
+        {
+            ERR("Failed to map pages %ld, %ld\n", Page, Run);
             return FALSE;
         }
+
+        if (KernelMapping &&
+            MempMapRangeOfPages(Page * PAGE_SIZE + KSEG0_BASE,
+                                Page * PAGE_SIZE,
+                                Run) != Run)
+        {
+            ERR("Failed to map pages %ld, %ld\n", Page, Run);
+            return FALSE;
+        }
+
+        Page += Run;
+        Remaining -= Run;
     }
 
     return TRUE;
@@ -344,7 +380,26 @@ WinLdrSetProcessorContext(
 {
     TRACE("WinLdrSetProcessorContext\n");
 
-    /* Disable Interrupts */
+    /*
+     * PxeBase holds the kernel mappings. On a BIOS machine the identity map
+     * built above already covers this loader. UEFI firmware maps the loader,
+     * its stack, and the framebuffer with its own PML4, which is not at
+     * physical page 0x1000. Keep that one low entry or the switch fetches
+     * the next instruction from an empty table.
+     * Nothing after the load may call the BIOS. The return path reloads a
+     * descriptor, and GDTR is about to hold a kernel address.
+     */
+#ifdef UEFIBOOT
+    {
+        ULONG_PTR LiveCr3;
+        PULONG64 LivePml4;
+
+        LiveCr3 = __readcr3() & ~(ULONG_PTR)0xFFF;
+        LivePml4 = (PULONG64)LiveCr3;
+        if (LivePml4[0] & 1)
+            ((PULONG64)PxeBase)[0] = LivePml4[0];
+    }
+#endif
     _disable();
 
     /* Re-initialize EFLAGS */

@@ -5,7 +5,8 @@
  * PURPOSE:     FreeLoader
  * COPYRIGHT:   Copyright (C) 1998-2003 Brian Palmer <brianp@sginet.com>
  *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
- * PROGRAMMERS: Ryan Wilson
+ * PROGRAMMERS: Brian Palmer
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/
@@ -558,4 +559,13 @@ EditCustomBootReactOS(
 
     OperatingSystem->SectionId = SectionId;
     OperatingSystem->LoadIdentifier = NULL;
+}
+
+/*
+ * The boot CD loader stops the firmware watchdog. This second-stage
+ * image does not link that code, and it is already in the kernel.
+ */
+VOID
+PcStopFirmwareWatchdog(VOID)
+{
 }

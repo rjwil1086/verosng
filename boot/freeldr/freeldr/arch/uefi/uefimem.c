@@ -1,8 +1,12 @@
 /*
- * PROJECT:     FreeLoader UEFI Support
- * LICENSE:     GPL-2.0-or-later (https://spdx.org/licenses/GPL-2.0-or-later)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/freeldr/arch/uefi/uefimem.c
  * PURPOSE:     Memory Management Functions
  * COPYRIGHT:   Copyright 2022 Justin Miller <justinmiller100@gmail.com>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Justin Miller
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/
@@ -242,16 +246,25 @@ UefiExitBootServices(VOID)
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
 
-    TRACE("Attempting to exit bootsevices\n");
+    TRACE("Attempting to exit boot services\n");
     PUEFI_LoadMemoryMap(&MapKey,
                         &MapSize,
                         &DescriptorSize,
                         &DescriptorVersion);
 
     Status = GlobalSystemTable->BootServices->ExitBootServices(GlobalImageHandle, MapKey);
-    /* UEFI spec demands twice! */
+    /*
+     * A failed exit means the map key is stale. The firmware requires a
+     * fresh GetMemoryMap before the call is repeated.
+     */
     if (Status != EFI_SUCCESS)
+    {
+        PUEFI_LoadMemoryMap(&MapKey,
+                            &MapSize,
+                            &DescriptorSize,
+                            &DescriptorVersion);
         Status = GlobalSystemTable->BootServices->ExitBootServices(GlobalImageHandle, MapKey);
+    }
 
     if (Status != EFI_SUCCESS)
     {

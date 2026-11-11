@@ -1,20 +1,12 @@
 /*
- *  FreeLoader
- *  Copyright (C) 1998-2003  Brian Palmer  <brianp@sginet.com>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/freeldr/freeldr.c
+ * PURPOSE:     FreeLoader entry point
+ * COPYRIGHT:   Copyright 1998-2003 Brian Palmer <brianp@sginet.com>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Brian Palmer
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/
@@ -102,6 +94,11 @@ VOID __cdecl BootMain(IN PCCH CmdLine)
     TRACE("BootMain() called.\n");
 
 #ifndef UEFIBOOT
+    /* The Acer Insyde firmware arms a WDAT watchdog before the menu. */
+    PcStopFirmwareWatchdog();
+#endif
+
+#ifndef UEFIBOOT
     /* Check if the CPU is new enough */
     FrLdrCheckCpuCompatibility(); // FIXME: Should be done inside MachInit!
 #endif
@@ -119,6 +116,11 @@ VOID __cdecl BootMain(IN PCCH CmdLine)
         UiMessageBoxCritical("Unable to initialize memory manager.");
         goto Quit;
     }
+
+#ifndef UEFIBOOT
+    /* Drop reserved holes out of the boot identity map. */
+    PcUnmapReservedBootRanges();
+#endif
 
     /* Initialize I/O subsystem */
     FsInit();

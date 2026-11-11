@@ -1,9 +1,11 @@
 /*
- * PROJECT:         EFI Windows Loader
- * LICENSE:         GPL - See COPYING in the top level directory
- * FILE:            boot/freeldr/freeldr/windows/wlmemory.c
- * PURPOSE:         Memory related routines
- * PROGRAMMERS:     Aleksey Bragin (aleksey@reactos.org)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/freeldr/ntldr/wlmemory.c
+ * PURPOSE:     Memory related routines
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Aleksey Bragin
+ *              Ryan Wilson
  */
 
 /* INCLUDES ***************************************************************/
@@ -62,6 +64,9 @@ MempAddMemoryBlock(IN OUT PLOADER_PARAMETER_BLOCK LoaderBlock,
 {
     TRACE("MempAddMemoryBlock(BasePage=0x%lx, PageCount=0x%lx, Type=%ld)\n",
           BasePage, PageCount, Type);
+
+    if (Mad == NULL)
+        return;
 
     /* Check for memory block after 4GB - we don't support it yet
        Note: Even last page before 4GB limit is not supported */
@@ -230,6 +235,11 @@ WinLdrSetupMemoryLayout(IN OUT PLOADER_PARAMETER_BLOCK LoaderBlock)
         ERR("Error during MempSetupPaging of first page\n");
         return FALSE;
     }
+    /*
+     * A BIOS call from here turns interrupts back on. On the Acer that
+     * tick resets the CPU, so this stretch stays on the screen already drawn.
+     */
+    _disable();
 
     /* Before creating the map, we need to map pages to kernel mode */
     LastPageIndex = 1;
@@ -244,7 +254,6 @@ WinLdrSetupMemoryLayout(IN OUT PLOADER_PARAMETER_BLOCK LoaderBlock)
             LastPageType = MemoryMap[i].PageAllocated;
         }
     }
-
     // Construct a good memory map from what we've got,
     // but mark entries which the memory allocation bitmap takes
     // as free entries (this is done in order to have the ability
@@ -270,7 +279,6 @@ WinLdrSetupMemoryLayout(IN OUT PLOADER_PARAMETER_BLOCK LoaderBlock)
         }
         else
         {
-            // Add the resulting region
             MempAddMemoryBlock(LoaderBlock, LastPageIndex, PagesCount, LastPageType);
 
             // Reset our counter vars
@@ -312,15 +320,16 @@ WinLdrSetupMemoryLayout(IN OUT PLOADER_PARAMETER_BLOCK LoaderBlock)
     for (i = 0; i < BiosMemoryMapEntryCount; i++)
     {
         /* Check if its higher than the lookup table */
-        if (BiosMemoryMap->BasePage > MmGetHighestPhysicalPage())
+        if (BiosMemoryMap[i].BasePage > MmGetHighestPhysicalPage())
         {
             /* Copy this descriptor */
             MempAddMemoryBlock(LoaderBlock,
-                               BiosMemoryMap->BasePage,
-                               BiosMemoryMap->PageCount,
-                               BiosMemoryMap->MemoryType);
+                               BiosMemoryMap[i].BasePage,
+                               BiosMemoryMap[i].PageCount,
+                               BiosMemoryMap[i].MemoryType);
         }
     }
+    TRACE("Bios map added\n");
 
     TRACE("MadCount: %d\n", MadCount);
 
@@ -362,14 +371,22 @@ WinLdrInsertDescriptor(IN OUT PLOADER_PARAMETER_BLOCK LoaderBlock,
     PLIST_ENTRY ListHead = &LoaderBlock->MemoryDescriptorListHead;
     PLIST_ENTRY PreviousEntry, NextEntry;
     PMEMORY_ALLOCATION_DESCRIPTOR PreviousDescriptor = NULL, NextDescriptor = NULL;
+    ULONG Steps;
 
     TRACE("BP=0x%X PC=0x%X %s\n", NewDescriptor->BasePage,
-        NewDescriptor->PageCount, MemTypeDesc[NewDescriptor->MemoryType]);
+        NewDescriptor->PageCount,
+        (NewDescriptor->MemoryType < sizeof(MemTypeDesc) / sizeof(MemTypeDesc[0]))
+            ? MemTypeDesc[NewDescriptor->MemoryType] : "?");
 
     /* Find a place where to insert the new descriptor to */
     PreviousEntry = ListHead;
     NextEntry = ListHead->Flink;
-    while (NextEntry != ListHead)
+    if (NextEntry == NULL || (ULONG64)NextEntry >= 0x40000000)
+    {
+        InitializeListHead(ListHead);
+        NextEntry = ListHead;
+    }
+    for (Steps = 0; NextEntry != ListHead && NextEntry != NULL && Steps < MAX_MAD_COUNT; Steps++)
     {
         NextDescriptor = CONTAINING_RECORD(NextEntry,
             MEMORY_ALLOCATION_DESCRIPTOR,
