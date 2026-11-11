@@ -1,36 +1,46 @@
 # VerOS NT™
 
-VerOS NT is Ryan Wilson's hobby project: a one-person fork of [ReactOS](https://github.com/reactos/reactos). The goal is a general-purpose operating system that can install and run any application Windows 10 22H2 can install and run. That set is x64 programs and, later, 32-bit programs on the amd64 boot.
+VerOS NT is my hobby. It's my fork of [ReactOS](https://github.com/reactos/reactos), and I'm the only person on it. I want a general-purpose operating system that can install and run what Windows 10 22H2 can, x64 first. 32-bit programs on that same boot come later. Cursor and Grok write most of the patches. I don't read them.
 
-These are alpha builds for the harness, experiments, and watching compatibility scores move. Run them in a virtual machine. A daily machine or a production environment needs a finished OS.
+These builds are alpha. I run them in a virtual machine so I can see what breaks. Don't install this on a machine you use.
 
-Cursor and Grok write most of the patches. Ryan reviews them before they land. Notes under [`veros/transparency/`](veros/transparency/) record the sources for a Windows-behavior change. A prompt may use QEMU harness traces, public documentation, this tree under GPL-2.0, and Wine code under the license already on the file. Leaked or proprietary Windows source, and decompiled or disassembled Microsoft binaries, stay out of the notes and out of the prompts.
+Right now the work is boot, NTFS, drivers, and the calls an application makes. The plan is the [milestones on GitHub](https://github.com/rjwil1086/verosng/milestones). The number in the title is the order, and I close a milestone there when that work is done.
 
-VerOS NT is a trademark of Ryan Wilson. Windows is a registered trademark of Microsoft Corporation. Microsoft and the ReactOS Project have not licensed or endorsed this fork.
+## How I record Windows
 
-## Plan
+I boot Windows 10 22H2 and run my own probes in it. Each probe calls something the OS already offers, then prints what came back. The log is that printout. I compare it with the same probe on VerOS. What I keep from a Windows run is the name I asked about and the status code. I don't copy a program, a header, or a disassembly out of the guest.
 
-The path is the [milestones on GitHub](https://github.com/rjwil1086/verosng/milestones). Open milestones follow the number in the title. Close a milestone there when the work is done. Rename the title to change its number.
+Windows 10 22H2 boots in QEMU with 8 GB of RAM and 4 CPUs, the same as VerOS. The boot does not write the Windows disk. A capture uses the plain emulator, not WHPX. A syscall probe calls `GetProcAddress` for a name, calls that function, and prints the status code. A kernel probe and a graphics probe do that for their calls. I use a Windows log when it ends with `DIFF END OK`. If I change a probe, I boot Windows again. If I don't, I reuse the log I have.
 
-An application that Windows 10 22H2 x64 can run installs and runs here. A driver, a graphics driver, more RAM, or more processors becomes the next pass when the application under test fails without it. Display scaling, a new shell, and antivirus filters wait until a program under test requires them.
+A separate trace records only a call number, a status, and four arguments, with no names. That trace stays out of the kernel. I don't take the guest apart to make up more syscall numbers.
 
-Finished milestones keep their numbers. A later milestone is entered early only when the log from the milestone in progress names its missing piece, and the work then returns to that milestone. A missing Windows GPU driver does not interrupt milestones 29 through 33.
+## What a patch is allowed to come from
 
-## Compatibility loop
+If the change is about how Windows behaves, it can only come from public docs, public specs, code already in this tree, or a log from booting this tree. A size, an offset, or a return code comes from one of those. I don't paste a header, and I don't rebuild a function from one.
 
-The same QEMU harness path runs a reference guest and a VerOS NT guest.
+If any of this shows up, that piece of work stops: Windows source, leaked NT source, or the Windows Research Kernel; a decompiler listing, or a disassembly of a Microsoft binary; WDK or SDK headers, a `.lib`, a `.sys`, or other object code. That stays out of the repo and out of the patch. Once it has shown up, the work stops there.
 
-1. The harness records traces, boot results, and crashes from both guests.
-2. The diff engine places reference behavior beside the VerOS NT result.
-3. Cursor and Grok get a concrete mismatch, and the generation record is published.
-4. The harness boots again, checks for a crash, and runs the regression test.
-5. Compatibility moves because the harness measured it.
+I'm not aware of Cursor or Grok using any unauthorized code. Before a commit, the diff is read again. If a hunk has a whole function I didn't ask for, a comment about Windows internals nobody mentioned, header text, or code that looks decompiled, the commit stops and those hunks are shown to me.
 
-`ARCH=amd64` is the only supported OS build. A native i386 boot is unsupported. 32-bit applications run on the amd64 boot.
+## Source notes
+
+If Cursor commits a change to boot, the kernel, the HAL, a driver, NTFS, or a Windows DLL, that commit also adds a note under [`veros/transparency/`](veros/transparency/). Docs, branding, GitHub workflows, and the editor rules don't get one. The note is in the same commit. The name is picked first, with the date and a short title. It can't be that commit's id, because the id includes the file. If I miss one, the next real commit can add a note named with the old commit's full id. I don't make a commit that only adds a note.
+
+The note says what question I was answering, what I was allowed to use, and that the license is GPL-2.0-or-later. Each input is something that was actually used, and it says where to open it. A public document or another project's file includes an https link. A file in this tree includes its path. A guest log includes its path and the line that shows it finished, such as `DIFF END OK`. Something I said starts with `Reported:`. There's a harness section only if a guest ran. There's a before and after only if both numbers come from a log I committed or a dashboard snapshot. The prompt stays out. So do the old yes-or-no checkboxes, a copied trace, a header, a disassembly, and a Windows call number.
 
 ## Building
 
-The daily build is Windows, Clang 18.1.8, amd64, Debug, target `bootcd`. `ARCH=amd64` is the only supported OS build. Details and tool paths are in [docs/LOCAL_BUILD.md](docs/LOCAL_BUILD.md).
+The daily build is Windows, amd64, Debug, target `bootcd`. A native 32-bit boot isn't supported. `Setup-BuildEnvironment.ps1` in the parent of this checkout downloads the tools into `tools\`. Details are in [docs/LOCAL_BUILD.md](docs/LOCAL_BUILD.md).
+
+You need:
+
+- Windows, with PowerShell and `curl.exe`
+- Git
+- 7-Zip 26.06, so the setup script can unpack the installers
+- ReactOS Build Environment 2.2.1. That package supplies CMake 3.17, Ninja, Bison, m4, Flex, and the amd64 MinGW GCC the environment script uses
+- Clang 18.1.8, the Windows package `clang+llvm-18.1.8-x86_64-pc-windows-msvc`. This is the compiler. RosBE's amd64 GCC was built without plugin support, so the amd64 build uses Clang
+- QEMU 11.1.0 (`qemu-w64-setup-20260811.exe`), to boot the ISO. The boot test uses the plain emulator, 8 GB of RAM, and 4 CPUs
+- Rust 1.99.1, target `x86_64-pc-windows-gnu`. A new file is Rust unless the change has to stay in an existing C or C++ file, or C is required for a binary interface, a build that only compiles C, or code that runs before a Rust runtime exists. The boot CD build does not call `rustc` yet
 
 From the source tree:
 
@@ -39,10 +49,12 @@ From the source tree:
 .\tools\pipeline\Test-Boot.ps1
 ```
 
-`Build-Bootcd.ps1` writes `build-amd64\bootcd.iso`. It uses RosBE 2.2.1 and Clang 18.1.8 from the parent `tools` folder when `Setup-BuildEnvironment.ps1` created them, and otherwise from `D:\RosBE`, `C:\RosBE`, or `D:\LLVM-18`. `Test-Boot.ps1` boots that ISO with QEMU 11.1.0, 8 GiB of RAM, 4 processors, and TCG. `build-amd64/` and `output/` stay untracked.
+`Build-Bootcd.ps1` writes `build-amd64\bootcd.iso`. It looks for RosBE and Clang in the parent `tools` folder first, then `D:\RosBE`, `C:\RosBE`, `D:\LLVM-18`, or `C:\Program Files\LLVM`. `Test-Boot.ps1` looks for QEMU in that same `tools` folder, then `C:\Program Files\qemu`. `build-amd64/` and `output/` stay untracked.
 
 ## License
 
-GPL-2.0 is the default. The text is in [COPYING](COPYING). A file header wins when it names a different license. Wine-synced code keeps the license it arrived with.
+The license is [GPL-2.0](COPYING). There is no warranty. If a file header names a different license, that header wins. A new userland DLL is LGPL-2.1-or-later. Any other new file is GPL-2.0-or-later. Code that came from other projects keeps the license it came with. The name, path, version, license, and upstream site for each one are in [media/doc/3rd Party Files.txt](media/doc/3rd%20Party%20Files.txt). Wine code is LGPL-2.1 or later unless a file header says otherwise. The modules are listed in [media/doc/WINESYNC.txt](media/doc/WINESYNC.txt).
 
-Upstream is [reactos/reactos](https://github.com/reactos/reactos). Development of this fork is on [rjwil1086/verosng](https://github.com/rjwil1086/verosng).
+Upstream is [reactos/reactos](https://github.com/reactos/reactos). This fork is [rjwil1086/verosng](https://github.com/rjwil1086/verosng).
+
+VerOS NT is my trademark. Windows is a registered trademark of Microsoft Corporation. ReactOS is a registered trademark of ReactOS Deutschland e.V. I use those names to say what this is compared with and where the tree came from. I don't use their logos. Microsoft and the ReactOS Project have not licensed or endorsed this fork.
