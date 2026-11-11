@@ -628,28 +628,40 @@ NtfsLogFileRecord(PDEVICE_EXTENSION Vcb,
         WriteAttribute(Vcb, Data, 0, Page, NTFS_LOG_PAGE, &Written, NULL);
     }
 
-    PageOffset = NTFS_LOG_PAGE;
-    for (;;)
     {
-        if (ReadAttribute(Vcb, Data, PageOffset, (PCHAR)Page, NTFS_LOG_PAGE) != NTFS_LOG_PAGE)
-            break;
-        if (*(PULONG)Page == 0 || *(PULONG)Page == 0xFFFFFFFF)
-        {
-            RtlZeroMemory(Page, NTFS_LOG_PAGE);
-            *(PULONG)Page = NTFS_LOG_PAGE_MAGIC;
-            Slot = 8;
-            break;
-        }
-        if (*(PULONG)Page != NTFS_LOG_PAGE_MAGIC)
-            goto FreePage;
+        ULONGLONG LogSize = AttributeDataLength(Data->pRecord);
 
+        PageOffset = Vcb->LogAppendPage;
+        /* Once the append point falls off the end, further updates must
+         * not restart at the first page. That rereads a full 64MB log
+         * for every file the installer copies. */
+        if (PageOffset >= LogSize && PageOffset >= NTFS_LOG_PAGE)
+            goto FreePage;
+        if (PageOffset < NTFS_LOG_PAGE)
+            PageOffset = NTFS_LOG_PAGE;
         Slot = 8;
-        while (Slot + 16 + Vcb->NtfsInfo.BytesPerFileRecord <= NTFS_LOG_PAGE &&
-               *(PULONG)(Page + Slot) == NTFS_LOG_REC_MAGIC)
-            Slot += 16 + Vcb->NtfsInfo.BytesPerFileRecord;
-        if (Slot + 16 + Vcb->NtfsInfo.BytesPerFileRecord <= NTFS_LOG_PAGE)
-            break;
-        PageOffset += NTFS_LOG_PAGE;
+        for (; PageOffset + NTFS_LOG_PAGE <= LogSize; PageOffset += NTFS_LOG_PAGE)
+        {
+            if (ReadAttribute(Vcb, Data, PageOffset, (PCHAR)Page, NTFS_LOG_PAGE) != NTFS_LOG_PAGE)
+                break;
+            if (*(PULONG)Page == 0 || *(PULONG)Page == 0xFFFFFFFF)
+            {
+                RtlZeroMemory(Page, NTFS_LOG_PAGE);
+                *(PULONG)Page = NTFS_LOG_PAGE_MAGIC;
+                Slot = 8;
+                break;
+            }
+            if (*(PULONG)Page != NTFS_LOG_PAGE_MAGIC)
+                goto FreePage;
+
+            Slot = 8;
+            while (Slot + 16 + Vcb->NtfsInfo.BytesPerFileRecord <= NTFS_LOG_PAGE &&
+                   *(PULONG)(Page + Slot) == NTFS_LOG_REC_MAGIC)
+                Slot += 16 + Vcb->NtfsInfo.BytesPerFileRecord;
+            if (Slot + 16 + Vcb->NtfsInfo.BytesPerFileRecord <= NTFS_LOG_PAGE)
+                break;
+        }
+        Vcb->LogAppendPage = PageOffset;
     }
 
     if (Slot + 16 + Vcb->NtfsInfo.BytesPerFileRecord > NTFS_LOG_PAGE)

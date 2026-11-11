@@ -169,6 +169,9 @@ typedef struct
     PWCHAR UpCaseTable;
 
     ULONG MftDataOffset;
+    /* Next $LogFile page that can take a record. A value past the log means
+     * it is full: starting the scan over walks the whole file on every create. */
+    ULONGLONG LogAppendPage;
     ULONG Flags;
     ULONG OpenHandleCount;
 

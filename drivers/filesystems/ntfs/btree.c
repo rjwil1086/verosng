@@ -1,27 +1,13 @@
 /*
-*  ReactOS kernel
-*  Copyright (C) 2002, 2017 ReactOS Team
-*
-*  This program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; either version 2 of the License, or
-*  (at your option) any later version.
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public License
-*  along with this program; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
-*
-* COPYRIGHT:        See COPYING in the top level directory
-* PROJECT:          ReactOS kernel
-* FILE:             drivers/filesystem/ntfs/btree.c
-* PURPOSE:          NTFS filesystem driver
-* PROGRAMMERS:      Trevor Thompson
-*/
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/filesystems/ntfs/btree.c
+ * PURPOSE:     NTFS filesystem driver
+ * COPYRIGHT:   Copyright (C) 2002, 2017 ReactOS Team
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Trevor Thompson
+ *              Ryan Wilson
+ */
 
 /* INCLUDES *****************************************************************/
 
@@ -279,6 +265,59 @@ AllocateIndexNode(PDEVICE_EXTENSION DeviceExt,
 
     DPRINT("New VCN: %I64u\n", *NewVCN);
 
+    /* The bitmap bit is already set. A record that is still zeros is not an
+     * index node, and the next walk of this directory stops in the debugger. */
+    {
+        PINDEX_BUFFER IndexBuffer;
+        PINDEX_ENTRY_ATTRIBUTE EndEntry;
+        ULONG NodeBytesWritten;
+        ULONGLONG NodeOffset;
+
+        IndexBuffer = ExAllocatePoolWithTag(NonPagedPool, IndexBufferSize, TAG_NTFS);
+        if (IndexBuffer == NULL)
+        {
+            DPRINT1("ERROR: Couldn't allocate an empty index node!\n");
+            ExFreePoolWithTag(BitmapMem, TAG_NTFS);
+            ReleaseAttributeContext(BitmapCtx);
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        RtlZeroMemory(IndexBuffer, IndexBufferSize);
+        IndexBuffer->Ntfs.Type = NRH_INDX_TYPE;
+        IndexBuffer->Ntfs.UsaOffset = 0x28;
+        IndexBuffer->Ntfs.UsaCount = (USHORT)(IndexBufferSize / DeviceExt->NtfsInfo.BytesPerSector + 1);
+        IndexBuffer->VCN = *NewVCN;
+        IndexBuffer->Header.FirstEntryOffset = 0x28;
+        IndexBuffer->Header.AllocatedSize = IndexBufferSize - FIELD_OFFSET(INDEX_BUFFER, Header);
+        EndEntry = (PINDEX_ENTRY_ATTRIBUTE)((ULONG_PTR)&IndexBuffer->Header
+                                            + IndexBuffer->Header.FirstEntryOffset);
+        EndEntry->Flags = NTFS_INDEX_ENTRY_END;
+        EndEntry->Length = ALIGN_UP_BY(FIELD_OFFSET(INDEX_ENTRY_ATTRIBUTE, FileName), 8);
+        IndexBuffer->Header.TotalSizeOfEntries = IndexBuffer->Header.FirstEntryOffset + EndEntry->Length;
+
+        Status = AddFixupArray(DeviceExt, &IndexBuffer->Ntfs);
+        if (NT_SUCCESS(Status))
+        {
+            NodeOffset = GetAllocationOffsetFromVCN(DeviceExt, IndexBufferSize, *NewVCN);
+            Status = WriteAttribute(DeviceExt,
+                                    IndexAllocationCtx,
+                                    NodeOffset,
+                                    (const PUCHAR)IndexBuffer,
+                                    IndexBufferSize,
+                                    &NodeBytesWritten,
+                                    FileRecord);
+        }
+
+        ExFreePoolWithTag(IndexBuffer, TAG_NTFS);
+        if (!NT_SUCCESS(Status))
+        {
+            DPRINT1("ERROR: Failed to write an empty index node!\n");
+            ExFreePoolWithTag(BitmapMem, TAG_NTFS);
+            ReleaseAttributeContext(BitmapCtx);
+            return Status;
+        }
+    }
+
     ExFreePoolWithTag(BitmapMem, TAG_NTFS);
     ReleaseAttributeContext(BitmapCtx);
 
@@ -524,6 +563,7 @@ CreateBTreeNodeFromIndexNode(PDEVICE_EXTENSION Vcb,
     NTSTATUS Status;
     ULONGLONG IndexNodeOffset;
     ULONG BytesRead;
+    BOOLEAN Synthesized;
 
     if (IndexAllocationAttributeCtx == NULL)
     {
@@ -576,19 +616,55 @@ CreateBTreeNodeFromIndexNode(PDEVICE_EXTENSION Vcb,
                               (PCHAR)NodeBuffer,
                               IndexBufferSize);
 
-    ASSERT(BytesRead == IndexBufferSize);
-    NT_ASSERT(NodeBuffer->Ntfs.Type == NRH_INDX_TYPE);
-    NT_ASSERT(NodeBuffer->VCN == *VCN);
+    Synthesized = FALSE;
+    if (BytesRead != IndexBufferSize || NodeBuffer->Ntfs.Type != NRH_INDX_TYPE)
+    {
+        PINDEX_ENTRY_ATTRIBUTE EndEntry;
+
+        /* A nonzero signature is a damaged record. Zeros mean the allocation
+         * was saved and the record never reached the disk. */
+        if (BytesRead != IndexBufferSize || NodeBuffer->Ntfs.Type != 0)
+        {
+            DPRINT1("File system corruption detected, no index record at VCN %I64u "
+                    "(read %lu of %lu, signature 0x%08lx)\n",
+                    *VCN,
+                    BytesRead,
+                    IndexBufferSize,
+                    NodeBuffer->Ntfs.Type);
+            ExFreePoolWithTag(NewNode->FirstKey, TAG_NTFS);
+            NewNode->FirstKey = NULL;
+            DestroyBTreeNode(NewNode);
+            ExFreePoolWithTag(NodeBuffer, TAG_NTFS);
+            return NULL;
+        }
+
+        DPRINT1("Unwritten index record at VCN %I64u; using an empty node\n", *VCN);
+        RtlZeroMemory(NodeBuffer, IndexBufferSize);
+        NodeBuffer->Ntfs.Type = NRH_INDX_TYPE;
+        NodeBuffer->VCN = *VCN;
+        NodeBuffer->Header.FirstEntryOffset = 0x28;
+        NodeBuffer->Header.AllocatedSize = IndexBufferSize - FIELD_OFFSET(INDEX_BUFFER, Header);
+        EndEntry = (PINDEX_ENTRY_ATTRIBUTE)((ULONG_PTR)&NodeBuffer->Header
+                                            + NodeBuffer->Header.FirstEntryOffset);
+        EndEntry->Flags = NTFS_INDEX_ENTRY_END;
+        EndEntry->Length = ALIGN_UP_BY(FIELD_OFFSET(INDEX_ENTRY_ATTRIBUTE, FileName), 8);
+        NodeBuffer->Header.TotalSizeOfEntries = NodeBuffer->Header.FirstEntryOffset + EndEntry->Length;
+        Synthesized = TRUE;
+    }
 
     // Apply the fixup array to the node buffer
-    Status = FixupUpdateSequenceArray(Vcb, &NodeBuffer->Ntfs);
-    if (!NT_SUCCESS(Status))
+    if (!Synthesized)
     {
-        DPRINT1("ERROR: Couldn't apply fixup array to index node buffer!\n");
-        ExFreePoolWithTag(NodeBuffer, TAG_NTFS);
-        ExFreePoolWithTag(CurrentKey, TAG_NTFS);
-        ExFreePoolWithTag(NewNode, TAG_NTFS);
-        return NULL;
+        Status = FixupUpdateSequenceArray(Vcb, &NodeBuffer->Ntfs);
+        if (!NT_SUCCESS(Status))
+        {
+            DPRINT1("ERROR: Couldn't apply fixup array to index node buffer!\n");
+            ExFreePoolWithTag(NewNode->FirstKey, TAG_NTFS);
+            NewNode->FirstKey = NULL;
+            DestroyBTreeNode(NewNode);
+            ExFreePoolWithTag(NodeBuffer, TAG_NTFS);
+            return NULL;
+        }
     }
 
     // Walk through the index and create keys for all the entries
@@ -636,6 +712,14 @@ CreateBTreeNodeFromIndexNode(PDEVICE_EXTENSION Vcb,
                                                                        IndexRoot,
                                                                        IndexAllocationAttributeCtx,
                                                                        CurrentKey->IndexEntry);
+                if (CurrentKey->LesserChild == NULL)
+                {
+                    CurrentKey->NextKey = NULL;
+                    ExFreePoolWithTag(NextKey, TAG_NTFS);
+                    DestroyBTreeNode(NewNode);
+                    ExFreePoolWithTag(NodeBuffer, TAG_NTFS);
+                    return NULL;
+                }
             }
 
             CurrentKey = NextKey;
@@ -653,6 +737,12 @@ CreateBTreeNodeFromIndexNode(PDEVICE_EXTENSION Vcb,
                                                                        IndexRoot,
                                                                        IndexAllocationAttributeCtx,
                                                                        CurrentKey->IndexEntry);
+                if (CurrentKey->LesserChild == NULL)
+                {
+                    DestroyBTreeNode(NewNode);
+                    ExFreePoolWithTag(NodeBuffer, TAG_NTFS);
+                    return NULL;
+                }
             }
 
             break;

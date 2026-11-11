@@ -2336,7 +2336,12 @@ UpdateIndexEntryFileName(PDEVICE_EXTENSION Vcb,
         }
 
         (*CurrentEntry) += 1;
-        ASSERT(IndexEntry->Length >= sizeof(INDEX_ENTRY_ATTRIBUTE));
+        /* A zero length never reaches the end entry and the walk never returns. */
+        if (IndexEntry->Length < sizeof(INDEX_ENTRY_ATTRIBUTE))
+        {
+            DPRINT1("Corrupt index entry length %u\n", IndexEntry->Length);
+            break;
+        }
         IndexEntry = (PINDEX_ENTRY_ATTRIBUTE)((PCHAR)IndexEntry + IndexEntry->Length);
     }
 
@@ -2559,6 +2564,7 @@ NtfsLoadMftBitmap(PDEVICE_EXTENSION DeviceExt)
 
     DeviceExt->MftBitmapBytes = (ULONG)Size;
     DeviceExt->MftNextFree = 24;
+    DeviceExt->LogAppendPage = 0;
     return STATUS_SUCCESS;
 }
 
@@ -4110,6 +4116,16 @@ BrowseSubNodeIndexEntries(PNTFS_VCB Vcb,
 
     if (IndexRecord->Ntfs.Type != NRH_INDX_TYPE)
     {
+        /* Zeros mean the node was allocated and never written. It holds no names. */
+        if (IndexRecord->Ntfs.Type == 0)
+        {
+            DPRINT1("Unwritten index record at VCN %I64u of MFT record %I64u\n",
+                    VCN,
+                    MftRecord->MFTRecordNumber & NTFS_MFT_MASK);
+            ExFreePoolWithTag(IndexRecord, TAG_NTFS);
+            return STATUS_OBJECT_PATH_NOT_FOUND;
+        }
+
         DPRINT1("File system corruption detected, no index record at VCN %I64u of MFT record %I64u "
                 "(offset 0x%I64x, block size %lu, cluster %lu, index record %lu, signature 0x%08lx)\n",
                 VCN,
@@ -4191,7 +4207,12 @@ BrowseSubNodeIndexEntries(PNTFS_VCB Vcb,
 
         // Advance to the next index entry
         (*CurrentEntry) += 1;
-        ASSERT(IndexEntry->Length >= sizeof(INDEX_ENTRY_ATTRIBUTE));
+        /* A zero length never reaches the end entry and the walk never returns. */
+        if (IndexEntry->Length < sizeof(INDEX_ENTRY_ATTRIBUTE))
+        {
+            DPRINT1("Corrupt index entry length %u\n", IndexEntry->Length);
+            break;
+        }
         IndexEntry = (PINDEX_ENTRY_ATTRIBUTE)((PCHAR)IndexEntry + IndexEntry->Length);
     }
 
@@ -4365,7 +4386,12 @@ BrowseIndexEntries(PDEVICE_EXTENSION Vcb,
 
         // Advance to the next index entry
         (*CurrentEntry) += 1;
-        ASSERT(IndexEntry->Length >= sizeof(INDEX_ENTRY_ATTRIBUTE));
+        /* A zero length never reaches the end entry and the walk never returns. */
+        if (IndexEntry->Length < sizeof(INDEX_ENTRY_ATTRIBUTE))
+        {
+            DPRINT1("Corrupt index entry length %u\n", IndexEntry->Length);
+            break;
+        }
         IndexEntry = (PINDEX_ENTRY_ATTRIBUTE)((PCHAR)IndexEntry + IndexEntry->Length);
     }
 
