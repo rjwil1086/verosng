@@ -1303,8 +1303,8 @@ typedef enum _FILE_INFORMATION_CLASS {
   FileIdFullDirectoryInformation,
   FileValidDataLengthInformation,
   FileShortNameInformation,
-#if (NTDDI_VERSION >= NTDDI_VISTA)
   FileIoCompletionNotificationInformation,
+#if (NTDDI_VERSION >= NTDDI_VISTA)
   FileIoStatusBlockRangeInformation,
   FileIoPriorityHintInformation,
   FileSfioReserveInformation,

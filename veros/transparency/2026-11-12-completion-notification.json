@@ -1,0 +1,10 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What does FileIoCompletionNotificationInformation store on a file object?",
+  "allowedInputs": [
+    "modules/rostests/winetests/ntdll/file.c test_file_completion_information",
+    "sdk/include/xdk/iotypes.h FO_SKIP_SET_EVENT, FO_SKIP_COMPLETION_PORT, and FO_SKIP_SET_FAST_IO",
+    "dll/win32/kernel32/client/file/iocompl.c SetFileCompletionNotificationModes",
+    "Reported: the update check failed with Win32 error 87 after asking for completion-notification mode on the socket"
+  ]
+}

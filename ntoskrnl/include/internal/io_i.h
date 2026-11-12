@@ -4,6 +4,7 @@
  * FILE:            ntoskrnl/include/internal/io_i.h
  * PURPOSE:         Info Classes for the I/O Manager
  * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
+ *                  Ryan Wilson
  */
 
 //
@@ -52,8 +53,8 @@ UCHAR IopQueryOperationLength[] =
     0,
     0,
     0,
-#if 0 // VISTA
     sizeof(FILE_IO_COMPLETION_NOTIFICATION_INFORMATION),
+#if 0 // VISTA
     sizeof(FILE_IOSTATUSBLOCK_RANGE_INFORMATION),
     sizeof(FILE_IO_PRIORITY_HINT_INFORMATION),
     sizeof(FILE_SFIO_RESERVE_INFORMATION),
@@ -109,6 +110,7 @@ UCHAR IopSetOperationLength[] =
     0,
     sizeof(FILE_VALID_DATA_LENGTH_INFORMATION),
     sizeof(UNICODE_STRING),
+    sizeof(FILE_IO_COMPLETION_NOTIFICATION_INFORMATION),
     0xFF
 };
 
@@ -155,6 +157,7 @@ ACCESS_MASK IopQueryOperationAccess[] =
     0,
     0,
     0,
+    0,
     0xFFFFFFFF
 };
 
@@ -191,16 +194,17 @@ ACCESS_MASK IopSetOperationAccess[] =
     0,
     0,
     0,
-    FILE_WRITE_DATA,
-    0,
-    0,
-    0,
     0,
     FILE_WRITE_DATA,
     0,
     0,
+    0,
+    0,
     FILE_WRITE_DATA,
-    DELETE,
+    0,
+    0,
+    FILE_WRITE_DATA,
+    0,
     0xFFFFFFFF
 };
 

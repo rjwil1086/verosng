@@ -433,8 +433,11 @@ IopCompleteRequest(IN PKAPC Apc,
         }
         else if (FileObject)
         {
-            /* Signal the file object and set the status */
-            KeSetEvent(&FileObject->Event, 0, FALSE);
+            /* FILE_SKIP_SET_EVENT_ON_HANDLE is stored as FO_SKIP_SET_EVENT */
+            if (!(FileObject->Flags & FO_SKIP_SET_EVENT))
+            {
+                KeSetEvent(&FileObject->Event, 0, FALSE);
+            }
             FileObject->FinalStatus = Irp->IoStatus.Status;
 
             /*

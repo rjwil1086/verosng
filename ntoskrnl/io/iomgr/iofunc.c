@@ -7,6 +7,7 @@
  *                  Gunnar Dalsnes
  *                  Filip Navara (navaraf@reactos.org)
  *                  Pierre Schweitzer (pierre@reactos.org)
+ *                  Ryan Wilson
  */
 
 /* INCLUDES *****************************************************************/
@@ -2566,6 +2567,22 @@ NtQueryInformationFile(IN HANDLE FileHandle,
         Irp->IoStatus.Information = sizeof(FILE_ALIGNMENT_INFORMATION);
         CallDriver = FALSE;
     }
+    else if (FileInformationClass == FileIoCompletionNotificationInformation)
+    {
+        PFILE_IO_COMPLETION_NOTIFICATION_INFORMATION Notification;
+        ULONG NotifyFlags = 0;
+
+        Notification = Irp->AssociatedIrp.SystemBuffer;
+        if (FileObject->Flags & FO_SKIP_COMPLETION_PORT)
+            NotifyFlags |= FILE_SKIP_COMPLETION_PORT_ON_SUCCESS;
+        if (FileObject->Flags & FO_SKIP_SET_EVENT)
+            NotifyFlags |= FILE_SKIP_SET_EVENT_ON_HANDLE;
+        if (FileObject->Flags & FO_SKIP_SET_FAST_IO)
+            NotifyFlags |= FILE_SKIP_SET_USER_EVENT_ON_FAST_IO;
+        Notification->Flags = NotifyFlags;
+        Irp->IoStatus.Information = sizeof(*Notification);
+        CallDriver = FALSE;
+    }
     else if (FileInformationClass == FileAllInformation)
     {
         AllBuffer = Irp->AssociatedIrp.SystemBuffer;
@@ -3372,6 +3389,36 @@ NtSetInformationFile(IN HANDLE FileHandle,
         }
 
         /* Set the IRP Status */
+        Irp->IoStatus.Status = Status;
+        Irp->IoStatus.Information = 0;
+    }
+    else if (FileInformationClass == FileIoCompletionNotificationInformation)
+    {
+        PFILE_IO_COMPLETION_NOTIFICATION_INFORMATION Notification;
+        ULONG NotifyFlags;
+
+        /*
+         * Flags come from modules/rostests/winetests/ntdll/file.c.
+         * A synchronous file rejects FILE_SKIP_COMPLETION_PORT_ON_SUCCESS.
+         * Other values are stored and a zero write leaves the stored bits.
+         */
+        Notification = Irp->AssociatedIrp.SystemBuffer;
+        NotifyFlags = Notification->Flags;
+        if ((NotifyFlags & FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) &&
+            (FileObject->Flags & FO_SYNCHRONOUS_IO))
+        {
+            Status = STATUS_INVALID_PARAMETER;
+        }
+        else
+        {
+            if (NotifyFlags & FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)
+                FileObject->Flags |= FO_SKIP_COMPLETION_PORT;
+            if (NotifyFlags & FILE_SKIP_SET_EVENT_ON_HANDLE)
+                FileObject->Flags |= FO_SKIP_SET_EVENT;
+            if (NotifyFlags & FILE_SKIP_SET_USER_EVENT_ON_FAST_IO)
+                FileObject->Flags |= FO_SKIP_SET_FAST_IO;
+            Status = STATUS_SUCCESS;
+        }
         Irp->IoStatus.Status = Status;
         Irp->IoStatus.Information = 0;
     }
