@@ -29,6 +29,7 @@
 55  stdcall  getservbyname(str str)
 56  stdcall  getservbyport(long str)
 57  stdcall  gethostname(ptr long)
+@ stdcall GetHostNameW(ptr long)
 
 101 stdcall WSAAsyncSelect(long long long long)
 102 stdcall WSAAsyncGetHostByAddr(long long ptr long long ptr long)

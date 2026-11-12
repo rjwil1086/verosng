@@ -1929,6 +1929,13 @@ gethostname(
   _In_ int namelen);
 
 WINSOCK_API_LINKAGE
+int
+WSAAPI
+GetHostNameW(
+  _Out_writes_(namelen) WCHAR FAR *name,
+  _In_ int namelen);
+
+WINSOCK_API_LINKAGE
 struct servent FAR *
 WSAAPI
 getservbyport(

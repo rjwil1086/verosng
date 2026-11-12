@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How does GetHostNameW report the computer name?",
+  "allowedInputs": [
+    "dll/win32/ws2_32/src/getxbyxx.c gethostname",
+    "Reported: the updater client imports GetHostNameW"
+  ]
+}

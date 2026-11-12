@@ -1,9 +1,12 @@
 /*
- * COPYRIGHT:   See COPYING in the top level directory
- * PROJECT:     ReactOS WinSock 2 API
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
  * FILE:        dll/win32/ws2_32/src/getxbyxx.c
  * PURPOSE:     Get X by Y Functions for Name Resolution.
- * PROGRAMMER:  Alex Ionescu (alex@relsoft.net)
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu
+ *              Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/
@@ -420,6 +423,41 @@ gethostname(OUT char FAR * name,
     if (Results != ResultsBuffer) HeapFree(WsSockHeap, 0, Results);
 
     /* Return success */
+    return ERROR_SUCCESS;
+}
+
+/*
+ * @implemented
+ */
+INT
+WSAAPI
+GetHostNameW(OUT WCHAR FAR *name,
+             IN INT namelen)
+{
+    CHAR AnsiName[256];
+    INT Error;
+    INT Copied;
+
+    if (!name || namelen < 1)
+    {
+        SetLastError(WSAEFAULT);
+        return SOCKET_ERROR;
+    }
+
+    Error = gethostname(AnsiName, sizeof(AnsiName));
+    if (Error != ERROR_SUCCESS)
+    {
+        return Error;
+    }
+    AnsiName[sizeof(AnsiName) - 1] = '\0';
+
+    Copied = MultiByteToWideChar(CP_ACP, 0, AnsiName, -1, name, namelen);
+    if (Copied == 0)
+    {
+        SetLastError(WSAEFAULT);
+        return SOCKET_ERROR;
+    }
+
     return ERROR_SUCCESS;
 }
 
