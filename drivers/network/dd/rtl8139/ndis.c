@@ -2,6 +2,7 @@
  * ReactOS Realtek 8139 Driver
  *
  * Copyright (C) 2013 Cameron Gutman
+ * Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +38,65 @@ MiniportReset (
     return NDIS_STATUS_FAILURE;
 }
 
+/*
+ * Copy every NDIS buffer. NdisGetFirstBufferFromPacketSafe can return a
+ * first buffer that is shorter than the packet, and a frame above 4GB
+ * cannot be handed to this 32-bit NIC as a physical address.
+ */
+static
+BOOLEAN
+CopyPacketToBounce(
+    IN PNDIS_PACKET Packet,
+    IN PUCHAR Destination,
+    IN ULONG DestinationLength,
+    OUT PULONG Copied)
+{
+    PNDIS_BUFFER Buffer;
+    PVOID FirstVa;
+    UINT FirstLength;
+    UINT TotalLength;
+    ULONG Offset = 0;
+
+    NdisGetFirstBufferFromPacketSafe(Packet,
+                                     &Buffer,
+                                     &FirstVa,
+                                     &FirstLength,
+                                     &TotalLength,
+                                     NormalPagePriority);
+    UNREFERENCED_PARAMETER(FirstVa);
+    UNREFERENCED_PARAMETER(FirstLength);
+
+    if (Buffer == NULL || TotalLength == 0 || TotalLength > DestinationLength)
+    {
+        return FALSE;
+    }
+
+    while (Buffer != NULL && Offset < TotalLength)
+    {
+        PVOID VirtualAddress;
+        UINT Length;
+
+        NdisQueryBufferSafe(Buffer, &VirtualAddress, &Length, NormalPagePriority);
+        if (VirtualAddress == NULL)
+        {
+            return FALSE;
+        }
+        if (Offset + Length > TotalLength)
+        {
+            Length = TotalLength - Offset;
+        }
+        if (Length != 0)
+        {
+            RtlCopyMemory(Destination + Offset, VirtualAddress, Length);
+            Offset += Length;
+        }
+        NdisGetNextBuffer(Buffer, &Buffer);
+    }
+
+    *Copied = Offset;
+    return Offset == TotalLength;
+}
+
 NDIS_STATUS
 NTAPI
 MiniportSend (
@@ -51,19 +111,17 @@ MiniportSend (
                                     ScatterGatherListPacketInfo);
     ULONG transmitLength;
     ULONG transmitBuffer;
-    PNDIS_BUFFER firstBuffer;
-    PVOID firstBufferVa;
-    UINT firstBufferLength, totalBufferLength;
     PUCHAR runtBuffer;
 
-    ASSERT(sgList != NULL);
+    if (sgList == NULL)
+    {
+        return NDIS_STATUS_FAILURE;
+    }
 
-    ASSERT(sgList->NumberOfElements == 1);
-    ASSERT(sgList->Elements[0].Address.HighPart == 0);
-    ASSERT((sgList->Elements[0].Address.LowPart & 3) == 0);
-    ASSERT(sgList->Elements[0].Length <= MAXIMUM_FRAME_SIZE);
-
-    NDIS_DbgPrint(MAX_TRACE, ("Sending %d byte packet\n", sgList->Elements[0].Length));
+    if (sgList->NumberOfElements > 0)
+    {
+        NDIS_DbgPrint(MAX_TRACE, ("Sending %d byte packet\n", sgList->Elements[0].Length));
+    }
 
     NdisAcquireSpinLock(&adapter->Lock);
 
@@ -76,38 +134,41 @@ MiniportSend (
 
     NDIS_DbgPrint(MAX_TRACE, ("Sending packet on TX desc %d\n", adapter->CurrentTxDesc));
 
-    //
-    // If this is a runt, we need to pad it manually for the RTL8139
-    //
-    if (sgList->Elements[0].Length < MINIMUM_FRAME_SIZE)
-    {
-        transmitLength = MINIMUM_FRAME_SIZE;
-        transmitBuffer = adapter->RuntTxBuffersPa.LowPart +
-                  (MINIMUM_FRAME_SIZE * adapter->CurrentTxDesc);
-
-        NdisGetFirstBufferFromPacketSafe(Packet,
-                                         &firstBuffer,
-                                         &firstBufferVa,
-                                         &firstBufferLength,
-                                         &totalBufferLength,
-                                         NormalPagePriority);
-        if (firstBufferVa == NULL)
-        {
-            NDIS_DbgPrint(MIN_TRACE, ("Unable to get buffer from packet\n"));
-            NdisReleaseSpinLock(&adapter->Lock);
-            return NDIS_STATUS_RESOURCES;
-        }
-
-        ASSERT(firstBufferLength == totalBufferLength);
-
-        runtBuffer = adapter->RuntTxBuffers + (MINIMUM_FRAME_SIZE * adapter->CurrentTxDesc);
-        RtlCopyMemory(runtBuffer, firstBufferVa, firstBufferLength);
-        RtlFillMemory(runtBuffer + firstBufferLength, MINIMUM_FRAME_SIZE - firstBufferLength, 0x00);
-    }
-    else
+    /*
+     * The NIC stores one 32-bit transmit address. One aligned frame below
+     * 4GB is sent from its own physical address. Anything else is copied
+     * into the shared bounce area, which is allocated below 4GB. The guest
+     * log livecd-20261112T071817Z stopped in this function when a transmit
+     * address had a non-zero high half.
+     */
+    if (sgList->NumberOfElements == 1 &&
+        sgList->Elements[0].Length >= MINIMUM_FRAME_SIZE &&
+        sgList->Elements[0].Length <= MAXIMUM_FRAME_SIZE &&
+        sgList->Elements[0].Address.HighPart == 0 &&
+        (sgList->Elements[0].Address.LowPart & 3) == 0)
     {
         transmitLength = sgList->Elements[0].Length;
         transmitBuffer = sgList->Elements[0].Address.LowPart;
+    }
+    else
+    {
+        ULONG copied;
+
+        runtBuffer = adapter->RuntTxBuffers + (MAXIMUM_FRAME_SIZE * adapter->CurrentTxDesc);
+        if (!CopyPacketToBounce(Packet, runtBuffer, MAXIMUM_FRAME_SIZE, &copied))
+        {
+            NDIS_DbgPrint(MIN_TRACE, ("Unable to bounce packet\n"));
+            NdisReleaseSpinLock(&adapter->Lock);
+            return NDIS_STATUS_RESOURCES;
+        }
+        transmitLength = copied;
+        if (transmitLength < MINIMUM_FRAME_SIZE)
+        {
+            RtlFillMemory(runtBuffer + copied, MINIMUM_FRAME_SIZE - copied, 0x00);
+            transmitLength = MINIMUM_FRAME_SIZE;
+        }
+        transmitBuffer = adapter->RuntTxBuffersPa.LowPart +
+                         (MAXIMUM_FRAME_SIZE * adapter->CurrentTxDesc);
     }
 
     status = NICTransmitPacket(adapter, adapter->CurrentTxDesc, transmitBuffer, transmitLength);
@@ -173,7 +234,7 @@ MiniportHalt (
         if (adapter->RuntTxBuffers != NULL)
         {
             NdisMFreeSharedMemory(adapter->MiniportAdapterHandle,
-                                  MINIMUM_FRAME_SIZE * TX_DESC_COUNT,
+                                  MAXIMUM_FRAME_SIZE * TX_DESC_COUNT,
                                   FALSE,
                                   adapter->RuntTxBuffers,
                                   adapter->RuntTxBuffersPa);
@@ -361,13 +422,19 @@ MiniportInitialize (
     }
 
     NdisMAllocateSharedMemory(MiniportAdapterHandle,
-                              MINIMUM_FRAME_SIZE * TX_DESC_COUNT,
+                              MAXIMUM_FRAME_SIZE * TX_DESC_COUNT,
                               FALSE,
                               (PVOID*)&adapter->RuntTxBuffers,
                               &adapter->RuntTxBuffersPa);
     if (adapter->RuntTxBuffers == NULL)
     {
         NDIS_DbgPrint(MIN_TRACE, ("Unable to allocate runt TX buffer\n"));
+        status = NDIS_STATUS_RESOURCES;
+        goto Cleanup;
+    }
+    if (adapter->RuntTxBuffersPa.HighPart != 0)
+    {
+        NDIS_DbgPrint(MIN_TRACE, ("TX bounce buffer is above 4GB\n"));
         status = NDIS_STATUS_RESOURCES;
         goto Cleanup;
     }

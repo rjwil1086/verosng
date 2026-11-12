@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Where can the RTL8139 transmit a frame whose buffer is above 4GB or split across NDIS buffers?",
+  "allowedInputs": [
+    "drivers/network/dd/rtl8139/ndis.c programs one 32-bit transmit address",
+    "sdk/include/ddk/ndis.h NdisGetFirstBufferFromPacketSafe returns the first buffer length separately from the total",
+    "Reported: with 8192 MB of RAM the live CD stopped in MiniportSend because a transmit address had a non-zero high half"
+  ]
+}
