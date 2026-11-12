@@ -3,6 +3,7 @@
  * PROJECT:     ReactOS Ancillary Function Driver
  * FILE:        include/reactos/drivers/afd/shared.h
  * PURPOSE:     Shared definitions for AFD.SYS and MSAFD.DLL
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  */
 #ifndef __AFD_SHARED_H
 #define __AFD_SHARED_H
@@ -55,7 +56,9 @@ typedef struct _AFD_HANDLE_ {
 typedef struct _AFD_POLL_INFO {
     LARGE_INTEGER		        Timeout;
     ULONG				HandleCount;
-    ULONG_PTR                               Exclusive;
+    /* ULONG, including on amd64. A pointer-sized field shifts Handles
+     * and the poll ioctl stops matching the callers in this tree. */
+    ULONG                               Exclusive;
     AFD_HANDLE			        Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 

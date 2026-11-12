@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How wide is the exclusive field in the AFD poll request?",
+  "allowedInputs": [
+    "sdk/include/reactos/drivers/afd/shared.h AFD_POLL_INFO",
+    "drivers/network/afd/afd/select.c reads Exclusive as a ULONG",
+    "Reported: the Rust poll caller packs that field as 32 bits, and a pointer-sized field shifts the socket handle"
+  ]
+}
