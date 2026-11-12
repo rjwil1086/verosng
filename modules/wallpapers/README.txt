@@ -22,12 +22,4 @@ Note: Nebula was inspired from concept art by community member taisayshello.
 
 You can download other wallpapers from the "ReactOS Standard Wallpapers" package in the ReactOS Application Manager.
 
-To include the module in your build folder, run the configure script with the flags -DENABLE_WALLPAPERS=1
-
-# For Windows users
-
-    configure.cmd -DENABLE_WALLPAPERS=1
-
-# For UNIX users
-
-    ./configure.sh -DENABLE_WALLPAPERS=1
+To include the module in your build folder, pass -DENABLE_WALLPAPERS=1 to CMake.
