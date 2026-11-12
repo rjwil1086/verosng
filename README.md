@@ -14,6 +14,8 @@ Windows 10 22H2 boots in QEMU with 8 GB of RAM and 4 CPUs, the same as VerOS. Th
 
 A separate trace records only a call number, a status, and four arguments, with no names. That trace stays out of the kernel. I don't take the guest apart to make up more syscall numbers.
 
+The logs stay out of this repository. After a run, the result files are copied into a private archive, one new folder each time, and that archive is its own git repository. I don't paste a log into the kernel tree. A note may include the SHA-256 of a log only when that file is still on disk and still contains the line the note quotes. A later capture is not hashed as if it were the earlier one.
+
 ## What a patch is allowed to come from
 
 If the change is about how Windows behaves, it can only come from public docs, public specs, code already in this tree, or a log from booting this tree. A size, an offset, or a return code comes from one of those. I don't paste a header, and I don't rebuild a function from one.
@@ -24,9 +26,15 @@ Before a commit, the diff is read again. If a hunk has a whole function I didn't
 
 ## Source notes
 
-If Cursor commits a change to boot, the kernel, the HAL, a driver, NTFS, or a Windows DLL, that commit also adds a note under [`veros/transparency/`](veros/transparency/). Docs, branding, GitHub workflows, and the editor rules don't get one. The note is in the same commit. The name is picked first, with the date and a short title. It can't be that commit's id, because the id includes the file. If I miss one, the next real commit can add a note named with the old commit's full id. I don't make a commit that only adds a note.
+If Cursor commits a change to boot, the kernel, the HAL, a driver, NTFS, or a Windows DLL, that commit also adds a note under [`veros/transparency/`](veros/transparency/). Docs, branding, GitHub workflows, and the editor rules don't get one. The note is in the same commit. The name is picked first, with the date and a short title. It can't be that commit's id, because the id includes the file. If I miss one, a later commit adds a note named with the old commit's full id. One catch-up commit recorded the commits that were still missing a note. After that, a missed note goes in the next commit that changes the code. I don't make another commit whose only change is a note.
 
 The note says what question I was answering, what I was allowed to use, and that the license is GPL-2.0-or-later. Each input is something that was actually used, and it says where to open it. A public document or another project's file includes an https link. A file in this tree includes its path. A guest log includes its path and the line that shows it finished, such as `DIFF END OK`. Something I said starts with `Reported:`. There's a harness section only if a guest ran. There's a before and after only if both numbers come from a log I committed or a dashboard snapshot. The prompt stays out. So do the old yes-or-no checkboxes, a copied trace, a header, a disassembly, and a Windows call number.
+
+GitHub runs [tools/transparency/check_records.py](tools/transparency/check_records.py) on a push or a pull request to master. The check fails a Cursor commit in those directories when no note that commit added is still in the tree and the tree has no note named with that commit's full id. It fails a note that includes the prompt or the old yes-or-no checkboxes. When a log hash is present, it has to be 64 lowercase hex characters.
+
+## What the record is
+
+The notes and the check are the record of what a patch used. I'm the person who reads the logs and the person who commits the code. Code that has to return a particular status, or write a field at a known offset, will look like Windows. The notes don't promise that a function is unlike Microsoft's. They cover the commits I make. They don't review the ReactOS code this fork started from.
 
 ## Building
 

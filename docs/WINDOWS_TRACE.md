@@ -1,6 +1,6 @@
 # Windows 10 syscall traces
 
-This is the truth source for Windows 10 22H2 x64 call behavior. The traces are produced by booting a guest and are not committed.
+This is the truth source for Windows 10 22H2 x64 call behavior. The traces are produced by booting a guest and are not committed. After a run, the result files are copied into a private archive outside this repository, one new folder each time.
 
 ## Tools
 

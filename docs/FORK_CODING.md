@@ -10,7 +10,7 @@ Files added in this fork are GPL-2.0-compatible and carry an SPDX identifier. Th
 
 ## Clean room
 
-Windows behavior is reimplemented from public documentation and from logs of this guest. Windows source, leaked NT source, the Windows Research Kernel, decompiler output, disassembly of Microsoft binaries, WDK headers, libraries, and `.sys` files are not inputs and are not committed. A structure-offset check may record numbers and field names only.
+Windows behavior is reimplemented from public documentation, public specifications, code already in this tree, and logs from booting this tree. Windows source, leaked NT source, the Windows Research Kernel, decompiler output, disassembly of Microsoft binaries, WDK or SDK headers, libraries, and `.sys` files stop that work and stay out of the commit. Guest logs stay out of this repository. A copy of the result files goes to a private archive, one new folder each time. A Cursor commit that changes boot, the kernel, the HAL, a driver, NTFS, or a Windows-facing DLL adds a note under `veros/transparency/`. [README.md](../README.md) describes that note and the check GitHub runs. A structure-offset check may record numbers and field names only.
 
 ## Pipeline, harness, and dashboard
 
