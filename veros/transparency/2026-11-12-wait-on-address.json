@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How does WaitOnAddress wait until the watched bytes change?",
+  "allowedInputs": [
+    "dll/win32/kernel32/client/synch.c already waits with NtWaitForSingleObject",
+    "Reported: the update window died after the WaitOnAddress stub returned and the caller invoked it again until the thread stack was exhausted"
+  ]
+}

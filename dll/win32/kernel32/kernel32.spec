@@ -765,6 +765,9 @@
 @ stdcall IsProcessorFeaturePresent(long)
 @ stdcall IsSystemResumeAutomatic()
 @ stdcall -version=0x600+ IsThreadAFiber()
+@ stdcall WaitOnAddress(ptr ptr long long)
+@ stdcall WakeByAddressAll(ptr)
+@ stdcall WakeByAddressSingle(ptr)
 @ stdcall -version=0x600+ IsThreadpoolTimerSet(ptr) ntdll.TpIsTimerSet
 @ stdcall IsTimeZoneRedirectionEnabled()
 @ stub -version=0x600+ IsValidCalDateTime

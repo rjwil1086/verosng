@@ -968,4 +968,179 @@ UnregisterWaitEx(IN HANDLE WaitHandle,
     return TRUE;
 }
 
+typedef struct _ADDRESS_WAIT_ENTRY
+{
+    LIST_ENTRY Entry;
+    PVOID Address;
+    HANDLE Event;
+    BOOLEAN Woken;
+} ADDRESS_WAIT_ENTRY, *PADDRESS_WAIT_ENTRY;
+
+static LIST_ENTRY AddressWaitList;
+static RTL_CRITICAL_SECTION AddressWaitLock;
+static volatile LONG AddressWaitReady;
+
+static
+VOID
+EnsureAddressWait(VOID)
+{
+    if (InterlockedCompareExchange(&AddressWaitReady, 1, 0) == 0)
+    {
+        InitializeListHead(&AddressWaitList);
+        RtlInitializeCriticalSection(&AddressWaitLock);
+        InterlockedExchange(&AddressWaitReady, 2);
+    }
+    else
+    {
+        while (AddressWaitReady != 2)
+        {
+            NtYieldExecution();
+        }
+    }
+}
+
+static
+BOOLEAN
+AddressBytesMatch(IN volatile VOID *Address,
+                  IN PVOID CompareAddress,
+                  IN SIZE_T AddressSize)
+{
+    switch (AddressSize)
+    {
+        case 1:
+            return (*(volatile UCHAR *)Address == *(UCHAR *)CompareAddress);
+        case 2:
+            return (*(volatile USHORT *)Address == *(USHORT *)CompareAddress);
+        case 4:
+            return (*(volatile ULONG *)Address == *(ULONG *)CompareAddress);
+        case 8:
+            return (*(volatile ULONGLONG *)Address == *(ULONGLONG *)CompareAddress);
+        default:
+            return FALSE;
+    }
+}
+
+static
+VOID
+WakeAddressWaiters(IN PVOID Address,
+                   IN BOOLEAN WakeAll)
+{
+    PLIST_ENTRY Link;
+
+    EnsureAddressWait();
+    RtlEnterCriticalSection(&AddressWaitLock);
+    Link = AddressWaitList.Flink;
+    while (Link != &AddressWaitList)
+    {
+        PADDRESS_WAIT_ENTRY Entry = CONTAINING_RECORD(Link, ADDRESS_WAIT_ENTRY, Entry);
+        Link = Link->Flink;
+        if (Entry->Address == Address)
+        {
+            Entry->Woken = TRUE;
+            RemoveEntryList(&Entry->Entry);
+            NtSetEvent(Entry->Event, NULL);
+            if (!WakeAll)
+            {
+                break;
+            }
+        }
+    }
+    RtlLeaveCriticalSection(&AddressWaitLock);
+}
+
+/*
+ * @implemented
+ */
+BOOL
+WINAPI
+WaitOnAddress(IN volatile VOID *Address,
+              IN PVOID CompareAddress,
+              IN SIZE_T AddressSize,
+              IN DWORD Milliseconds)
+{
+    ADDRESS_WAIT_ENTRY Entry;
+    OBJECT_ATTRIBUTES Attributes;
+    LARGE_INTEGER Relative;
+    PLARGE_INTEGER Timeout;
+    NTSTATUS Status;
+
+    if (AddressSize != 1 && AddressSize != 2 && AddressSize != 4 && AddressSize != 8)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    if (((ULONG_PTR)Address & (AddressSize - 1)) != 0)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    EnsureAddressWait();
+    InitializeObjectAttributes(&Attributes, NULL, 0, NULL, NULL);
+    Status = NtCreateEvent(&Entry.Event, EVENT_ALL_ACCESS, &Attributes, NotificationEvent, FALSE);
+    if (!NT_SUCCESS(Status))
+    {
+        BaseSetLastNTError(Status);
+        return FALSE;
+    }
+
+    RtlEnterCriticalSection(&AddressWaitLock);
+    if (!AddressBytesMatch(Address, CompareAddress, AddressSize))
+    {
+        RtlLeaveCriticalSection(&AddressWaitLock);
+        NtClose(Entry.Event);
+        return TRUE;
+    }
+    Entry.Address = (PVOID)Address;
+    Entry.Woken = FALSE;
+    InsertTailList(&AddressWaitList, &Entry.Entry);
+    RtlLeaveCriticalSection(&AddressWaitLock);
+
+    if (Milliseconds == INFINITE)
+    {
+        Timeout = NULL;
+    }
+    else
+    {
+        Relative.QuadPart = -((LONGLONG)Milliseconds * 10000);
+        Timeout = &Relative;
+    }
+    Status = NtWaitForSingleObject(Entry.Event, FALSE, Timeout);
+
+    RtlEnterCriticalSection(&AddressWaitLock);
+    if (!Entry.Woken)
+    {
+        RemoveEntryList(&Entry.Entry);
+    }
+    RtlLeaveCriticalSection(&AddressWaitLock);
+    NtClose(Entry.Event);
+
+    if (Status == STATUS_SUCCESS)
+    {
+        return TRUE;
+    }
+    BaseSetLastNTError(Status);
+    return FALSE;
+}
+
+/*
+ * @implemented
+ */
+VOID
+WINAPI
+WakeByAddressAll(IN PVOID Address)
+{
+    WakeAddressWaiters(Address, TRUE);
+}
+
+/*
+ * @implemented
+ */
+VOID
+WINAPI
+WakeByAddressSingle(IN PVOID Address)
+{
+    WakeAddressWaiters(Address, FALSE);
+}
+
 /* EOF */
