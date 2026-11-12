@@ -9,21 +9,10 @@
     "boot/bootdata/hivedef.inf TEMP and drivers/filesystems/cdfs/create.c FILE_OPEN_IF denial already in this tree",
     "output/syscall-diff/reactos.log DIFF END OK after the create ran on the harness FAT12 sink"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG, with the harness 1.44MB FAT12 sink",
     "name": "NtCreateFile",
     "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
-  },
-  "cursor": {
-    "prompt": "Milestone 8: NtCreateFile. Implement the plan as specified.",
-    "model": "Grok 4.7",
-    "date": "2026-11-07"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": true
   },
   "measuredEffect": {
     "metric": "amd64 probe exact status match percent",

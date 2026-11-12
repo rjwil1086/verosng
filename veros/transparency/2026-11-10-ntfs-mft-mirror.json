@@ -6,21 +6,10 @@
     "unittests/ntfs/host/ntfs_fuzz.c and ntfs_check.c",
     "unittests/ntfs/out/share-fuzz-5/result.log. Image 6 was named in the note, and no separate log path was recorded for it."
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "amd64 live CD, QEMU TCG, fuzz disk",
     "name": "Invoke-NtfsSuite.ps1 -Phase fuzz -Count 8",
     "traceOrReplayId": "unittests/ntfs/out/share-fuzz-5/result.log"
-  },
-  "cursor": {
-    "prompt": "The fuzz test needs to be green. figure out why it is red, fix it, then run it again.",
-    "model": "Grok 4.7",
-    "date": "2026-11-10"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": true
   },
   "measuredEffect": {
     "metric": "NTFS 3.1 fuzz row",

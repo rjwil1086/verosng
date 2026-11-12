@@ -13,27 +13,9 @@
     "boot/freeldr/freeldr/ntldr/arch/amd64/winldr.c",
     "https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html ExitBootServices returns EFI_INVALID_PARAMETER when MapKey is stale, and GetMemoryMap must be called again"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "QEMU SeaBIOS, amd64 boot CD, TCG",
     "name": "local qemu",
     "traceOrReplayId": "source/output/freeldr-tco-smoke2.log reached the kernel on the watchdog-halt image. The final notice change was not booted."
-  },
-  "cursor": {
-    "prompt": "Implement the Acer watchdog and reserved-hole changes so the boot CD can be tested, then halt the watchdog before the last BIOS call. Commit and push the laptop handoff once QEMU still boots.",
-    "model": "Grok 4.7",
-    "date": "2026-11-11",
-    "session": "f962e825-28f4-42b7-bfd6-f5cc4b3d8c1f"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": false
-  },
-  "measuredEffect": {
-    "metric": "Acer reaches KiSystemStartup",
-    "before": null,
-    "after": null,
-    "note": "The user reported that QEMU still boots and that the Acer still resets after the debugger notice. No committed harness score."
   }
 }

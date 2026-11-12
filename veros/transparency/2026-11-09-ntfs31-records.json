@@ -7,27 +7,10 @@
     "https://flatcap.github.io/linux-ntfs/ntfs/attributes/standard_information.html",
     "docs/MILESTONES.md milestone 12, which allows a Linux NTFS driver to be read for on-disk behavior"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG",
     "name": "NTFS 3.1 $STANDARD_INFORMATION",
     "traceOrReplayId": "output/boot-20261110T004934Z.log"
-  },
-  "cursor": {
-    "prompt": "NTFS 3.1 on-disk records. Implement the plan as specified.",
-    "model": "Grok 4.7",
-    "date": "2026-11-09"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": false
-  },
-  "measuredEffect": {
-    "metric": "resident $STANDARD_INFORMATION value length of a file created on an NTFS 3.1 volume",
-    "before": null,
-    "after": null,
-    "note": "The amd64 live CD boot log shows winlogon assigning a startup desktop and the shell extensions running, with no bugcheck. That boot does not create a file on an NTFS volume, so the new attribute length was not read back. The driver writes 72 bytes when the mounted volume's major version is 3 or newer, and 48 otherwise."
   },
   "commit": null,
   "note": "No Linux driver source was copied. The 72-byte field order matches the offsets ntfslib's MkStdInfo already writes."

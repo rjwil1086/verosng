@@ -7,22 +7,6 @@
     "sdk/cmake/CMakeMacros.cmake ISO layout and the generated bootcd.cmake.lst",
     "source/build-amd64/bootcd.iso listing of VerOS/system32/smss.exe and amd64/system32/smss.exe"
   ],
-  "forbiddenInputsNotUsed": true,
-  "harness": {
-    "guest": "none",
-    "name": "none",
-    "traceOrReplayId": "none"
-  },
-  "cursor": {
-    "prompt": "The live CD opened text-mode setup after the ReactOS to VerOS rename. Fix the boot, then commit and push that change.",
-    "model": "Grok 4.7",
-    "date": "2026-11-10"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": false
-  },
   "measuredEffect": {
     "metric": "smss.exe copies on bootcd.iso",
     "before": "One VerOS\\system32\\smss.exe, the text-mode installer",

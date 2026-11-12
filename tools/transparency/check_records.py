@@ -8,6 +8,7 @@
 """Check transparency notes for Cursor commits in a revision range."""
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -27,7 +28,9 @@ DATE_FILE = re.compile(
     r"^veros/transparency/(\d{4}-\d{2}-\d{2})-[A-Za-z0-9][A-Za-z0-9-]*\.json$"
 )
 SHA_FILE = re.compile(r"^veros/transparency/([0-9a-f]{40})\.json$")
+LOG_SHA = re.compile(r"^[0-9a-f]{64}$")
 BANNED_FIELDS = ("forbiddenInputsNotUsed", "humanReview", "cursor")
+NOTES_DIR = "veros/transparency"
 
 
 def git(*args):
@@ -38,6 +41,19 @@ def git(*args):
         text=True,
     )
     return result.stdout
+
+
+def git_exists(*args):
+    result = subprocess.run(
+        ["git", *args],
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def repo_root():
+    return git("rev-parse", "--show-toplevel").strip()
 
 
 def is_scoped(path):
@@ -57,6 +73,25 @@ def cites_source(item):
     if "https://" in lowered or "http://" in lowered or "/" in item:
         return True
     return lowered.startswith("reported:")
+
+
+def note_name_error(sha, path):
+    date_match = DATE_FILE.match(path)
+    sha_match = SHA_FILE.match(path)
+    if date_match:
+        try:
+            datetime.strptime(date_match.group(1), "%Y-%m-%d")
+        except ValueError:
+            return "%s: %s has a bad date" % (sha, path)
+        return None
+    if sha_match:
+        named = sha_match.group(1)
+        if named == sha:
+            return "%s: %s cannot be named with this commit" % (sha, path)
+        if not git_exists("cat-file", "-e", "%s^{commit}" % named):
+            return "%s: %s does not name an earlier commit" % (sha, path)
+        return None
+    return "%s: %s is not a date slug or an earlier commit SHA" % (sha, path)
 
 
 def validate_record(record, path):
@@ -91,6 +126,10 @@ def validate_record(record, path):
                 value = harness.get(field)
                 if not isinstance(value, str) or not value.strip() or value == "none":
                     errors.append("%s: harness.%s must name the guest that ran" % (path, field))
+            if "logSha256" in harness:
+                digest = harness.get("logSha256")
+                if not isinstance(digest, str) or LOG_SHA.match(digest) is None:
+                    errors.append("%s: harness.logSha256 must be 64 hex characters" % path)
     if "measuredEffect" in record:
         effect = record["measuredEffect"]
         if not isinstance(effect, dict):
@@ -107,68 +146,116 @@ def validate_record(record, path):
     return errors
 
 
-def notes_for_commit(sha):
-    added = git(
-        "diff-tree",
-        "--no-commit-id",
-        "--name-only",
-        "-r",
-        "--diff-filter=A",
-        sha,
-    ).splitlines()
-    return [path for path in added if path.startswith("veros/transparency/")]
+def changed_entries(sha):
+    text = git("diff-tree", "--no-commit-id", "--name-status", "-r", sha)
+    entries = []
+    for line in text.splitlines():
+        if not line:
+            continue
+        parts = line.split("\t")
+        entries.append((parts[0], parts[-1]))
+    return entries
 
 
-def check_commit(sha):
+def load_json(text, path, errors):
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        errors.append("%s: %s is not JSON (%s)" % (path, path, exc))
+        return None
+
+
+def validate_checkout():
+    errors = []
+    root = repo_root()
+    directory = os.path.join(root, NOTES_DIR.replace("/", os.sep))
+    if not os.path.isdir(directory):
+        return ["%s is missing" % NOTES_DIR]
+    for name in sorted(os.listdir(directory)):
+        if not name.endswith(".json"):
+            continue
+        path = "%s/%s" % (NOTES_DIR, name)
+        name_error = note_name_error("checkout", path)
+        if name_error:
+            errors.append(name_error)
+            continue
+        full = os.path.join(directory, name)
+        with open(full, "r", encoding="utf-8") as handle:
+            record = load_json(handle.read(), path, errors)
+        if record is not None:
+            errors.extend(validate_record(record, path))
+    return errors
+
+
+def note_exists(rel, end):
+    full = os.path.join(repo_root(), rel.replace("/", os.sep))
+    if os.path.isfile(full):
+        return True
+    return git_exists("cat-file", "-e", "%s:%s" % (end, rel))
+
+
+def backfill_present(sha, end):
+    return note_exists("%s/%s.json" % (NOTES_DIR, sha), end)
+
+
+def range_end(spec):
+    if "..." in spec:
+        right = spec.split("...")[-1]
+    elif ".." in spec:
+        right = spec.split("..")[-1]
+    else:
+        right = spec
+    if not right:
+        right = "HEAD"
+    return git("rev-parse", "--verify", right).strip()
+
+
+def check_commit(sha, end):
+    entries = changed_entries(sha)
+    errors = []
+    for status, path in entries:
+        if not path.startswith(NOTES_DIR + "/"):
+            continue
+        if not status or status[0] not in ("A", "M", "R", "C"):
+            continue
+        name_error = note_name_error(sha, path)
+        if name_error:
+            errors.append(name_error)
+
     body = git("log", "-1", "--format=%B", sha)
     if "co-authored-by: cursor" not in body.lower():
-        return []
-    changed = git("diff-tree", "--no-commit-id", "--name-only", "-r", sha).splitlines()
-    if not any(is_scoped(path) for path in changed):
-        return []
+        return errors
+    if not any(is_scoped(path) for _status, path in entries):
+        return errors
 
-    errors = []
     date_files = []
-    for path in notes_for_commit(sha):
-        date_match = DATE_FILE.match(path)
-        sha_match = SHA_FILE.match(path)
-        if date_match:
-            try:
-                datetime.strptime(date_match.group(1), "%Y-%m-%d")
-            except ValueError:
-                errors.append("%s: %s has a bad date" % (sha, path))
+    for status, path in entries:
+        if status.startswith("A") and DATE_FILE.match(path):
             date_files.append(path)
-        elif sha_match:
-            if sha_match.group(1) == sha:
-                errors.append("%s: %s cannot be named with this commit" % (sha, path))
-        else:
-            errors.append("%s: %s is not a date slug or an earlier commit SHA" % (sha, path))
-    if len(date_files) != 1:
-        errors.append(
-            "%s: a Windows-behavior commit adds one veros/transparency/<yyyy-mm-dd>-<slug>.json"
-            % sha
-        )
+    if any(note_exists(path, end) for path in date_files):
         return errors
-
-    shown = git("show", "%s:%s" % (sha, date_files[0]))
-    try:
-        record = json.loads(shown)
-    except json.JSONDecodeError as exc:
-        errors.append("%s: %s is not JSON (%s)" % (sha, date_files[0], exc))
+    if backfill_present(sha, end):
         return errors
-    errors.extend(validate_record(record, date_files[0]))
+    errors.append(
+        "%s: a Windows-behavior commit adds one veros/transparency/<yyyy-mm-dd>-<slug>.json"
+        % sha
+    )
     return errors
 
 
 def main(argv):
-    if len(argv) != 2:
-        print("usage: check_records.py <revision-range>", file=sys.stderr)
+    if len(argv) == 2 and argv[1] == "--checkout":
+        errors = validate_checkout()
+    elif len(argv) == 2:
+        end = range_end(argv[1])
+        errors = validate_checkout()
+        listed = git("rev-list", "--reverse", "--no-merges", argv[1])
+        for sha in listed.splitlines():
+            if sha:
+                errors.extend(check_commit(sha, end))
+    else:
+        print("usage: check_records.py <revision-range>|--checkout", file=sys.stderr)
         return 2
-    listed = git("rev-list", "--reverse", "--no-merges", argv[1])
-    errors = []
-    for sha in listed.splitlines():
-        if sha:
-            errors.extend(check_commit(sha))
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

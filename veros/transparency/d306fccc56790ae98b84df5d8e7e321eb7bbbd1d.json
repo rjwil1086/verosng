@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What did d306fccc56790ae98b84df5d8e7e321eb7bbbd1d change when a display reset already holds the adapter lock?",
+  "allowedInputs": [
+    "Reported: the commit says the reset path waited on this processor until HwResetAdaptersLock was free, and a reset that re-enters while the lock is held never reaches the release.",
+    "win32ss/drivers/videoprt/dispatch.c",
+    "Reported: no guest log cited by this commit was still on disk when this note was written."
+  ]
+}

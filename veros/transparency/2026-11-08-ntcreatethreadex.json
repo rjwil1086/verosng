@@ -9,21 +9,10 @@
     "ntoskrnl/ps/thread.c NtCreateThreadEx and sdk/include/reactos/probe.h ProbeForWriteHandle already in this tree",
     "veros/dashboard/latest.json headline 85.1 before this pass"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG",
     "name": "NtCreateThreadEx",
     "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
-  },
-  "cursor": {
-    "prompt": "Per the milestone, we need to get all of these to return a matching status too: NtWriteFile, NtReadFile, NtClose, NtDeviceIoControlFile, NtCreateThreadEx, NtCreateUserProcess",
-    "model": "Grok 4.7",
-    "date": "2026-11-08"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": true
   },
   "measuredEffect": {
     "metric": "amd64 probe exact status match percent",

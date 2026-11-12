@@ -1,0 +1,10 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Does an NTFS install disk boot to the desktop, keep 7-Zip, and leave the syscall score unchanged?",
+  "allowedInputs": [
+    "drivers/filesystems/ntfs/",
+    "boot/freeldr/freeldr/lib/fs/ntfs.c",
+    "Reported: the note added in 73e7593d6afe said 7-Zip File Manager opened, git, Python, 7-Zip, and Notepad++ loaded, and the amd64 probe stayed 87.1 with 88 of 101 names.",
+    "Reported: that note cited output/syscall-diff/windows.log and output/syscall-diff/reactos.log for DIFF END OK. Both files still contain that line and are later captures, so this note has no log hash."
+  ]
+}

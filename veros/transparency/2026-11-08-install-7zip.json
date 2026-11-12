@@ -13,21 +13,10 @@
     "output/syscall-diff/windows.log and output/syscall-diff/reactos.log, both containing DIFF END OK",
     "veros/dashboard/latest.json overall 87.1"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "amd64 installed FAT disk and live CD, 8192 MB, 4 CPUs, TCG, compared with the saved Windows 10 22H2 log",
     "name": "syscall-diff",
     "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
-  },
-  "cursor": {
-    "prompt": "Let's begin milestone 11. Then update the milestone label to complete before the commit.",
-    "model": "Grok 4.7",
-    "date": "2026-11-08"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": false
   },
   "measuredEffect": {
     "metric": "dashboard exact-match percent after the first installed application",

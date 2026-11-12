@@ -1,0 +1,11 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which NTFS 3.1 catalog rows were still failing after the 72-byte standard information change, and what on-disk behavior did the compliance guest require?",
+  "allowedInputs": [
+    "drivers/filesystems/ntfs/",
+    "sdk/lib/fslib/ntfslib/",
+    "drivers/filesystems/ntfs/notes.txt",
+    "Reported: the note added in ef7530979436 said the compliance guest moved from 45 of 46 stored rows to 46 of 46. An exact lookup has to be able to return a system file, and the volume lock counts handles at cleanup.",
+    "Reported: that note cited unittests/ntfs/out/serial-compliance-211841.log. That log is not on disk, so this note has no log hash."
+  ]
+}

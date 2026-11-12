@@ -7,21 +7,10 @@
     "output/kernel-abi/windows.log DIFF comparison",
     "compat/reference/win10-22h2-ntoskrnl.txt and compat/reference/win10-22h2-hal.txt are the probe output. There is no separate public page for that generated list."
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "Windows 10 22H2 and ReactOS amd64",
     "name": "kernel-abi",
     "traceOrReplayId": "output/kernel-abi/windows.log"
-  },
-  "cursor": {
-    "prompt": "Let's build this but without interrupting the agent working on milestone 7",
-    "model": "Grok 4.7",
-    "date": "2026-11-07"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": true
   },
   "measuredEffect": {
     "metric": "kernel ABI percent from exact status agreement on the paired kernel probe",

@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why is the daily boot an amd64 live CD, and why does the dashboard score the amd64 probe instead of the i386 probe?",
+  "allowedInputs": [
+    "Reported: the note added in 8b592df03ac0 said the live CD reached the desktop, both probe runs printed DIFF END OK, and 81 of 101 names returned the same status, overall 80.2. The previous committed snapshot was an i386 score of 78.2 and was not a before value for this metric.",
+    "Reported: that note cited output/syscall-diff/reactos.log, output/syscall-diff/windows.log, and output/driver/load.log. load.log is gone. The two probe logs still on disk contain DIFF END OK and are later captures, so this note has no log hash."
+  ]
+}

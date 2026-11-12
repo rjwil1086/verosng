@@ -1,0 +1,11 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What did 95ff073ec5bcac8ebf6623535ef83808dd767a87 change in the process and delay paths the probe calls?",
+  "allowedInputs": [
+    "Reported: the commit says a null process handle is an invalid parameter, a zero user delay returns success, and the two process services are exported so the syscall score can be rescored.",
+    "ntoskrnl/ps/process.c",
+    "ntoskrnl/ke/wait.c",
+    "dll/ntdll/def/ntdll.spec",
+    "Reported: no guest log cited by this commit was still on disk when this note was written."
+  ]
+}

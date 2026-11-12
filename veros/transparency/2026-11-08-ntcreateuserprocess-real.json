@@ -11,21 +11,10 @@
     "dll/ntdll/def/ntdll.spec and sdk/cmake/config.cmake DLL_EXPORT_VERSION 0x502 already in this tree",
     "veros/dashboard/latest.json headline 87.1 before this pass"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG",
     "name": "NtCreateUserProcess",
     "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows-real.log DIFF END OK"
-  },
-  "cursor": {
-    "prompt": "Let's do it. I want you to run all this testing without any interaction from me.",
-    "model": "Grok 4.7",
-    "date": "2026-11-08"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": true
   },
   "measuredEffect": {
     "metric": "amd64 probe exact status match percent",

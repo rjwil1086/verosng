@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What did c8d799f62cbf330f011445cb7c2eb1080260d16b change on the kernel init file header?",
+  "allowedInputs": [
+    "Reported: the commit says the header named the GPL only by pointing at COPYING, and the license line now carries the SPDX identifier.",
+    "ntoskrnl/ke/amd64/krnlinit.c",
+    ".cursor/rules/file-headers.mdc"
+  ]
+}

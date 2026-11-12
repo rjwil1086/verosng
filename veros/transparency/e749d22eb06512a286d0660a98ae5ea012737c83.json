@@ -12,22 +12,10 @@
     "Reported: the revised clean-room rule was reviewed before this work continued",
     "Committed fixtures tools/syscall-diff/fixtures/windows.log and reactos.log"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "Windows 10 22H2 x64",
     "name": "syscall-diff",
     "traceOrReplayId": "output/syscall-diff/report.json (gitignored). A Windows result counts only when that guest log contains DIFF END OK"
-  },
-  "cursor": {
-    "prompt": "Build the Windows 10 trace harness, then differential testing that compares Windows and ReactOS statuses and reports them on the dashboard. Keep the capture clean-room. Hand interactive QEMU steps to the user.",
-    "model": "unrecorded",
-    "date": "2026-11-07",
-    "session": "95c01aaf-c94a-4823-b9f5-eea78707d578"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": false
   },
   "measuredEffect": {
     "metric": "dashboard syscall category percent",

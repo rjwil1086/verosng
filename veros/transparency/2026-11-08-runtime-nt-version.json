@@ -12,21 +12,10 @@
     "output/syscall-diff/windows.log and output/syscall-diff/reactos.log, both containing DIFF END OK",
     "veros/dashboard/latest.json overall 87.1 before this publish"
   ],
-  "forbiddenInputsNotUsed": true,
   "harness": {
     "guest": "amd64 live CD, 8192 MB, 4 CPUs, TCG, compared with the Windows 10 22H2 guest",
     "name": "syscall-diff",
     "traceOrReplayId": "output/syscall-diff/reactos.log DIFF END OK compared with output/syscall-diff/windows.log DIFF END OK"
-  },
-  "cursor": {
-    "prompt": "Milestone 10: report Windows 10 22H2. Implement the plan as specified. Follow-ups in this commit: show the QEMU window, attach the apps disk, continue a FAT mount after a failed verify, boot the ISO without a key, clear the public service-pack string, and rerun the syscall probe.",
-    "model": "Grok 4.7",
-    "date": "2026-11-08"
-  },
-  "humanReview": {
-    "noVerbatimMicrosoftSource": true,
-    "licenseHeadersKept": true,
-    "tiedToHarnessMismatch": false
   },
   "measuredEffect": {
     "metric": "dashboard exact-match percent after the runtime version change",
