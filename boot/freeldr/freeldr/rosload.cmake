@@ -26,6 +26,7 @@ list(APPEND ROSLOAD_SOURCE
     ntldr/registry.c
     ntldr/setupldr.c
     ntldr/winldr.c
+    ntldr/verosstage.c
     ntldr/wlmemory.c
     ntldr/wlregistry.c)
 

@@ -1,0 +1,10 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "When does FreeLoader rename staged update files and offer the saved rollback?",
+  "allowedInputs": [
+    "boot/freeldr/freeldr/ntldr/winldr.c LoadAndBootWindowsCommon loads the kernel after the stage call",
+    "boot/freeldr/freeldr/ntldr/verosstage.c",
+    "boot/freeldr/freeldr/oslist.c InitOperatingSystemList",
+    "Reported: the update client writes a stage manifest and one rollback menu line for the committed slot"
+  ]
+}

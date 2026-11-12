@@ -1,4 +1,15 @@
 /*
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        boot/freeldr/freeldr/oslist.c
+ * PURPOSE:     Build the FreeLoader operating system menu
+ * COPYRIGHT:   Copyright (C) 1998-2003 Brian Palmer <brianp@sginet.com>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Brian Palmer
+ *              Ryan Wilson
+ */
+
+/*
  *  FreeLoader
  *  Copyright (C) 1998-2003  Brian Palmer  <brianp@sginet.com>
  *
@@ -42,6 +53,8 @@ static PCSTR CopyString(PCSTR Source)
     return Dest;
 }
 
+static ULONG VerosAppendRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity);
+
 OperatingSystemItem*
 InitOperatingSystemList(
     _Out_ PULONG OperatingSystemCount,
@@ -78,7 +91,7 @@ InitOperatingSystemList(
         return NULL;
 
     /* Allocate memory to hold operating system lists */
-    Items = FrLdrHeapAlloc(Count * sizeof(OperatingSystemItem), TAG_OS_ITEM);
+    Items = FrLdrHeapAlloc((Count + 1) * sizeof(OperatingSystemItem), TAG_OS_ITEM);
     if (!Items)
         return NULL;
 
@@ -287,8 +300,82 @@ InitOperatingSystemList(
               // i, SettingName, Items[i].SectionId, Items[i].LoadIdentifier);
     }
 
+    Count = VerosAppendRollback(Items, Count, Count + 1);
+
     /* Return success */
     *OperatingSystemCount = Count;
     *DefaultOperatingSystem = DefaultOS;
     return Items;
+}
+
+static ULONG
+VerosAppendRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity)
+{
+    ULONG FileId;
+    CHAR Body[256];
+    ULONG ReadCount = 0;
+    PCHAR Cursor;
+    CHAR Path[260];
+    CHAR BootType[80];
+    CHAR Section[32];
+    CHAR Options[32];
+    CHAR Title[64];
+    ULONG_PTR SectionId;
+
+    if (Count == 0 || ArcOpen("veros.revs", OpenReadOnly, &FileId) != ESUCCESS)
+    {
+        return Count;
+    }
+    ArcRead(FileId, Body, sizeof(Body) - 1, &ReadCount);
+    ArcClose(FileId);
+    Body[ReadCount] = ANSI_NULL;
+    if (!IniReadSettingByName(Items[0].SectionId, "SystemPath", Path, sizeof(Path)) || Path[0] == ANSI_NULL)
+    {
+        return Count;
+    }
+    if (!IniReadSettingByName(Items[0].SectionId, "BootType", BootType, sizeof(BootType)))
+    {
+        RtlStringCbCopyA(BootType, sizeof(BootType), "Windows");
+    }
+    Cursor = Body;
+    while (Cursor != NULL && *Cursor != ANSI_NULL && Count < Capacity)
+    {
+        PCHAR Line = Cursor;
+        PCHAR Split;
+        ULONG Slot;
+        ULONG Build;
+        Cursor = strchr(Cursor, '\n');
+        if (Cursor != NULL)
+        {
+            *Cursor = ANSI_NULL;
+            Cursor++;
+        }
+        Split = strchr(Line, ' ');
+        if (Split == NULL)
+        {
+            continue;
+        }
+        *Split = ANSI_NULL;
+        Slot = (ULONG)atoi(Line);
+        Build = (ULONG)atoi(Split + 1);
+        if (Slot != 0)
+        {
+            continue;
+        }
+        RtlStringCbPrintfA(Section, sizeof(Section), "VerosRollback%lu", Slot);
+        RtlStringCbPrintfA(Options, sizeof(Options), "VEROSROLLBACK=%lu", Slot);
+        RtlStringCbPrintfA(Title, sizeof(Title), "Roll back to build %lu", Build);
+        if (!IniAddSection(Section, &SectionId))
+        {
+            continue;
+        }
+        IniAddSettingValueToSection(SectionId, "BootType", BootType);
+        IniAddSettingValueToSection(SectionId, "SystemPath", Path);
+        IniAddSettingValueToSection(SectionId, "Options", Options);
+        Items[Count].SectionId = SectionId;
+        Items[Count].LoadIdentifier = CopyString(Title);
+        Items[Count].AdvBootOptsDesc[0] = ANSI_NULL;
+        Count++;
+    }
+    return Count;
 }
