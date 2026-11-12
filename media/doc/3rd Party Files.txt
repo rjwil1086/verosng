@@ -212,6 +212,19 @@ Used Version: 2012-05-03
 License: GPL-3.0-or-later (https://spdx.org/licenses/GPL-3.0-or-later.html)
 URL: http://savannah.gnu.org/projects/freefont/
 
+Title: Manrope
+Path: media/fonts/manrope-*.ttf
+Path: media/fonts/Manrope-ExtraLight.ttf
+Used Version: git commit 468c0dbe38ef
+License: SIL Open Font License 1.1 (media/fonts/doc/Manrope/OFL.txt)
+URL: https://github.com/googlefonts/manrope
+
+Title: IBM Plex Mono
+Path: media/fonts/IBMPlexMono-*.ttf
+Used Version: 2.5.0
+License: SIL Open Font License 1.1 (media/fonts/doc/IBMPlexMono/OFL.txt)
+URL: https://github.com/IBM/plex
+
 Title: GNU adns
 Path: sdk/lib/3rdparty/adns
 Used Version: 1.0 REV 5

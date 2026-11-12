@@ -9,6 +9,7 @@ alwaysApply: true
 - New userland DLLs (`dll/` and `win32ss/user/user32*`) are `LGPL-2.1-or-later`. Other new files are `GPL-2.0-or-later`. The header text is in [file-headers.mdc](file-headers.mdc).
 - The QEMU plugin is `GPL-2.0-or-later` because GPL QEMU loads it.
 - Third-party code is allowed only when its license is GPL-2.0-compatible and it is listed the way `media/doc/3rd Party Files.txt` lists third-party files.
+- Manrope and IBM Plex Mono are the only exception. The files `media/fonts/manrope-*.ttf`, `media/fonts/Manrope-ExtraLight.ttf`, and `media/fonts/IBMPlexMono-*.ttf` stay under the SIL Open Font License 1.1. Do not relicense them and do not add a GPL SPDX line to those files. Keep `media/fonts/doc/Manrope/OFL.txt` and `media/fonts/doc/IBMPlexMono/OFL.txt` beside them, and keep both entries in `media/doc/3rd Party Files.txt`. Do not modify the font files. IBM Plex Mono reserves the font name "Plex". This exception does not apply to any other font.
 - Do not add a proprietary blob, a closed-source helper, or a generated file whose source is missing.
 
 ```text

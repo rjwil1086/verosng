@@ -17,6 +17,22 @@ list(APPEND FONT_FILES
     FreeSansBold.ttf
     FreeSansBoldOblique.ttf
     FreeSansOblique.ttf
+    IBMPlexMono-Bold.ttf
+    IBMPlexMono-BoldItalic.ttf
+    IBMPlexMono-ExtraLight.ttf
+    IBMPlexMono-ExtraLightItalic.ttf
+    IBMPlexMono-Italic.ttf
+    IBMPlexMono-Light.ttf
+    IBMPlexMono-LightItalic.ttf
+    IBMPlexMono-Medium.ttf
+    IBMPlexMono-MediumItalic.ttf
+    IBMPlexMono-Regular.ttf
+    IBMPlexMono-SemiBold.ttf
+    IBMPlexMono-SemiBoldItalic.ttf
+    IBMPlexMono-Text.ttf
+    IBMPlexMono-TextItalic.ttf
+    IBMPlexMono-Thin.ttf
+    IBMPlexMono-ThinItalic.ttf
     FSEX301.ttf
     FSEX301-L2.ttf
     georgia.ttf
@@ -25,6 +41,13 @@ list(APPEND FONT_FILES
     georgiaz.ttf
     lucon.ttf
     Marlett.ttf
+    manrope-bold.ttf
+    manrope-extrabold.ttf
+    Manrope-ExtraLight.ttf
+    manrope-light.ttf
+    manrope-medium.ttf
+    manrope-regular.ttf
+    manrope-semibold.ttf
     micross.ttf
     pala.ttf
     palab.ttf
