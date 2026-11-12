@@ -783,12 +783,21 @@ IndexOneInf(LPCWSTR FullPath, DWORD *LineKey)
             while (Result)
             {
                 WCHAR Description[LINE_LEN];
+                WCHAR InstallSection[LINE_LEN];
                 DWORD FieldCount;
                 DWORD Field;
 
                 (*LineKey)++;
                 if (!SetupGetStringFieldW(&ContextDevice, 0, Description, LINE_LEN, NULL))
                     Description[0] = 0;
+                /* Field 1 is the DDInstall section. The models section name
+                 * (RealtekMfg) has no Characteristics key, so indexing that
+                 * name makes NetClassInstaller reject the NIC. */
+                if (!SetupGetStringFieldW(&ContextDevice, 1, InstallSection, LINE_LEN, NULL))
+                {
+                    Result = SetupFindNextLine(&ContextDevice, &ContextDevice);
+                    continue;
+                }
 
                 FieldCount = SetupGetFieldCount(&ContextDevice);
                 for (Field = 2; Field <= FieldCount; Field++)
@@ -813,7 +822,7 @@ IndexOneInf(LPCWSTR FullPath, DWORD *LineKey)
                     }
                     if (GotId && DeviceId[0])
                     {
-                        if (!AppendInfId(FullPath, ManufacturerSection, Description, ProviderName,
+                        if (!AppendInfId(FullPath, InstallSection, Description, ProviderName,
                                          ManufacturerName, DeviceId, &ClassGuid, DriverDate,
                                          DriverVersion, *LineKey, Field))
                         {

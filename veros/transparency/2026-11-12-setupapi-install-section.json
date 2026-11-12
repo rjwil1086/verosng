@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which INF section name should the driver index store for a Net class device?",
+  "allowedInputs": [
+    "dll/win32/netcfgx/installer.c reads Characteristics from the section name stored by the driver index",
+    "source/build-amd64/drivers/network/dd/rtl8139/netrtl.inf puts Characteristics in RTL8139_Inst.ndi and points at that section from RealtekMfg",
+    "Reported: the live CD log said Characteristics was missing from section RealtekMfg of netrtl.inf, so the Realtek adapter was not installed"
+  ]
+}
