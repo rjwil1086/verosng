@@ -1,0 +1,33 @@
+---
+description: Update the GitHub milestone and its issues while implementing it
+alwaysApply: true
+---
+
+# Milestone progress
+
+When the task is an open milestone on `https://github.com/rjwil1086/verosng`, update that milestone in GitHub in the same turn as the work. Match it by title (`Milestone 16: The next application`). The number in the title is not the GitHub milestone number.
+
+Use `gh --repo rjwil1086/verosng`. Leave `https://github.com/reactos/reactos` alone. Do not open, close, or retitle a milestone. If the task fits more than one open milestone, ask Ryan which one. Work that is not a milestone stays off the milestone list.
+
+## Progress
+
+Read the milestone description before changing it.
+
+When one task bullet is finished, change that line from `-` to `- [x]`. While a task is unfinished, leave its bullet and replace the `## Progress` section at the end with the current state: the date, the task, what is done, and the issue number. Leave the goal, the other tasks, and the success criteria as they are.
+
+Write the description back with `gh api --method PATCH`. Read it back. Stop if any line outside that bullet and the `## Progress` section changed.
+
+## Issues
+
+A fault found while carrying the milestone out is an issue in that milestone. Open it when the fault shows up, before editing code for it. Close it when that fault is resolved.
+
+- Search the milestone's open issues first. Comment on the existing issue when it is the same fault.
+- A new fault is a new issue. Title is `[MODULE] Imperative summary`. The body is the symptom, the check that showed it, and the task it blocks. Add the `bug` label for a defect. Set `--milestone` to the milestone title.
+- Close the issue when the same check no longer shows the fault. The close comment names that check. The milestone progress bar is the count of closed issues in the milestone.
+- Leave the issue open when the fix is not verified yet. One issue is one fault. Do not file an issue that restates the milestone.
+
+```text
+Wrong: a milestone fix with no issue, or a closed issue whose check was not rerun.
+Right: gh issue create --repo rjwil1086/verosng --milestone "Milestone 16: The next application" --label bug --title "[KERNEL32] Return the missing import"
+Right: gh issue close 42 --repo rjwil1086/verosng --comment "The import resolves. The installer reaches the desktop."
+```
