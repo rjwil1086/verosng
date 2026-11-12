@@ -1,0 +1,12 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Can the boot identifiers and the install directory change to VerOS without leaving the loader and the CD pointing at different folders?",
+  "allowedInputs": [
+    "boot/bootdata/bootcd.ini",
+    "boot/bootdata/txtsetup.sif",
+    "boot/freeldr/freeldr/ntldr/setupldr.c",
+    "base/setup/lib/bootsup.c",
+    "Reported: 8a13899ad43 changed the default install directory from \\ReactOS to \\VerOS and BootType from ReactOSSetup to VerOSSetup. Source directories such as sdk/include/reactos were not renamed.",
+    "Reported: the same commit renamed visible strings to VerOS NT. Those notes were removed by 03b00ba36ec because a branding change does not keep a note. This note stays because the commit also changed boot and install paths."
+  ]
+}

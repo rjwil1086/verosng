@@ -1,0 +1,14 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What did 314477035202839560a9065185977e542fb5c27c change before the PICs are programmed?",
+  "allowedInputs": [
+    "Reported: the commit says a USB boot leaves the firmware legacy SMI armed, and clearing it before ACPI and the clock keeps that SMI from resetting the machine.",
+    "hal/halx86/generic/usbhandoff.c",
+    "hal/halx86/generic/halinit.c",
+    "hal/halx86/include/halp.h",
+    "drivers/usb/usbuhci/hardware.h PCI_LEGSUP 0xC0 and PCI_LEGSUP_CLEAR_SMI 0x8F00",
+    "https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/ehci-specification-for-usb.pdf USBLEGSUP and HCCPARAMS",
+    "https://stuff.mit.edu/afs/sipb/contrib/doc/specs/protocol/usb/UHCI11D.PDF USBCMD and USBBASE",
+    "Reported: no guest log cited by this commit was still on disk when this note was written."
+  ]
+}

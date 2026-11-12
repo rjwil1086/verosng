@@ -1,0 +1,13 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What did 2c62038f58d5a83408c9cbf86e66859c1db1b163 change so an existing install can be upgraded in place?",
+  "allowedInputs": [
+    "Reported: the commit says the live CD replaces the OS files without formatting the volume, the welcome menu stages the new tree, the next boots commit that tree and then remove the staging directory, and the installed hives, profiles, and Program Files stay.",
+    "boot/bootdata/bootcd/upgrade.inf",
+    "boot/freeldr/freeldr/settings.c",
+    "base/setup/upgrade/upgrade.c",
+    "base/setup/lib/setuplib.c",
+    "Reported: base/applications/verosupd/ in this commit is the VerOS update client, not an NT 5.2 port.",
+    "Reported: no guest log cited by this commit was still on disk when this note was written."
+  ]
+}

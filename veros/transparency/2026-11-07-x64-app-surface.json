@@ -14,12 +14,12 @@
     "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimepreciseasfiletime",
     "dll/win32/kernel32/kernel32.spec publishes FlsGetValue2. No public page for that name was found.",
     "win32ss/user/ntuser/sysparams.c for the wheel-scroll change. No separate public page was found for that edit.",
-    "output/m7-npp-boot.log",
-    "Reported: git --version, python print(1), 7-Zip, and Notepad++ each completed one ordinary action"
+    "Reported: git --version, python print(1), 7-Zip, and Notepad++ each completed one ordinary action",
+    "Reported: the milestone 7 boot log is no longer on disk."
   ],
   "harness": {
     "guest": "ReactOS amd64",
     "name": "milestone-7-x64-apps",
-    "traceOrReplayId": "output/m7-npp-boot.log"
+    "traceOrReplayId": "Reported: the milestone 7 boot log is no longer on disk"
   }
 }

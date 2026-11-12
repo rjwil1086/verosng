@@ -1,11 +1,11 @@
 # PROJECT: VerOS NT
 # LICENSE: GNU General Public License, version 2 or later (GPL-2.0-or-later)
 # FILE: tools/transparency/check_records.py
-# PURPOSE: Reject a Cursor commit that changes Windows behavior and omits its source note
+# PURPOSE: Reject a scoped commit that changes Windows behavior and omits its source note
 # COPYRIGHT: Copyright 2026 Ryan Wilson <ryan@verosnt.com>
 # PROGRAMMERS: Ryan Wilson
 
-"""Check transparency notes for Cursor commits in a revision range."""
+"""Check transparency notes for scoped commits in a revision range."""
 
 import json
 import os
@@ -29,6 +29,9 @@ DATE_FILE = re.compile(
 )
 SHA_FILE = re.compile(r"^veros/transparency/([0-9a-f]{40})\.json$")
 LOG_SHA = re.compile(r"^[0-9a-f]{64}$")
+OUTPUT_FILE = re.compile(
+    r"output/[A-Za-z0-9_./+-]+\.(?:log|json|txt|probe|err|ok)"
+)
 BANNED_FIELDS = ("forbiddenInputsNotUsed", "humanReview", "cursor")
 NOTES_DIR = "veros/transparency"
 
@@ -143,6 +146,35 @@ def validate_record(record, path):
                     errors.append(
                         "%s: measuredEffect.%s must come from a committed log" % (path, field)
                     )
+    errors.extend(cited_log_errors(record, path))
+    return errors
+
+
+def record_strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            for text in record_strings(item):
+                yield text
+    elif isinstance(value, list):
+        for item in value:
+            for text in record_strings(item):
+                yield text
+
+
+def cited_log_errors(record, path):
+    errors = []
+    root = repo_root()
+    seen = set()
+    for text in record_strings(record):
+        for cited in OUTPUT_FILE.findall(text):
+            if cited in seen:
+                continue
+            seen.add(cited)
+            full = os.path.join(root, cited.replace("/", os.sep))
+            if not os.path.isfile(full):
+                errors.append("%s: %s is not on disk" % (path, cited))
     return errors
 
 
@@ -222,9 +254,6 @@ def check_commit(sha, end):
         if name_error:
             errors.append(name_error)
 
-    body = git("log", "-1", "--format=%B", sha)
-    if "co-authored-by: cursor" not in body.lower():
-        return errors
     if not any(is_scoped(path) for _status, path in entries):
         return errors
 
@@ -237,7 +266,8 @@ def check_commit(sha, end):
     if backfill_present(sha, end):
         return errors
     errors.append(
-        "%s: a Windows-behavior commit adds one veros/transparency/<yyyy-mm-dd>-<slug>.json"
+        "%s: a commit that changes boot, the kernel, the HAL, a driver, NTFS, "
+        "or a Windows-facing DLL adds one veros/transparency/<yyyy-mm-dd>-<slug>.json"
         % sha
     )
     return errors

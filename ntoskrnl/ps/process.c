@@ -1481,7 +1481,11 @@ NtCreateProcess(OUT PHANDLE ProcessHandle,
                              FALSE);
 }
 
-/* Attribute numbers from the enum already in sdk/include/wine/winternl.h. */
+/* sdk/include/wine/winternl.h:
+ * PS_ATTRIBUTE_PARENT_PROCESS, PS_ATTRIBUTE_DEBUG_PORT,
+ * PS_ATTRIBUTE_IMAGE_NAME, and PS_ATTRIBUTE_IMAGE_INFO.
+ * THREAD_CREATE_FLAGS_CREATE_SUSPENDED is 0x1.
+ * THREAD_CREATE_FLAGS_HIDE_FROM_DEBUGGER is 0x4. */
 #define PSP_ATTRIBUTE_PARENT_PROCESS    0x00060000
 #define PSP_ATTRIBUTE_DEBUG_PORT        0x00060001
 #define PSP_ATTRIBUTE_IMAGE_NAME        0x00020005

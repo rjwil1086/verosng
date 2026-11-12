@@ -1,0 +1,20 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does FreeLoader reset on the Acer and the ThinkPad when the same boot CD reaches the kernel in QEMU?",
+  "allowedInputs": [
+    "Reported: both laptops reset in FreeLoader and QEMU still boots",
+    "Reported: an Acer Linux 5.15 dump with an e820 reserved hole, an Insyde WDAT table, and NM10 LPC 8086:27bc. The dump was not given a path.",
+    "https://github.com/torvalds/linux/blob/master/include/acpi/actbl3.h struct acpi_table_wdat",
+    "https://github.com/tianocore/edk2/blob/master/MdePkg/Include/IndustryStandard/WatchdogActionTable.h",
+    "https://github.com/torvalds/linux/blob/master/drivers/watchdog/iTCO_wdt.c names Intel document 322896-001 for NM10",
+    "boot/freeldr/freeldr/arch/i386/hwacpi.c",
+    "boot/freeldr/freeldr/arch/uefi/uefimem.c",
+    "boot/freeldr/freeldr/ntldr/arch/amd64/winldr.c",
+    "https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html ExitBootServices returns EFI_INVALID_PARAMETER when MapKey is stale, and GetMemoryMap must be called again"
+  ],
+  "harness": {
+    "guest": "QEMU SeaBIOS, amd64 boot CD, TCG",
+    "name": "local qemu",
+    "traceOrReplayId": "source/output/freeldr-tco-smoke2.log reached the kernel on the watchdog-halt image. The final notice change was not booted."
+  }
+}

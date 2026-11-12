@@ -7,6 +7,6 @@
     "drivers/storage/port/storahci/",
     "drivers/storage/port/storport/",
     "sdk/include/reactos/drivers/ata/identify_funcs.h",
-    "Reported: the note added in b5cf543e0630 said class 0106 had been bound to pciide, and the boot log then named a QEMU HARDDISK identity. output/storahci/boot.log and output/drivers-test/boot.log are not on disk now, so this note has no log hash."
+    "Reported: the note added in b5cf543e0630 said class 0106 had been bound to pciide, and the boot log then named a QEMU HARDDISK identity. The storahci and drivers-test boot logs are not on disk now, so this note has no log hash."
   ]
 }

@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How does this fork present itself as VerOS NG, and what display mode does it boot with?",
+  "allowedInputs": [
+    "Reported: the note added in cb7525d2a16 said the English product strings, boot menu, version resource, and service display names changed to VerOS NG, and existing copyright notices stayed.",
+    "Reported: the same note said a virtual display that offers 1600x900 uses that mode, a real monitor keeps its preferred timing, and it named VBE DDC function 4F15, the EDID preferred-timing descriptor, and the QEMU vgabios mode list without recording a URL.",
+    "Reported: user screenshots of the live CD showed the previous logo, start-menu bar, desktop version line, and a solid blue desktop. No guest log for this commit is still on disk."
+  ]
+}

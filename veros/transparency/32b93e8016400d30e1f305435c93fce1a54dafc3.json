@@ -1,0 +1,12 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the live CD start a QEMU AHCI controller with storahci, and why does that disk identify as QEMU HARDDISK?",
+  "allowedInputs": [
+    "boot/bootdata/hivesys.inf",
+    "boot/bootdata/txtsetup.sif",
+    "drivers/storage/port/storahci/",
+    "drivers/storage/port/storport/",
+    "sdk/include/reactos/drivers/ata/identify_funcs.h",
+    "Reported: the note added in b5cf543e0630 said class 0106 had been bound to pciide, and the boot log then named a QEMU HARDDISK identity. The storahci and drivers-test boot logs are not on disk now, so this note has no log hash."
+  ]
+}

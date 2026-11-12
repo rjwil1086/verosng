@@ -4,16 +4,13 @@
   "question": "Which missing Vista exports and loader gaps stop 32-bit notepad++, 7-Zip, git, and Python from starting on the live CD?",
   "allowedInputs": [
     "Reported: screenshots of the ReactOS missing-entry-point dialogs while those programs were launched The missing export names came from those dialogs. No separate public page was recorded for each name.",
-    "output/ntdll-apps/notepadpp-boot8.log",
-    "output/ntdll-apps/7zip-boot.log",
-    "output/ntdll-apps/git-boot2.log",
-    "output/ntdll-apps/python-boot2.log",
+    "Reported: the four ntdll-apps boot logs are no longer on disk.",
     "dll/ntdll/def/ntdll.spec and dll/ntdll/ldr/"
   ],
   "harness": {
     "guest": "ReactOS i386 live CD under QEMU TCG",
     "name": "ntdll-apps",
-    "traceOrReplayId": "output/ntdll-apps/notepadpp-boot8.log, 7zip-boot.log, git-boot2.log, python-boot2.log"
+    "traceOrReplayId": "Reported: the four ntdll-apps boot logs are no longer on disk"
   },
   "measuredEffect": {
     "metric": "cataloged working launches of 32-bit notepad++, 7-Zip, git, and Python",

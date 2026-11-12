@@ -7,7 +7,7 @@
     "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-kequerymaximumprocessorcountex The Ex form with all groups returns the system maximum, and that maximum does not exceed 64 logical processors on x64.",
     "ntoskrnl/ke/processor.c already in this tree, where KeMaximumProcessors is the value KeQueryMaximumProcessorCount returns",
     "sdk/lib/drivers/wdf/kmdf/src/core/fxbugcheckcallback.cpp already in this tree, which asserts when both processor-count exports are missing and the version is 10.0",
-    "The installed-disk serial logs under output/install: FAT32 boot-code status 0, the ucx01000 assert, the later desktop, and 7zFM.exe with a Windows 10 manifest",
+    "Reported: the installed-disk serial log showed FAT32 boot-code status 0, the ucx01000 assert, the later desktop, and 7zFM.exe with a Windows 10 manifest. That log is not a file this note can open.",
     "Reported: the 7-Zip 26.06 installer completed and 7zFM.exe opened from the Start menu after reboot",
     "Reported: git, Python, 7-Zip, and Notepad++ started on the live CD",
     "output/syscall-diff/windows.log and output/syscall-diff/reactos.log, both containing DIFF END OK",

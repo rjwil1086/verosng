@@ -21,13 +21,18 @@
 
 /* GLOBALS *******************************************************************/
 
-/* UHCI legacy support is a 16-bit register at PCI config 0xC0. */
+/* UHCI legacy support is PCI_LEGSUP (0xC0) and PCI_LEGSUP_CLEAR_SMI (0x8F00)
+ * in drivers/usb/usbuhci/hardware.h. USBCMD run bit 0x0001 and USBBASE at
+ * 0x20 are in https://stuff.mit.edu/afs/sipb/contrib/doc/specs/protocol/usb/UHCI11D.PDF */
 #define UHCI_USBLEGSUP              0xC0
 #define UHCI_USBLEGSUP_RWC          0x8F00
 #define UHCI_USBCMD_RUN             0x0001
 #define UHCI_BAR_OFFSET             0x20
 
-/* EHCI extended capability. HCCPARAMS bits 15:8 are the config offset. */
+/* EHCI HCCPARAMS is at offset 8. EECP is bits 15:8. BIOS owned is bit 16
+ * and OS owned is bit 24. Intel EHCI specification, USBLEGSUP and HCCPARAMS:
+ * https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/ehci-specification-for-usb.pdf
+ */
 #define EHCI_HCC_PARAMS             8
 #define EHCI_EECP_SHIFT             8
 #define EHCI_EECP_MASK              0xFF

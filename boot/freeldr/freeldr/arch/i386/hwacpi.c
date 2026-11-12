@@ -343,6 +343,13 @@ PcPciRead32(UCHAR Bus, UCHAR Device, UCHAR Function, UCHAR Offset)
  * reloads it. The first expiry raises an SMI; if that SMI sees the halt bit
  * already set, Insyde spins and the second expiry resets the CPU. Silence
  * the SMI, clear both timeout bits, then halt. QEMU has no such device.
+ *
+ * TCO1_STS + 0x04 bit 0x0008, TCO2_STS + 0x06 bits 0x0002 and 0x0004, and
+ * TCO1_CNT + 0x08 bit 0x0800 are in Intel AP-727:
+ * https://uefi.org/sites/default/files/resources/Watchdog%20Descriptor%20Table.pdf
+ * TCOv2_TMR + 0x12, SMI_EN at PMBASE + 0x30 bit 13, and TCO base PMBASE + 0x60
+ * are in https://github.com/torvalds/linux/blob/master/drivers/watchdog/iTCO_wdt.c
+ * That file names Intel document 322896-001 for NM10.
  */
 static VOID
 PcHaltIchTco(VOID)

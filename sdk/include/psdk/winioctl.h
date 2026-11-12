@@ -820,6 +820,9 @@ typedef struct {
   LARGE_INTEGER MftZoneStart;
   LARGE_INTEGER MftZoneEnd;
 } NTFS_VOLUME_DATA_BUFFER, *PNTFS_VOLUME_DATA_BUFFER;
+/* The fields after MinorVersion are the public Win32 structure:
+ * https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ns-winioctl-ntfs_extended_volume_data
+ */
 typedef struct {
   ULONG ByteCount;
   USHORT MajorVersion;

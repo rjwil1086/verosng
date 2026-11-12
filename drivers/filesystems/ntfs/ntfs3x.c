@@ -18,9 +18,24 @@
 #define NDEBUG
 #include <debug.h>
 
+/* 'RSTR' and 'RCRD' are the restart and record page magics in
+ * https://fossies.org/linux/ntfs-3g/include/ntfs-3g/logfile.h
+ * 'FILE' is the file-record magic in
+ * https://fossies.org/linux/ntfs-3g/include/ntfs-3g/layout.h */
 #define NTFS_LOG_FILE_MAGIC 0x52545352  /* 'RSTR' */
 #define NTFS_LOG_PAGE_MAGIC 0x44524352  /* 'RCRD' */
 #define NTFS_LOG_REC_MAGIC  0x454C4946  /* 'FILE' */
+/* RESTART_PAGE_HEADER.system_page_size and .restart_area_offset. */
+#define NTFS_LOG_SYSTEM_PAGE_SIZE_OFFSET 0x10
+#define NTFS_LOG_RESTART_AREA_OFFSET     0x18
+/* RESTART_AREA.client_in_use_list and .client_array_offset. */
+#define NTFS_LOG_CLIENT_IN_USE_OFFSET    0x0C
+#define NTFS_LOG_CLIENT_ARRAY_OFFSET     0x16
+/* LOG_CLIENT_RECORD.client_restart_lsn and .next_client.
+ * LOGFILE_NO_CLIENT is 0xFFFF. */
+#define NTFS_LOG_CLIENT_RESTART_LSN_OFFSET 8
+#define NTFS_LOG_CLIENT_NEXT_OFFSET        0x12
+#define NTFS_LOG_NO_CLIENT                 0xFFFF
 #define NTFS_LOG_PAGE       4096
 #define NTFS_USN_MFT        23
 #define NTFS_EFS_BLOCK      512
@@ -383,9 +398,9 @@ NtfsClearVolumeDirty(PDEVICE_EXTENSION Vcb)
     return STATUS_SUCCESS;
 }
 
-/* A Windows restart page uses the same 'RSTR' magic. Nothing is replayed
- * unless every in-use client has an empty restart LSN. Outstanding records
- * stay read-only instead of being applied halfway. */
+/* An 'RSTR' page is a RESTART_PAGE_HEADER. Nothing is replayed unless every
+ * in-use client has an empty client_restart_lsn. Outstanding records stay
+ * read-only instead of being applied halfway. */
 static
 NTSTATUS
 NtfsReplayWindowsLog(PDEVICE_EXTENSION Vcb, PNTFS_ATTR_CONTEXT Data, PUCHAR Page)
@@ -402,7 +417,7 @@ NtfsReplayWindowsLog(PDEVICE_EXTENSION Vcb, PNTFS_ATTR_CONTEXT Data, PUCHAR Page
     if (!NT_SUCCESS(Status))
         return Status;
 
-    PageSize = *(PULONG)(Page + 0x10);
+    PageSize = *(PULONG)(Page + NTFS_LOG_SYSTEM_PAGE_SIZE_OFFSET);
     if (PageSize == NTFS_LOG_PAGE)
     {
         PUCHAR Other = ExAllocatePoolWithTag(NonPagedPool, PageSize, TAG_NTFS);
@@ -411,8 +426,8 @@ NtfsReplayWindowsLog(PDEVICE_EXTENSION Vcb, PNTFS_ATTR_CONTEXT Data, PUCHAR Page
             *(PULONG)Other == NTFS_LOG_FILE_MAGIC &&
             NT_SUCCESS(FixupUpdateSequenceArray(Vcb, (PNTFS_RECORD_HEADER)Other)))
         {
-            USHORT OtherOff = *(PUSHORT)(Other + 0x18);
-            USHORT FirstOff = *(PUSHORT)(Page + 0x18);
+            USHORT OtherOff = *(PUSHORT)(Other + NTFS_LOG_RESTART_AREA_OFFSET);
+            USHORT FirstOff = *(PUSHORT)(Page + NTFS_LOG_RESTART_AREA_OFFSET);
             if (OtherOff + 8 < PageSize && FirstOff + 8 < PageSize &&
                 *(PULONGLONG)(Other + OtherOff) > *(PULONGLONG)(Page + FirstOff))
                 RtlCopyMemory(Page, Other, PageSize);
@@ -421,23 +436,23 @@ NtfsReplayWindowsLog(PDEVICE_EXTENSION Vcb, PNTFS_ATTR_CONTEXT Data, PUCHAR Page
             ExFreePoolWithTag(Other, TAG_NTFS);
     }
 
-    RestartOff = *(PUSHORT)(Page + 0x18);
+    RestartOff = *(PUSHORT)(Page + NTFS_LOG_RESTART_AREA_OFFSET);
     if (RestartOff < 0x30 || RestartOff + 0x40 > NTFS_LOG_PAGE)
         return STATUS_DISK_CORRUPT_ERROR;
 
-    ClientOff = *(PUSHORT)(Page + RestartOff + 0x16);
-    Client = *(PUSHORT)(Page + RestartOff + 0x0C);
-    while (Client != 0xFFFF)
+    ClientOff = *(PUSHORT)(Page + RestartOff + NTFS_LOG_CLIENT_ARRAY_OFFSET);
+    Client = *(PUSHORT)(Page + RestartOff + NTFS_LOG_CLIENT_IN_USE_OFFSET);
+    while (Client != NTFS_LOG_NO_CLIENT)
     {
         ULONG At = RestartOff + ClientOff + (ULONG)Client * 0x60;
         ULONGLONG RestartLsn;
 
         if (ClientOff < 0x18 || At + 0x14 > NTFS_LOG_PAGE)
             return STATUS_DISK_CORRUPT_ERROR;
-        RestartLsn = *(PULONGLONG)(Page + At + 8);
+        RestartLsn = *(PULONGLONG)(Page + At + NTFS_LOG_CLIENT_RESTART_LSN_OFFSET);
         if (RestartLsn != 0)
             Pending = TRUE;
-        Client = *(PUSHORT)(Page + At + 0x12);
+        Client = *(PUSHORT)(Page + At + NTFS_LOG_CLIENT_NEXT_OFFSET);
         Seen++;
         if (Seen > 16)
             return STATUS_DISK_CORRUPT_ERROR;
@@ -489,7 +504,7 @@ NtfsReplayLog(PDEVICE_EXTENSION Vcb)
         goto Done;
     }
 
-    /* An uninitialized log is not replayed. A Windows restart page has an
+    /* An uninitialized log is not replayed. A published 'RSTR' page has an
      * update sequence; the log this driver writes does not. */
     if (*(PULONG)Page != NTFS_LOG_FILE_MAGIC)
     {
@@ -1132,8 +1147,9 @@ NtfsGetReparseTag(PDEVICE_EXTENSION Vcb, ULONGLONG MftIndex)
     return Tag;
 }
 
-/* $Quota:$Q value. A SID follows these 48 bytes when the owner id is not the
- * default. Threshold and limit are the fields FSCTL_SET_QUOTA changes. */
+/* $Quota:$Q value from https://flatcap.github.io/linux-ntfs/ntfs/files/quota.html
+ * change_time is 16, threshold is 24, limit is 32, and the SID starts at 48
+ * when the owner id is not the default. */
 #define NTFS_QUOTA_CONTROL_SIZE     48
 #define NTFS_QUOTA_CHANGE_OFFSET    16
 #define NTFS_QUOTA_THRESHOLD_OFFSET 24

@@ -1,0 +1,12 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What did 31bf7ef6b143156459eadf00d45f8c7625cbcece change so a directory walk continues after an empty index node?",
+  "allowedInputs": [
+    "Reported: the commit says an allocated index record that never reached the disk is still zeros, treating that record as corruption or following a zero-length entry stops the walk, a new node is written empty, and a zero record is read back as an empty node.",
+    "drivers/filesystems/ntfs/btree.c",
+    "drivers/filesystems/ntfs/mft.c",
+    "drivers/filesystems/ntfs/ntfs3x.c",
+    "drivers/filesystems/ntfs/ntfs.h",
+    "Reported: no guest log cited by this commit was still on disk when this note was written."
+  ]
+}

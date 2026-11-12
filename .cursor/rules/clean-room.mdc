@@ -9,6 +9,8 @@ Implement Windows behavior only from public documentation, public specifications
 
 Sizes, offsets, and return codes required for interoperability come from those sources. Do not paste header text or reconstruct a function body.
 
+A new size, offset, device id, or magic value in boot, the kernel, the HAL, a driver, or NTFS names its public document, in-tree file, or guest log in the comment beside the value. The transparency note lists that same source. The comment does not say what Windows does and leave the source unnamed.
+
 These inputs stop the task. Do not implement that component in the session:
 
 - Windows source, leaked NT source, or the Windows Research Kernel

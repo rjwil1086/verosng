@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which copyright lines did the header pass keep, and which line did it add?",
+  "allowedInputs": [
+    ".cursor/rules/file-headers.mdc",
+    "Reported: the header pass kept each existing author line and added Copyright 2026 Ryan Wilson."
+  ]
+}

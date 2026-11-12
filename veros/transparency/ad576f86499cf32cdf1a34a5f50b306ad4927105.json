@@ -6,6 +6,9 @@
     "hal/halx86/generic/usbhandoff.c",
     "hal/halx86/generic/halinit.c",
     "hal/halx86/include/halp.h",
+    "drivers/usb/usbuhci/hardware.h PCI_LEGSUP 0xC0 and PCI_LEGSUP_CLEAR_SMI 0x8F00",
+    "https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/ehci-specification-for-usb.pdf USBLEGSUP and HCCPARAMS",
+    "https://stuff.mit.edu/afs/sipb/contrib/doc/specs/protocol/usb/UHCI11D.PDF USBCMD and USBBASE",
     "Reported: no guest log cited by this commit was still on disk when this note was written."
   ]
 }

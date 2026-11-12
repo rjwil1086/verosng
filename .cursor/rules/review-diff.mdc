@@ -15,6 +15,7 @@ Stop when a hunk has any of these:
 - A comment that describes Windows internals the log, the docs, and the conversation never mentioned
 - Header text
 - The shape of decompiled code
+- A new offset or magic constant whose hunk names no public document, in-tree file, or guest log
 
 ```c
 /* Right: returning STATUS_INVALID_PARAMETER because the probe log showed that status. */

@@ -4,7 +4,7 @@
   "allowedInputs": [
     "docs/MILESTONES.md milestone 8 and the NtCreateFile pass plan",
     "tools/syscall-diff/probe.c run_real arguments already in this tree",
-    "output/syscall-diff/windows.log and output/syscall-diff/reactos-before.log, both containing DIFF END OK",
+    "output/syscall-diff/windows.log containing DIFF END OK",
     "veros/dashboard/latest.json headline 80.2 before this pass",
     "boot/bootdata/hivedef.inf TEMP and drivers/filesystems/cdfs/create.c FILE_OPEN_IF denial already in this tree",
     "output/syscall-diff/reactos.log DIFF END OK after the create ran on the harness FAT12 sink"

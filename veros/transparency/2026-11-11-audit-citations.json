@@ -1,0 +1,24 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which public source is named on the dirctl.c header and next to the log, quota, TCO, process-attribute, USB handoff, and NTFS volume-data constants?",
+  "allowedInputs": [
+    ".cursor/rules/file-headers.mdc",
+    "drivers/filesystems/ntfs/dirctl.c",
+    "drivers/filesystems/ntfs/ntfs3x.c",
+    "boot/freeldr/freeldr/arch/i386/hwacpi.c",
+    "ntoskrnl/ps/process.c",
+    "hal/halx86/generic/usbhandoff.c",
+    "sdk/include/psdk/winioctl.h",
+    "sdk/include/wine/winternl.h",
+    "drivers/usb/usbuhci/hardware.h",
+    "https://fossies.org/linux/ntfs-3g/include/ntfs-3g/logfile.h",
+    "https://fossies.org/linux/ntfs-3g/include/ntfs-3g/layout.h",
+    "https://flatcap.github.io/linux-ntfs/ntfs/files/quota.html",
+    "https://docs.rs/crate/ntfs-3g-sys/0.1.0/source/vendor/ntfs-3g/ntfsprogs/ntfsdecrypt.c",
+    "https://uefi.org/sites/default/files/resources/Watchdog%20Descriptor%20Table.pdf",
+    "https://github.com/torvalds/linux/blob/master/drivers/watchdog/iTCO_wdt.c",
+    "https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/ehci-specification-for-usb.pdf",
+    "https://stuff.mit.edu/afs/sipb/contrib/doc/specs/protocol/usb/UHCI11D.PDF",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ns-winioctl-ntfs_extended_volume_data"
+  ]
+}
