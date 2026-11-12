@@ -1,0 +1,10 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which Vista exports that this tree already builds should be visible at the current export version?",
+  "allowedInputs": [
+    "dll/win32/kernel32/kernel32.spec IsThreadAFiber was already a real export behind a 0x600 gate",
+    "dll/ntdll/def/ntdll.spec NtCancelIoFileEx was already present as a stub behind a 0x600 gate",
+    "dll/win32/ws2_32/ws2_32.spec WSAPoll and WSASendMsg were already stubs behind a 0x600 gate",
+    "Reported: DLL_EXPORT_VERSION stays 0x502, so those gates hid the exports from the updater"
+  ]
+}

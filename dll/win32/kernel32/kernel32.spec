@@ -764,7 +764,7 @@
 @ stdcall IsProcessInJob(long long ptr)
 @ stdcall IsProcessorFeaturePresent(long)
 @ stdcall IsSystemResumeAutomatic()
-@ stdcall -version=0x600+ IsThreadAFiber()
+@ stdcall IsThreadAFiber()
 @ stdcall WaitOnAddress(ptr ptr long long)
 @ stdcall WakeByAddressAll(ptr)
 @ stdcall WakeByAddressSingle(ptr)
