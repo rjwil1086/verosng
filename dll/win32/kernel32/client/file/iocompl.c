@@ -5,6 +5,7 @@
  * PURPOSE:         Io Completion functions
  * PROGRAMMERS:     Ariadne (ariadne@xs4all.nl)
  *                  Oleg Dubinskiy (oleg.dubinskij30@gmail.com)
+ *                  Ryan Wilson
  * UPDATE HISTORY:
  *                  Created 01/11/98
  */
@@ -292,6 +293,71 @@ BindIoCompletionCallback(IN HANDLE FileHandle,
     }
 
     /* Return success */
+    return TRUE;
+}
+
+/*
+ * @implemented
+ */
+BOOL
+WINAPI
+GetQueuedCompletionStatusEx(IN HANDLE CompletionPort,
+                            OUT LPOVERLAPPED_ENTRY lpCompletionPortEntries,
+                            IN ULONG ulCount,
+                            OUT PULONG ulNumEntriesRemoved,
+                            IN DWORD dwMilliseconds,
+                            IN BOOL fAlertable)
+{
+    ULONG Removed;
+    DWORD Timeout;
+
+    UNREFERENCED_PARAMETER(fAlertable);
+
+    if (!ulNumEntriesRemoved || !lpCompletionPortEntries || ulCount == 0)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    Removed = 0;
+    Timeout = dwMilliseconds;
+    while (Removed < ulCount)
+    {
+        DWORD Bytes;
+        ULONG_PTR Key;
+        LPOVERLAPPED Overlapped;
+        BOOL Ok;
+
+        Bytes = 0;
+        Key = 0;
+        Overlapped = NULL;
+        Ok = GetQueuedCompletionStatus(CompletionPort,
+                                       &Bytes,
+                                       &Key,
+                                       &Overlapped,
+                                       Timeout);
+        if (!Ok && Overlapped == NULL)
+        {
+            if (Removed == 0)
+            {
+                return FALSE;
+            }
+            break;
+        }
+
+        lpCompletionPortEntries[Removed].lpCompletionKey = Key;
+        lpCompletionPortEntries[Removed].lpOverlapped = Overlapped;
+        lpCompletionPortEntries[Removed].Internal = 0;
+        lpCompletionPortEntries[Removed].dwNumberOfBytesTransferred = Bytes;
+        Removed++;
+        Timeout = 0;
+        if (!Ok)
+        {
+            break;
+        }
+    }
+
+    *ulNumEntriesRemoved = Removed;
     return TRUE;
 }
 

@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How does GetQueuedCompletionStatusEx return more than one completion packet?",
+  "allowedInputs": [
+    "dll/win32/kernel32/client/file/iocompl.c GetQueuedCompletionStatus",
+    "Reported: the update window died after one stub call to GetQueuedCompletionStatusEx with a 1024-entry buffer and an infinite timeout"
+  ]
+}
