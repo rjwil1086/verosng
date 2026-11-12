@@ -1,9 +1,13 @@
 /*
- * COPYRIGHT:        See COPYING in the top level directory
- * PROJECT:          ReactOS kernel
- * FILE:             drivers/net/afd/include/afd.h
- * PURPOSE:          Ancillary functions driver -- constants and structures
- * PROGRAMMER:       Art Yerkes (ayerkes@speakeasy.net)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/network/afd/include/afd.h
+ * PURPOSE:     Ancillary functions driver constants and structures
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Art Yerkes (ayerkes@speakeasy.net)
+ *              Ryan Wilson
+ *
  * UPDATE HISTORY:
  * 20040630 Created
  */
@@ -98,11 +102,11 @@ typedef struct IPADDR_ENTRY {
 					   * for ancillary data on packet
 					   * requests. */
 
-/* XXX This is a hack we should clean up later
- * We do this in order to get some storage for the locked handle table
- * Maybe I'll use some tail item in the irp instead */
-#define AFD_HANDLES(x) ((PAFD_HANDLE)(x)->Exclusive)
-#define SET_AFD_HANDLES(x,y) (((x)->Exclusive) = (ULONG_PTR)(y))
+/* Exclusive is a 32-bit flag in the poll request. The locked handle
+ * table is a pointer, so it lives in the IRP instead of that field. */
+#define AFD_HANDLES(Irp) ((PAFD_HANDLE)(Irp)->Tail.Overlay.DriverContext[0])
+#define SET_AFD_HANDLES(Irp, Handles) \
+    ((Irp)->Tail.Overlay.DriverContext[0] = (PVOID)(Handles))
 
 typedef struct _AFD_MAPBUF {
     PVOID BufferAddress;

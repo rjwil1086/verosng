@@ -1,0 +1,15 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Where does a poll request keep the locked handle table once Exclusive is 32 bits wide?",
+  "allowedInputs": [
+    "drivers/network/afd/include/afd.h stored that pointer in Exclusive and said the IRP tail was the intended place",
+    "output/livecd-20261112T091517Z.log Assertion failed: KeGetCurrentIrql() <= APC_LEVEL",
+    "Reported: Exclusive was narrowed to 32 bits, so the pointer was truncated and the fault handler ran while the device lock was held"
+  ],
+  "harness": {
+    "guest": "VerOS live CD",
+    "name": "livecd-20261112T091517Z",
+    "traceOrReplayId": "livecd-20261112T091517Z",
+    "logSha256": "af3438274b7c4478fa53dd2c77808b203b78677854a691c21c0d3dabbf26c3d4"
+  }
+}

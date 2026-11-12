@@ -1,9 +1,13 @@
 /*
- * COPYRIGHT:        See COPYING in the top level directory
- * PROJECT:          ReactOS kernel
- * FILE:             drivers/net/afd/afd/select.c
- * PURPOSE:          Ancillary functions driver
- * PROGRAMMER:       Art Yerkes (ayerkes@speakeasy.net)
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        drivers/network/afd/afd/select.c
+ * PURPOSE:     Ancillary functions driver
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Art Yerkes (ayerkes@speakeasy.net)
+ *              Ryan Wilson
+ *
  * UPDATE HISTORY:
  * 20040708 Created
  */
@@ -84,7 +88,7 @@ VOID SignalSocket(
               PollReq->Handles[i].Events,
               PollReq->Handles[i].Status));
     }
-    UnlockHandles( AFD_HANDLES(PollReq), PollReq->HandleCount );
+    UnlockHandles( AFD_HANDLES(Irp), PollReq->HandleCount );
     if( Irp->MdlAddress ) UnlockRequest( Irp, IoGetCurrentIrpStackLocation( Irp ) );
     AFD_DbgPrint(MID_TRACE,("Completing\n"));
     (void)IoSetCancelRoutine(Irp, NULL);
@@ -143,7 +147,7 @@ VOID KillSelectsForFCB( PAFD_DEVICE_EXTENSION DeviceExt,
         ListEntry = ListEntry->Flink;
         Irp = Poll->Irp;
         PollReq = Irp->AssociatedIrp.SystemBuffer;
-        HandleArray = AFD_HANDLES(PollReq);
+        HandleArray = AFD_HANDLES(Irp);
 
         for( i = 0; i < PollReq->HandleCount; i++ ) {
             AFD_DbgPrint(MAX_TRACE,("Req: %u, This %p\n",
@@ -179,10 +183,10 @@ AfdSelect( PDEVICE_OBJECT DeviceObject, PIRP Irp,
                             PollReq->HandleCount,
                             (INT)(PollReq->Timeout.QuadPart)));
 
-    SET_AFD_HANDLES(PollReq,
+    SET_AFD_HANDLES(Irp,
                     LockHandles( PollReq->Handles, PollReq->HandleCount ));
 
-    if( !AFD_HANDLES(PollReq) ) {
+    if( !AFD_HANDLES(Irp) ) {
         Irp->IoStatus.Status = STATUS_NO_MEMORY;
         Irp->IoStatus.Information = 0;
         IoCompleteRequest( Irp, IO_NETWORK_INCREMENT );
@@ -191,10 +195,10 @@ AfdSelect( PDEVICE_OBJECT DeviceObject, PIRP Irp,
 
     if( Exclusive ) {
         for( i = 0; i < PollReq->HandleCount; i++ ) {
-            if( !AFD_HANDLES(PollReq)[i].Handle ) continue;
+            if( !AFD_HANDLES(Irp)[i].Handle ) continue;
 
             KillSelectsForFCB( DeviceExt,
-                               (PFILE_OBJECT)AFD_HANDLES(PollReq)[i].Handle,
+                               (PFILE_OBJECT)AFD_HANDLES(Irp)[i].Handle,
                                TRUE );
         }
     }
@@ -202,9 +206,9 @@ AfdSelect( PDEVICE_OBJECT DeviceObject, PIRP Irp,
     KeAcquireSpinLock( &DeviceExt->Lock, &OldIrql );
 
     for( i = 0; i < PollReq->HandleCount; i++ ) {
-        if( !AFD_HANDLES(PollReq)[i].Handle ) continue;
+        if( !AFD_HANDLES(Irp)[i].Handle ) continue;
 
-        FileObject = (PFILE_OBJECT)AFD_HANDLES(PollReq)[i].Handle;
+        FileObject = (PFILE_OBJECT)AFD_HANDLES(Irp)[i].Handle;
         FCB = FileObject->FsContext;
 
         AFD_DbgPrint(MID_TRACE, ("AFD: Select Events: "));
@@ -388,9 +392,9 @@ static BOOLEAN UpdatePollWithFCB( PAFD_ACTIVE_POLL Poll, PFILE_OBJECT FileObject
     ASSERT( KeGetCurrentIrql() == DISPATCH_LEVEL );
 
     for( i = 0; i < PollReq->HandleCount; i++ ) {
-        if( !AFD_HANDLES(PollReq)[i].Handle ) continue;
+        if( !AFD_HANDLES(Poll->Irp)[i].Handle ) continue;
 
-        FileObject = (PFILE_OBJECT)AFD_HANDLES(PollReq)[i].Handle;
+        FileObject = (PFILE_OBJECT)AFD_HANDLES(Poll->Irp)[i].Handle;
         FCB = FileObject->FsContext;
 
         PollReq->Handles[i].Status = PollReq->Handles[i].Events & FCB->PollState;
