@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How can a registered library replace the shutdown choices?",
+  "allowedInputs": [
+    "dll/win32/msgina/shutdown.c ShellShutdownDialog",
+    "sdk/include/veros_shutdown.h",
+    "Reported: the update client registers one hook DLL, and a hook that declines leaves the stock shutdown prompt"
+  ]
+}

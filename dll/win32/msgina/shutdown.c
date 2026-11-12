@@ -1,14 +1,17 @@
 /*
  * COPYRIGHT:       See COPYING in the top level directory
+ *                  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROJECT:         ReactOS msgina.dll
  * FILE:            lib/msgina/shutdown.c
  * PURPOSE:         Shutdown Dialog Box (GUI only)
  * PROGRAMMERS:     Lee Schroeder (spaceseel at gmail dot com)
  *                  Hermes Belusca-Maito (hermes.belusca@sfr.fr)
  *                  Arnav Bhatt (arnavbhatt288 at gmail dot com)
+ *                  Ryan Wilson
  */
 
 #include "msgina.h"
+#include <veros_shutdown.h>
 #include <wingdi.h>
 #include <windowsx.h>
 #include <commctrl.h>
@@ -1392,6 +1395,51 @@ ShellShutdownDialog(
         {
             DWORD BufferSize = _countof(gContext.UserName);
             GetUserNameW(gContext.UserName, &BufferSize);
+        }
+    }
+
+    /* A registered hook replaces the shutdown and restart choices. */
+    {
+        HKEY hookKey;
+        WCHAR library[MAX_PATH];
+        DWORD libraryBytes = sizeof(library);
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, VEROS_SHUTDOWN_HOOK_KEY, 0, KEY_QUERY_VALUE, &hookKey) == ERROR_SUCCESS)
+        {
+            if (RegQueryValueExW(hookKey, VEROS_SHUTDOWN_HOOK_VALUE, NULL, NULL, (LPBYTE)library, &libraryBytes) == ERROR_SUCCESS)
+            {
+                HMODULE hook = LoadLibraryW(library);
+                if (hook)
+                {
+                    PFN_VEROS_SHUTDOWN_QUERY query = (PFN_VEROS_SHUTDOWN_QUERY)GetProcAddress(hook, "VerosShutdownQuery");
+                    PFN_VEROS_SHUTDOWN_COMMIT commit = (PFN_VEROS_SHUTDOWN_COMMIT)GetProcAddress(hook, "VerosShutdownCommit");
+                    VEROS_SHUTDOWN_QUERY choices;
+                    ZeroMemory(&choices, sizeof(choices));
+                    if (query && commit && query(&choices) && choices.Count > 0)
+                    {
+                        UINT index;
+                        for (index = 0; index < choices.Count && index < VEROS_SHUTDOWN_MAX_CHOICES; index++)
+                        {
+                            WCHAR text[400];
+                            VEROS_SHUTDOWN_COMMIT committed;
+                            StringCbCopyW(text, sizeof(text), choices.Choices[index].Label);
+                            StringCbCatW(text, sizeof(text), L"\n");
+                            StringCbCatW(text, sizeof(text), choices.Choices[index].Detail);
+                            if (MessageBoxW(hWndParent, text, L"VerOS", MB_YESNO) != IDYES)
+                                continue;
+                            ZeroMemory(&committed, sizeof(committed));
+                            committed.ChoiceId = choices.Choices[index].Id;
+                            commit(&committed);
+                            FreeLibrary(hook);
+                            RegCloseKey(hookKey);
+                            if (choices.Choices[index].FinalAction == 2)
+                                return WLX_SHUTDOWN_STATE_REBOOT;
+                            return WLX_SHUTDOWN_STATE_POWER_OFF;
+                        }
+                    }
+                    FreeLibrary(hook);
+                }
+            }
+            RegCloseKey(hookKey);
         }
     }
 
