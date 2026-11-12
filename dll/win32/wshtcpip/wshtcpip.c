@@ -1,9 +1,13 @@
 /*
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/wshtcpip/wshtcpip.c
+ * PURPOSE:     Winsock helper for TCP/IP
  * COPYRIGHT:   See COPYING in the top level directory
- * PROJECT:     ReactOS WinSock Helper DLL for TCP/IP
- * FILE:        wshtcpip.c
- * PURPOSE:     DLL entry
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROGRAMMERS: Casper S. Hornstrup (chorns@users.sourceforge.net)
+ *              Ryan Wilson
+ *
  * REVISIONS:
  *   CSH 01/09-2000 Created
  */
@@ -363,6 +367,31 @@ WSHIoctl(
             NumberOfBytesReturned,
             NeedsCompletion);
         return res;
+    }
+    /*
+     * sdk/include/psdk/mswsock.h defines these behind _WIN32_WINNT >= 0x0600.
+     * This DLL is built at 0x502, so the codes are spelled out here.
+     * The guest log livecd-20261112T084925Z recorded 48000022, then
+     * 4800001c, 4800001d, and 4800001b, and connect failed with 10022.
+     * No layered provider is installed, so each query returns this socket.
+     */
+    else if (IoControlCode == _WSAIOR(IOC_WS2, 34) ||
+             IoControlCode == _WSAIOR(IOC_WS2, 28) ||
+             IoControlCode == _WSAIOR(IOC_WS2, 29) ||
+             IoControlCode == _WSAIOR(IOC_WS2, 27))
+    {
+        if (!OutputBuffer ||
+            OutputBufferLength < sizeof(SOCKET) ||
+            !NumberOfBytesReturned)
+        {
+            return WSAEFAULT;
+        }
+
+        *(SOCKET *)OutputBuffer = SocketHandle;
+        *NumberOfBytesReturned = sizeof(SOCKET);
+        if (NeedsCompletion)
+            *NeedsCompletion = FALSE;
+        return NO_ERROR;
     }
     else if (IoControlCode == SIO_KEEPALIVE_VALS)
     {

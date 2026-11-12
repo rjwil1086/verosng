@@ -1,0 +1,15 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "What should the TCP/IP helper return for the base-handle socket queries?",
+  "allowedInputs": [
+    "sdk/include/psdk/mswsock.h defines SIO_BASE_HANDLE and the BSP handle queries behind _WIN32_WINNT >= 0x0600",
+    "output/livecd-20261112T084925Z.log recorded Unknown IOCTL code 48000022 and os error 10022",
+    "Reported: no layered provider is installed, so the query returns this socket"
+  ],
+  "harness": {
+    "guest": "VerOS live CD",
+    "name": "livecd-20261112T084925Z",
+    "traceOrReplayId": "livecd-20261112T084925Z",
+    "logSha256": "086a98f32b1a584c5aeeb819fcb7df9d7956aa9bdf2a52ef89c7c183d1774556"
+  }
+}
