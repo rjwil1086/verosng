@@ -7,7 +7,7 @@ alwaysApply: true
 
 The guest is the powered-off QEMU disk `virtual-machines/win10-22h2/disk.qcow2` at the project root that contains this checkout. QEMU opens it with `format=qcow2` and `-snapshot`. Do not write the qcow2. Boot with `-accel tcg`, `-m 8192`, and `-smp 4`. Do not pass `-accel whpx` on a capture boot. The VerOS NT boot uses the same memory and CPU count.
 
-Two captures exist. Both stay under `output/`, which is gitignored.
+Two captures exist. Both stay under `output/`, which is gitignored. After the run, copy the result files named in [capture-log.mdc](../../../.cursor/rules/capture-log.mdc) into `capture-log/` at the project root. Do not commit that folder.
 
 - `tools/windows-trace` records numeric syscall lines: number, status, and `a1`–`a4`. No names and no ordinal map.
 - `differential-tests/syscall-diff` in the parent checkout runs one GPL amd64 `probe.exe` on Windows 10 22H2 x64 and on the amd64 VerOS NT boot. It calls the names in `compat/reference/win10-22h2-syscalls.txt` through `GetProcAddress` and prints `DIFF <name> <status>`, `MISSING`, `CRASH`, or `STARTED`, then `DIFF END OK`. COM1 is `-serial file:` with forward slashes. A FAT sink copy is only a backup.
