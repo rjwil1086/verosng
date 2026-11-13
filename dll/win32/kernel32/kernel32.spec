@@ -1149,7 +1149,7 @@
 @ stdcall SetTermsrvAppInstallMode(long)
 @ stdcall SetThreadAffinityMask(long long)
 @ stdcall SetThreadContext(long ptr)
-@ stdcall -version=0xA00+ SetThreadDescription(ptr wstr)
+@ stdcall SetThreadDescription(ptr wstr)
 @ stdcall -stub -version=0x600+ SetThreadErrorMode(long ptr)
 @ stdcall SetThreadExecutionState(long)
 @ stdcall -version=0x601+ SetThreadGroupAffinity(ptr ptr ptr)

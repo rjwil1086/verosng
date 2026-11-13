@@ -1,0 +1,13 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How can the update check thread start when kernel32 does not export SetThreadDescription and SetThreadStackGuarantee does not reserve the overflow tail?",
+  "allowedInputs": [
+    "dll/win32/kernel32/kernel32.spec SetThreadDescription was behind -version=0xA00+",
+    "dll/win32/kernel32/kernel32_vista/ThreadDescription.c SetThreadDescription",
+    "dll/win32/kernel32/client/thread.c SetThreadStackGuarantee returned success without storing GuaranteedStackBytes",
+    "ntoskrnl/mm/ARM3/pagfault.c MiCheckForUserStackOverflow asserted GuaranteedStackBytes was zero and committed one page",
+    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadstackguarantee the size cannot exceed the reserved stack and those bytes stay available during a stack overflow exception",
+    "output/disk-20261113T031230Z.log markers: LDR: missing export kernel32.dll!SetThreadDescription and Close to our death...",
+    "Reported: Check for updates crashed"
+  ]
+}

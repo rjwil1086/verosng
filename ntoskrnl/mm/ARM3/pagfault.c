@@ -1,9 +1,11 @@
 /*
- * PROJECT:         ReactOS Kernel
- * LICENSE:         BSD - See COPYING.ARM in the top level directory
- * FILE:            ntoskrnl/mm/ARM3/pagfault.c
- * PURPOSE:         ARM Memory Manager Page Fault Handling
- * PROGRAMMERS:     ReactOS Portable Systems Group
+ * PROJECT:     VerOS NT Kernel
+ * LICENSE:     BSD - See COPYING.ARM in the top level directory
+ * FILE:        ntoskrnl/mm/ARM3/pagfault.c
+ * PURPOSE:     ARM Memory Manager Page Fault Handling
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: ReactOS Portable Systems Group
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/
@@ -37,7 +39,7 @@ MiCheckForUserStackOverflow(IN PVOID Address,
     PETHREAD CurrentThread = PsGetCurrentThread();
     PTEB Teb = CurrentThread->Tcb.Teb;
     PVOID StackBase, DeallocationStack, NextStackAddress;
-    SIZE_T GuaranteedSize;
+    SIZE_T Growth, Guarantee, CommitSize;
     NTSTATUS Status;
 
     /* Do we own the address space lock? */
@@ -60,15 +62,19 @@ MiCheckForUserStackOverflow(IN PVOID Address,
     /* Read the current settings */
     StackBase = Teb->NtTib.StackBase;
     DeallocationStack = Teb->DeallocationStack;
-    GuaranteedSize = Teb->GuaranteedStackBytes;
+    /*
+     * SetThreadStackGuarantee stores the bytes that must still be committed
+     * when this path returns STATUS_STACK_OVERFLOW. Growth itself stays one
+     * page. A zero guarantee keeps the previous one-page reserve.
+     */
+    Guarantee = Teb->GuaranteedStackBytes;
+    if (Guarantee != 0)
+    {
+        Guarantee = (Guarantee + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1);
+    }
+    Growth = PAGE_SIZE;
     DPRINT("Handling guard page fault with Stacks Addresses 0x%p and 0x%p, guarantee: %lx\n",
-            StackBase, DeallocationStack, GuaranteedSize);
-
-    /* Guarantees make this code harder, for now, assume there aren't any */
-    ASSERT(GuaranteedSize == 0);
-
-    /* So allocate only the minimum guard page size */
-    GuaranteedSize = PAGE_SIZE;
+            StackBase, DeallocationStack, Guarantee);
 
     /* Does this faulting stack address actually exist in the stack? */
     if ((Address >= StackBase) || (Address < DeallocationStack))
@@ -80,25 +86,29 @@ MiCheckForUserStackOverflow(IN PVOID Address,
     }
 
     /* This is where the stack will start now */
-    NextStackAddress = (PVOID)((ULONG_PTR)PAGE_ALIGN(Address) - GuaranteedSize);
+    NextStackAddress = (PVOID)((ULONG_PTR)PAGE_ALIGN(Address) - Growth);
 
-    /* Do we have at least one page between here and the end of the stack? */
-    if (((ULONG_PTR)NextStackAddress - PAGE_SIZE) <= (ULONG_PTR)DeallocationStack)
+    /*
+     * Stop when the next guard page would land inside the guaranteed tail.
+     * With a zero guarantee this is the same test as before.
+     */
+    if ((ULONG_PTR)NextStackAddress <=
+        ((ULONG_PTR)DeallocationStack + Growth + Guarantee))
     {
-        /* We don't -- Trying to make this guard page valid now */
+        /* We don't -- commit the tail the overflow handler can still use */
         DPRINT1("Close to our death...\n");
 
-        /* Calculate the next memory address */
-        NextStackAddress = (PVOID)((ULONG_PTR)PAGE_ALIGN(DeallocationStack) + GuaranteedSize);
+        CommitSize = Guarantee ? Guarantee : Growth;
+        NextStackAddress = (PVOID)((ULONG_PTR)PAGE_ALIGN(DeallocationStack) + Growth);
 
         /* Allocate the memory */
         Status = ZwAllocateVirtualMemory(NtCurrentProcess(),
                                          &NextStackAddress,
                                          0,
-                                         &GuaranteedSize,
+                                         &CommitSize,
                                          MEM_COMMIT,
                                          PAGE_READWRITE);
-        if (NT_SUCCESS(Status))
+        if (NT_SUCCESS(Status) || (Status == STATUS_ALREADY_COMMITTED))
         {
             /* Success! */
             Teb->NtTib.StackLimit = NextStackAddress;
@@ -123,7 +133,7 @@ MiCheckForUserStackOverflow(IN PVOID Address,
     ASSERT((PsGetCurrentProcess()->Peb->NtGlobalFlag & FLG_DISABLE_STACK_EXTENSION) == 0);
 
     /* Update the stack limit */
-    Teb->NtTib.StackLimit = (PVOID)((ULONG_PTR)NextStackAddress + GuaranteedSize);
+    Teb->NtTib.StackLimit = (PVOID)((ULONG_PTR)NextStackAddress + Growth);
 
 #if defined(_WIN64) && defined(BUILD_WOW64_ENABLED)
     /* Update WOW64 32-bit TEB stack limit */
@@ -137,7 +147,7 @@ MiCheckForUserStackOverflow(IN PVOID Address,
     Status = ZwAllocateVirtualMemory(NtCurrentProcess(),
                                      &NextStackAddress,
                                      0,
-                                     &GuaranteedSize,
+                                     &Growth,
                                      MEM_COMMIT,
                                      PAGE_READWRITE | PAGE_GUARD);
     if ((NT_SUCCESS(Status) || (Status == STATUS_ALREADY_COMMITTED)))

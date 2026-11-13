@@ -1,10 +1,13 @@
 /*
- * COPYRIGHT:       See COPYING in the top level directory
- * PROJECT:         ReactOS system libraries
- * FILE:            dll/win32/kernel32/client/thread.c
- * PURPOSE:         Thread functions
- * PROGRAMMERS:     Alex Ionescu (alex.ionescu@reactos.org)
- *                  Ariadne (ariadne@xs4all.nl)
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/kernel32/client/thread.c
+ * PURPOSE:     Thread functions
+ * COPYRIGHT:   See COPYING in the top level directory
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Alex Ionescu (alex.ionescu@reactos.org)
+ *              Ariadne (ariadne@xs4all.nl)
+ *              Ryan Wilson
  */
 
 /* INCLUDES *******************************************************************/
@@ -1060,7 +1063,7 @@ QueueUserAPC(IN PAPCFUNC pfnAPC,
 }
 
 /*
- * @unimplemented
+ * @implemented
  */
 BOOL
 WINAPI
@@ -1069,6 +1072,7 @@ SetThreadStackGuarantee(IN OUT PULONG StackSizeInBytes)
     PTEB Teb = NtCurrentTeb();
     ULONG GuaranteedStackBytes;
     ULONG AllocationSize;
+    ULONG_PTR StackBase, StackBottom, Reserved;
 
     if (!StackSizeInBytes)
     {
@@ -1093,11 +1097,35 @@ SetThreadStackGuarantee(IN OUT PULONG StackSizeInBytes)
         return TRUE;
     }
 
-    // FIXME: Unimplemented!
-    UNIMPLEMENTED_ONCE;
+    /*
+     * The request cannot be larger than the reserved stack. pagfault.c
+     * commits this many bytes, in page units, when it raises the overflow.
+     * See SetThreadStackGuarantee on learn.microsoft.com.
+     */
+    StackBase = (ULONG_PTR)Teb->NtTib.StackBase;
+    StackBottom = (ULONG_PTR)Teb->DeallocationStack;
+    if (StackBase <= StackBottom)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
 
-    // Temporary HACK for supporting applications!
-    return TRUE; // FALSE;
+    Reserved = StackBase - StackBottom;
+    if ((ULONG_PTR)AllocationSize > Reserved)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    AllocationSize = (AllocationSize + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1);
+    if ((ULONG_PTR)AllocationSize > Reserved)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    Teb->GuaranteedStackBytes = AllocationSize;
+    return TRUE;
 }
 
 /*
