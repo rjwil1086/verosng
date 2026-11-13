@@ -1,11 +1,18 @@
 /*
- * PROJECT:     ReactOS Kernel
- * LICENSE:     GPL-2.0-or-later (https://spdx.org/licenses/GPL-2.0-or-later)
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        sdk/lib/cmlib/hiveinit.c
  * PURPOSE:     Configuration Manager Library - Registry Hive Loading & Initialization
  * COPYRIGHT:   Copyright 2001 - 2005 Eric Kohl
  *              Copyright 2005 Filip Navara <navaraf@reactos.org>
  *              Copyright 2021 Max Korostil
  *              Copyright 2022 George Bișoc <george.bisoc@reactos.org>
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Eric Kohl
+ *              Filip Navara
+ *              Max Korostil
+ *              George Bișoc
+ *              Ryan Wilson
  */
 
 #include "cmlib.h"
@@ -387,7 +394,18 @@ HvpInitializeMemoryHive(
                 return STATUS_REGISTRY_CORRUPT;
             }
 
-            /* Fix this bin */
+            /*
+             * Fix this bin. A bad signature or a size that is not a whole
+             * number of blocks means the cells are not a bin, so the block
+             * becomes one free cell. A wrong offset keeps its cells.
+             * hivedata.h: a free cell has a positive size.
+             */
+            if (Bin->Signature != HV_HBIN_SIGNATURE ||
+                (Bin->Size % HBLOCK_SIZE) != 0)
+            {
+                PHCELL Cell = (PHCELL)((ULONG_PTR)Bin + sizeof(HBIN));
+                Cell->Size = (LONG)(HBLOCK_SIZE - sizeof(HBIN));
+            }
             Bin->Signature = HV_HBIN_SIGNATURE;
             Bin->Size = HBLOCK_SIZE;
             Bin->FileOffset = BlockIndex * HBLOCK_SIZE;

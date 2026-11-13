@@ -1,0 +1,17 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the first logon stay on Loading your personal settings after the registry self-heal repairs corrupt hive bins?",
+  "allowedInputs": [
+    "sdk/lib/cmlib/hivecell.c HvpCreateHiveFreeCellList steps by the cell size, so a zero size leaves the offset unchanged",
+    "sdk/lib/cmlib/hivecell.c HvpComputeFreeListIndex asserts the free cell size is at least 8",
+    "sdk/lib/cmlib/hivedata.h a free cell has a positive size, HBLOCK_SIZE is 0x1000, and HBIN is the bin header",
+    "sdk/lib/cmlib/hiveinit.c self-heal rewrites a corrupt bin header and copies the cell bytes that were already there",
+    "output/install-20261113T050110Z.log marker: Loading profile S-1-5-21-424006905-957810238-2086768479-500",
+    "Reported: that logon then repaired hive bins and stayed on Loading your personal settings while the processor remained in the free-cell walk"
+  ],
+  "harness": {
+    "guest": "veros-ntfs",
+    "name": "first-logon",
+    "traceOrReplayId": "install-20261113T050110Z"
+  }
+}

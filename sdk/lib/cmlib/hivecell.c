@@ -1,8 +1,14 @@
 /*
- * PROJECT:   Registry manipulation library
- * LICENSE:   GPL - See COPYING in the top level directory
- * COPYRIGHT: Copyright 2005 Filip Navara <navaraf@reactos.org>
- *            Copyright 2001 - 2005 Eric Kohl
+ * PROJECT:     VerOS NT
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        sdk/lib/cmlib/hivecell.c
+ * PURPOSE:     Configuration Manager Library - Hive cell allocation
+ * COPYRIGHT:   Copyright 2005 Filip Navara <navaraf@reactos.org>
+ *              Copyright 2001 - 2005 Eric Kohl
+ *              Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Filip Navara
+ *              Eric Kohl
+ *              Ryan Wilson
  */
 
 #include "cmlib.h"
@@ -327,23 +333,37 @@ HvpCreateHiveFreeCellList(
     {
         Bin = (PHBIN)Hive->Storage[Stable].BlockList[BlockIndex].BinAddress;
 
-        /* Search free blocks and add to list */
+        /*
+         * A free cell has a positive size and a used cell a negative one
+         * (hivedata.h). The step is the absolute size. A zero size does not
+         * move FreeOffset, and HvpComputeFreeListIndex rejects a free cell
+         * smaller than 8 bytes, so those sizes end the bin.
+         */
+        if (Bin->Size < HBLOCK_SIZE || (Bin->Size % HBLOCK_SIZE) != 0)
+            break;
+
         FreeOffset = sizeof(HBIN);
         while (FreeOffset < Bin->Size)
         {
+            ULONG Step;
+
             FreeBlock = (PHCELL)((ULONG_PTR)Bin + FreeOffset);
+            if (FreeBlock->Size > 0)
+                Step = (ULONG)FreeBlock->Size;
+            else
+                Step = (ULONG)(-(FreeBlock->Size));
+
+            if (Step < 8 || Step > (Bin->Size - FreeOffset))
+                break;
+
             if (FreeBlock->Size > 0)
             {
                 Status = HvpAddFree(Hive, FreeBlock, Bin->FileOffset + FreeOffset);
                 if (!NT_SUCCESS(Status))
                     return Status;
+            }
 
-                FreeOffset += FreeBlock->Size;
-            }
-            else
-            {
-                FreeOffset -= FreeBlock->Size;
-            }
+            FreeOffset += Step;
         }
 
         BlockIndex += Bin->Size / HBLOCK_SIZE;
