@@ -1,5 +1,5 @@
 ---
-description: Implement Windows behavior without copying Microsoft expression
+description: Where Windows behavior, symbols, and struct layouts may come from
 alwaysApply: true
 ---
 
@@ -7,9 +7,16 @@ alwaysApply: true
 
 Implement Windows behavior only from public documentation, public specifications, code already in this tree, and logs from booting this tree.
 
-Sizes, offsets, and return codes required for interoperability come from those sources. Do not paste header text or reconstruct a function body.
+A public document or public specification is enough for a status code or other behavior. A new Windows export, syscall, structure, or field name that is not already in this tree comes from a QEMU trace. A struct layout that is not already in a ReactOS header in this tree comes from a QEMU trace. The trace has to show that name, or the offset or size of that layout. A numeric syscall line has no name, so it does not add an export.
 
-A new size, offset, device id, or magic value in boot, the kernel, the HAL, a driver, or NTFS names its public document, in-tree file, or guest log in the comment beside the value. The transparency note lists that same source. The comment does not say what Windows does and leave the source unnamed.
+A QEMU trace is either of these:
+
+- a differential guest log that contains `DIFF END OK`
+- a serial log or an abi plugin JSONL from a boot of this tree
+
+Do not paste header text or reconstruct a function body.
+
+A size, offset, device id, or magic value in boot, the kernel, the HAL, a driver, or NTFS names its public document, in-tree file, or guest log in the comment beside the value. The transparency note lists that same source. An offset that belongs to a new struct layout names the QEMU trace, or the ReactOS header that already has the layout. The comment does not say what Windows does and leave the source unnamed.
 
 These inputs stop the task. Do not implement that component in the session:
 
@@ -21,7 +28,30 @@ Do not copy, transcribe, or adapt any of that material into the repo or a patch.
 
 Windows traces from `tools/windows-trace` stay under `output/`. They record observed calls. Do not transcribe those logs into the kernel tree, and do not disassemble the guest to extend the syscall number list.
 
+## Review the diff before committing
+
+Before `git commit`, read the whole staged diff. If nothing is staged yet, read the diff that would be committed. Do not commit until this review is done.
+
+A patch may contain a size, an offset, or a return code taken from a public document, a public specification, code already in this tree, or a log from booting this tree. Stop when a hunk looks like it came from somewhere else.
+
+Stop when a hunk has any of these:
+
+- A whole function that was not asked for
+- A comment that describes Windows internals the log, the docs, and the conversation never mentioned
+- Header text
+- The shape of decompiled code
+- A new offset or magic constant whose hunk names no public document, in-tree file, or guest log
+- A new Windows export, syscall, structure, or field name, or a struct layout, whose hunk cites neither a QEMU trace nor a ReactOS header already in this tree
+
 ```c
-/* Right: a size or return code taken from a public contract or a guest log. */
-/* Wrong: a function body taken from leaked NT source or a decompiler listing. */
+/* Right: STATUS_INVALID_PARAMETER, because the probe log showed that status. */
+/* Right: a field already declared in a ReactOS header in this tree. */
+/* Wrong: a new struct laid out from a public document, with no trace and no ReactOS header. */
+/* Wrong: an unrequested function, pasted header text, or decompiled code. */
 ```
+
+When a hunk matches, do not commit and do not delete or rewrite it. Show Ryan the patches and wait.
+
+For each match, open that file in the editor at the first suspicious line, then quote the hunk in the chat with the path. Say which sign above it matched. Leave the commit unmade so he can review those patches.
+
+Ryan checks where that hunk came from. He commits it when the citation is a public document, a public specification, code already in this tree, or a log from booting this tree, and the information was obtained without Windows source, leaked NT source, the Windows Research Kernel, a decompiler listing, a disassembly, a WDK or SDK header, or other object code. A new Windows name or a new struct layout still needs the QEMU trace or the ReactOS header already in this tree. When the citation is missing, rewrite the hunk from an allowed source. Do not rewrite it from the material that made it suspicious.
