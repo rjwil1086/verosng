@@ -1,10 +1,12 @@
 /*
- * COPYRIGHT:       See COPYING in the top level directory
- * PROJECT:         ReactOS system libraries
- * FILE:            dll/win32/userenv/profile.c
- * PURPOSE:         User profile code
- * PROGRAMMERS:     Eric Kohl
- *                  Hervé Poussineau
+ * PROJECT:     VerOS NT System Libraries
+ * LICENSE:     GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:        dll/win32/userenv/profile.c
+ * PURPOSE:     User profile code
+ * COPYRIGHT:   Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS: Eric Kohl
+ *              Hervé Poussineau
+ *              Ryan Wilson
  */
 
 #include "precomp.h"
@@ -194,6 +196,56 @@ CreateProfileMutex(
     HeapFree(GetProcessHeap(), 0, pszMutexName);
 
     return hMutex;
+}
+
+
+/*
+ * CreateUserProfileExW creates ProfileList\<SID> and ProfileImagePath.
+ * A hive file can already exist while that key does not: the first logon
+ * reached RegLoadKeyW and then failed here with error 2.
+ */
+static
+DWORD
+EnsureProfileListEntry(
+    _In_ PCWSTR SidString,
+    _In_ PCWSTR ProfileDirectory)
+{
+    HKEY hProfilesKey = NULL;
+    HKEY hProfileKey = NULL;
+    DWORD dwError;
+    DWORD dwDisposition;
+
+    dwError = RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                            L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList",
+                            0,
+                            KEY_CREATE_SUB_KEY,
+                            &hProfilesKey);
+    if (dwError != ERROR_SUCCESS)
+        return dwError;
+
+    dwError = RegCreateKeyExW(hProfilesKey,
+                              SidString,
+                              0,
+                              NULL,
+                              REG_OPTION_NON_VOLATILE,
+                              KEY_QUERY_VALUE | KEY_SET_VALUE,
+                              NULL,
+                              &hProfileKey,
+                              &dwDisposition);
+    if (dwError == ERROR_SUCCESS && dwDisposition == REG_CREATED_NEW_KEY)
+    {
+        dwError = RegSetValueExW(hProfileKey,
+                                 L"ProfileImagePath",
+                                 0,
+                                 REG_SZ,
+                                 (const BYTE *)ProfileDirectory,
+                                 (DWORD)((wcslen(ProfileDirectory) + 1) * sizeof(WCHAR)));
+    }
+
+    if (hProfileKey != NULL)
+        RegCloseKey(hProfileKey);
+    RegCloseKey(hProfilesKey);
+    return dwError;
 }
 
 
@@ -2102,6 +2154,22 @@ LoadUserProfileW(
         {
             DPRINT1("RegLoadKeyW() failed (Error %ld)\n", dwError);
             goto cleanup;
+        }
+
+        {
+            WCHAR szProfileDir[MAX_PATH];
+            PWSTR pszSlash;
+
+            StringCbCopyW(szProfileDir, sizeof(szProfileDir), szUserHivePath);
+            pszSlash = wcsrchr(szProfileDir, L'\\');
+            if (pszSlash != NULL)
+                *pszSlash = UNICODE_NULL;
+            dwError = EnsureProfileListEntry(SidString.Buffer, szProfileDir);
+            if (dwError != ERROR_SUCCESS)
+            {
+                DPRINT1("EnsureProfileListEntry() failed (Error %ld)\n", dwError);
+                goto cleanup;
+            }
         }
 
         SetProfileData(SidString.Buffer,

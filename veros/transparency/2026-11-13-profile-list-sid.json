@@ -1,0 +1,17 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the first logon report that the local profile could not be loaded with error 2 after the hive load returns?",
+  "allowedInputs": [
+    "dll/win32/userenv/profile.c LoadUserProfileW calls CreateUserProfileW only when ntuser.dat is missing, then SetProfileData opens ProfileList\\SID",
+    "dll/win32/userenv/profile.c CreateUserProfileExW creates ProfileList\\SID and ProfileImagePath",
+    "dll/win32/userenv/profile.c GetUserProfileDirectoryW reads ProfileImagePath",
+    "base/system/winlogon/sas.c a failed LoadUserProfileW returns to the logon screen",
+    "output/disk-logon.log markers: profile.c:483 Error: 2 and IncrementRefCount() failed (Error 2)",
+    "Reported: the User Profile dialog showed Error: 2"
+  ],
+  "harness": {
+    "guest": "veros-ntfs",
+    "name": "disk-logon",
+    "traceOrReplayId": "disk-logon"
+  }
+}
