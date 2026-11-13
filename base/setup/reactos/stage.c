@@ -326,6 +326,72 @@ SetHiveRunOnce(
     return Error == ERROR_SUCCESS;
 }
 
+/*
+ * kernel32 CopyFileW opens the source with FILE_FLAG_NO_BUFFERING
+ * (dll/win32/kernel32/client/file/copy.c). A non-buffered transfer has
+ * to be a multiple of the sector size (drivers/filesystems/ntfs/rw.c).
+ * The guest stopped in this step, so copy through the cache.
+ */
+static BOOL
+StageCopyFile(
+    _In_ PCWSTR Source,
+    _In_ PCWSTR Dest)
+{
+    HANDLE Input;
+    HANDLE Output;
+    BYTE Buffer[0x10000];
+    DWORD Read;
+    DWORD Written;
+
+    SetFileAttributesW(Dest, FILE_ATTRIBUTE_NORMAL);
+    Input = CreateFileW(Source,
+                        GENERIC_READ,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        NULL,
+                        OPEN_EXISTING,
+                        FILE_ATTRIBUTE_NORMAL,
+                        NULL);
+    if (Input == INVALID_HANDLE_VALUE)
+        return FALSE;
+
+    Output = CreateFileW(Dest,
+                         GENERIC_WRITE,
+                         0,
+                         NULL,
+                         CREATE_ALWAYS,
+                         FILE_ATTRIBUTE_NORMAL,
+                         NULL);
+    if (Output == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(Input);
+        return FALSE;
+    }
+
+    for (;;)
+    {
+        if (!ReadFile(Input, Buffer, sizeof(Buffer), &Read, NULL))
+        {
+            CloseHandle(Output);
+            CloseHandle(Input);
+            DeleteFileW(Dest);
+            return FALSE;
+        }
+        if (Read == 0)
+            break;
+        if (!WriteFile(Output, Buffer, Read, &Written, NULL) || Written != Read)
+        {
+            CloseHandle(Output);
+            CloseHandle(Input);
+            DeleteFileW(Dest);
+            return FALSE;
+        }
+    }
+
+    CloseHandle(Output);
+    CloseHandle(Input);
+    return TRUE;
+}
+
 static BOOL
 CopyHiveFile(
     _In_ PCWSTR SourceDir,
@@ -344,7 +410,7 @@ CopyHiveFile(
     if (GetFileAttributesW(Source) == INVALID_FILE_ATTRIBUTES)
         return TRUE;
 
-    return CopyFileW(Source, Dest, FALSE);
+    return StageCopyFile(Source, Dest);
 }
 
 static BOOL
@@ -418,7 +484,7 @@ CopyCommitProgram(
         return FALSE;
 
     StageSetText(Progress, L"Copying the commit program...", Dest);
-    return CopyFileW(Source, Dest, FALSE);
+    return StageCopyFile(Source, Dest);
 }
 
 static BOOL
@@ -603,11 +669,31 @@ StageExistingInstall(VOID)
         return FALSE;
     }
 
-    if (!CopyExistingHives(SystemWin32, StageWin32, &Progress) ||
-        !CopyCommitProgram(StageWin32, &Progress))
+    if (!CopyExistingHives(SystemWin32, StageWin32, &Progress))
     {
+        DWORD Error = GetLastError();
+        WCHAR Text[160];
+
         StageCloseProgress(&Progress);
-        MessageBoxW(NULL, L"The existing hives could not be staged.", L"VerOS NT", MB_ICONERROR);
+        StringCchPrintfW(Text,
+                         ARRAYSIZE(Text),
+                         L"The existing hives could not be staged (error %lu).",
+                         Error);
+        MessageBoxW(NULL, Text, L"VerOS NT", MB_ICONERROR);
+        return FALSE;
+    }
+
+    if (!CopyCommitProgram(StageWin32, &Progress))
+    {
+        DWORD Error = GetLastError();
+        WCHAR Text[160];
+
+        StageCloseProgress(&Progress);
+        StringCchPrintfW(Text,
+                         ARRAYSIZE(Text),
+                         L"The commit program could not be staged (error %lu).",
+                         Error);
+        MessageBoxW(NULL, Text, L"VerOS NT", MB_ICONERROR);
         return FALSE;
     }
 

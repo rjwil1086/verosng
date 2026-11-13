@@ -279,6 +279,72 @@ CountTree(
     return Count;
 }
 
+/*
+ * kernel32 CopyFileW opens the source with FILE_FLAG_NO_BUFFERING
+ * (dll/win32/kernel32/client/file/copy.c). A non-buffered transfer has
+ * to be a multiple of the sector size (drivers/filesystems/ntfs/rw.c).
+ * Staged files are not all sector-sized, so copy through the cache.
+ */
+static BOOL
+UpgradeCopyFile(
+    _In_ PCWSTR Source,
+    _In_ PCWSTR Dest)
+{
+    HANDLE Input;
+    HANDLE Output;
+    BYTE Buffer[0x10000];
+    DWORD Read;
+    DWORD Written;
+
+    SetFileAttributesW(Dest, FILE_ATTRIBUTE_NORMAL);
+    Input = CreateFileW(Source,
+                        GENERIC_READ,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        NULL,
+                        OPEN_EXISTING,
+                        FILE_ATTRIBUTE_NORMAL,
+                        NULL);
+    if (Input == INVALID_HANDLE_VALUE)
+        return FALSE;
+
+    Output = CreateFileW(Dest,
+                         GENERIC_WRITE,
+                         0,
+                         NULL,
+                         CREATE_ALWAYS,
+                         FILE_ATTRIBUTE_NORMAL,
+                         NULL);
+    if (Output == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(Input);
+        return FALSE;
+    }
+
+    for (;;)
+    {
+        if (!ReadFile(Input, Buffer, sizeof(Buffer), &Read, NULL))
+        {
+            CloseHandle(Output);
+            CloseHandle(Input);
+            DeleteFileW(Dest);
+            return FALSE;
+        }
+        if (Read == 0)
+            break;
+        if (!WriteFile(Output, Buffer, Read, &Written, NULL) || Written != Read)
+        {
+            CloseHandle(Output);
+            CloseHandle(Input);
+            DeleteFileW(Dest);
+            return FALSE;
+        }
+    }
+
+    CloseHandle(Output);
+    CloseHandle(Input);
+    return TRUE;
+}
+
 static BOOL
 CopyTree(
     _In_ PCWSTR Source,
@@ -346,7 +412,7 @@ CopyTree(
         else
         {
             UpgradeShowFile(Progress, L"Copying files", DestChild);
-            if (!CopyFileW(SourceChild, DestChild, FALSE))
+            if (!UpgradeCopyFile(SourceChild, DestChild))
             {
                 Ok = FALSE;
                 break;
