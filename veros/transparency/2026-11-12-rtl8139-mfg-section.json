@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which section name must carry Characteristics so the RTL8139 NIC install can finish?",
+  "allowedInputs": [
+    "drivers/network/dd/rtl8139/netrtl.inf RTL8139_Inst.ndi.NT already sets Characteristics to 0x4 and BusType to 5",
+    "dll/win32/setupapi/driver.c the models section name RealtekMfg has no Characteristics key, so indexing that name makes NetClassInstaller reject the NIC"
+  ]
+}

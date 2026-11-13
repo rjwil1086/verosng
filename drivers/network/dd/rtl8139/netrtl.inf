@@ -25,6 +25,17 @@ DefaultDestDir = 12
 %Realtek8139.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_10EC&DEV_8139
 %Realtek8139.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_10EC&DEV_8138
 
+; setupapi may index the manufacturer section name instead of the DDInstall
+; section. NetCfg needs Characteristics on that name so PnP can finish.
+[RealtekMfg.NT]
+Characteristics = 0x4 ; NCF_PHYSICAL
+BusType = 5 ; PCIBus
+AddReg = RTL8139_AddReg.NT
+CopyFiles = RTL8139_CopyFiles.NT
+
+[RealtekMfg.NT.Services]
+AddService = rtl8139, 0x00000002, RTL8139_Service_Inst
+
 [AcctonMfg]
 %AcctonEN1207D.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_1113&DEV_1211
 %AcctonEN1207D.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_1113&DEV_9211
