@@ -240,6 +240,13 @@ function Publish-OsTree {
         $bin = Join-Path $Checkout "update-server\target\debug\veros-publish.exe"
     }
     $cache = Join-Path $Checkout "update-server\cache"
+    $source = Join-Path $Checkout "source"
+    $revision = ""
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        $revision = (& git -C $source rev-parse HEAD 2>$null)
+        if ($LASTEXITCODE -ne 0) { $revision = "" }
+    }
+    $env:VEROS_REVISION = "$revision".Trim()
     $id = & $bin $Reactos $Track $cache
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     return ($id | Select-Object -Last 1)
