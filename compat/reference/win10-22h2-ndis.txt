@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Public NDIS 6 routine names that resolved on Windows 10 22H2. Names only.
+NdisGetRoutineAddress
+NdisMRegisterMiniportDriver
+NdisMDeregisterMiniportDriver
+NdisMSetMiniportAttributes
+NdisFRegisterFilterDriver
+NdisFDeregisterFilterDriver
+NdisFSetAttributes
+NdisRegisterProtocolDriver
+NdisDeregisterProtocolDriver
+NdisAllocateNetBufferListPool
+NdisFreeNetBufferListPool
+NdisAllocateNetBufferList
+NdisFreeNetBufferList
+NdisAllocateNetBufferPool
+NdisFreeNetBufferPool
+NdisAllocateNetBuffer
+NdisFreeNetBuffer
+NdisAllocateNetBufferAndNetBufferList
+NdisMAllocateNetBufferSGList
+NdisMFreeNetBufferSGList
+NdisMIndicateReceiveNetBufferLists
+NdisFIndicateReceiveNetBufferLists
+NdisMSendNetBufferListsComplete
+NdisFSendNetBufferListsComplete
+NdisFSendNetBufferLists
+NdisSendNetBufferLists
+NdisReturnNetBufferLists
+NdisMIndicateStatusEx
+NdisFIndicateStatus
+NdisMOidRequestComplete
+NdisFOidRequestComplete
+NdisFPauseComplete
+NdisFRestartComplete
+NdisMRestartComplete

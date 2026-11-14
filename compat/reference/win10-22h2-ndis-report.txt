@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Windows 10 22H2 NDIS probe. Evidence: output/ndis-abi/windows.log DIFF END OK.
+# NdisGetVersion returns the major version in the high half and the minor in the low half.
+NdisGetVersion 0x00060054
+NdisGetRoutineAddress PRESENT
+NdisMRegisterMiniportDriver PRESENT
+NdisMDeregisterMiniportDriver PRESENT
+NdisMSetMiniportAttributes PRESENT
+NdisFRegisterFilterDriver PRESENT
+NdisFDeregisterFilterDriver PRESENT
+NdisFSetAttributes PRESENT
+NdisRegisterProtocolDriver PRESENT
+NdisDeregisterProtocolDriver PRESENT
+NdisAllocateNetBufferListPool PRESENT
+NdisFreeNetBufferListPool PRESENT
+NdisAllocateNetBufferList PRESENT
+NdisFreeNetBufferList PRESENT
+NdisAllocateNetBufferPool PRESENT
+NdisFreeNetBufferPool PRESENT
+NdisAllocateNetBuffer PRESENT
+NdisFreeNetBuffer PRESENT
+NdisAllocateNetBufferAndNetBufferList PRESENT
+NdisMAllocateNetBufferSGList PRESENT
+NdisMFreeNetBufferSGList PRESENT
+NdisMIndicateReceiveNetBufferLists PRESENT
+NdisFIndicateReceiveNetBufferLists PRESENT
+NdisMSendNetBufferListsComplete PRESENT
+NdisFSendNetBufferListsComplete PRESENT
+NdisFSendNetBufferLists PRESENT
+NdisSendNetBufferLists PRESENT
+NdisReturnNetBufferLists PRESENT
+NdisMIndicateStatusEx PRESENT
+NdisFIndicateStatus PRESENT
+NdisMOidRequestComplete PRESENT
+NdisFOidRequestComplete PRESENT
+NdisFPauseComplete PRESENT
+NdisFRestartComplete PRESENT
+NdisMRestartComplete PRESENT
