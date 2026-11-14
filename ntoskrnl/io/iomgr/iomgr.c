@@ -1,10 +1,12 @@
 /*
  * COPYRIGHT:       See COPYING in the top level directory
+ *                  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  * PROJECT:         ReactOS Kernel
  * FILE:            ntoskrnl/io/iomgr/iomgr.c
  * PURPOSE:         I/O Manager Initialization and Misc Utility Functions
  *
  * PROGRAMMERS:     David Welch (welch@mcmail.com)
+ *                  Ryan Wilson
  */
 
 /* INCLUDES ****************************************************************/
@@ -652,9 +654,13 @@ IoInitSystem(IN PLOADER_PARAMETER_BLOCK LoaderBlock)
     /* No one should need loader block any longer */
     IopLoaderBlock = NULL;
 
-    /* Create ARC names for boot devices */
+    /* Create ARC names for boot devices.
+       A virtual CD can still be enumerating. output/hardware-toolkit/
+       serial-20261114T050244Z.log shows c0000034 for cdrom(111), and
+       returning here bugchecks 0x69 before IopMarkBootPartition polls.
+       Object-not-found falls through to that poll. */
     Status = IopCreateArcNames(LoaderBlock);
-    if (!NT_SUCCESS(Status))
+    if (!NT_SUCCESS(Status) && (Status != STATUS_OBJECT_NAME_NOT_FOUND))
     {
         DPRINT1("IopCreateArcNames failed: %lx\n", Status);
         return FALSE;

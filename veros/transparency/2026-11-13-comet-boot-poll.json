@@ -1,0 +1,16 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does a Comet virtual CD bugcheck 0x69 before the boot-device poll runs?",
+  "allowedInputs": [
+    "output/hardware-toolkit/serial-20261114T050244Z.log reports ARC path cdrom(111), IopCreateArcNames failed: c0000034, then Fatal System Error 0x00000069. usbstor and cdrom loaded and no storage device was created before that failure.",
+    "ntoskrnl/io/iomgr/iomgr.c IopMarkBootPartition retries IopCreateArcNames while PollBootPartitionTimeout is counting. IoInitSystem returns before that function when the first IopCreateArcNames call fails.",
+    "ntoskrnl/ex/init.c calls KeBugCheck(IO1_INITIALIZATION_FAILED) when IoInitSystem returns FALSE.",
+    "boot/bootdata/hivesys.inf sets PollBootPartitionTimeout to 30000.",
+    "Reported: Ryan Wilson said the GL.iNet Comet mounts the ISO and the Shuttle has to boot from that virtual media."
+  ],
+  "harness": {
+    "guest": "shuttle-dh270",
+    "name": "hardware-toolkit",
+    "traceOrReplayId": "serial-20261114T050244Z"
+  }
+}
