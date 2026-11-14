@@ -1,0 +1,7 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does the NTFS boot sector lose the sector count while it prints the loading message?",
+  "allowedInputs": [
+    "boot/freeldr/bootsect/ntfs.S StartSearch calls PutChars, and PutChars issues Int 10h. The load loop then compares the count it kept in EDX."
+  ]
+}

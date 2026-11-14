@@ -1,9 +1,12 @@
 /*
  * PROJECT:         ReactOS Bootsector
- * LICENSE:         GPL-2.0-or-later (https://spdx.org/licenses/GPL-2.0-or-later)
- * FILE:            boot/freeldr/bootsect/fat32.S
+ * LICENSE:         GNU General Public License, version 2 or later (GPL-2.0-or-later)
+ * FILE:            boot/freeldr/bootsect/ntfs.S
  * PURPOSE:         Implementing boot sector for NTFS
- * COPYRIGHT:       Copyright 2020 Sylvain Deverre (deverre.sylv@gmail.com)
+ * COPYRIGHT:       Copyright 2020 Sylvain Deverre <deverre.sylv@gmail.com>
+ *                  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ * PROGRAMMERS:     Sylvain Deverre
+ *                  Ryan Wilson
  */
 
 /* INCLUDES ******************************************************************/
@@ -185,9 +188,11 @@ ReadSectorsSetupDiskAddressPacket:
     add  eax, ebx                           // Increment sector to read
     adc  edx, 0
     shl  ebx, 5
-    mov  dx, es
-    add  dx, bx                             // Setup read buffer for next sector
-    mov  es, dx
+    push si
+    mov  si, es
+    add  si, bx                             // Setup read buffer for next sector
+    mov  es, si
+    pop  si
     pop  bx
 
     sub  cx, word ptr ds:[LBASectorsRead]
@@ -405,10 +410,12 @@ StartSearch:
     div   ecx
     mov   edx, eax                          // edx = number of clusters to load
 
-    push  ax
+    // PutChars calls int 10h, which does not keep EDX. The load loop
+    // compares the cluster index with EDX.
+    push  edx
     mov   si, offset msgLoading
     call  PutChars
-    pop   ax
+    pop   edx
 
     // address for ReadNonResidentAttribute (ES:AX)
     xor   ax, ax
