@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why did a later delete stage stay armed when the stage directory already held removed-0?",
+  "allowedInputs": [
+    "boot/freeldr/freeldr/lib/fs/ntfs.c NtfsMoveFile returns false when NtfsLookupMft already finds the destination path.",
+    "Reported: dir of C:\\VerOS\\System32\\config\\sysupdate\\stage listed removed-0 and removed-1 from an earlier boot, and a reboot left C:\\VerOS\\hold\\victim.txt in place with the manifest still starting update-stage-1. After the pass chose a free slot, that directory was empty, removed-2 was the 2-byte file, and the manifest started update-spent-1."
+  ]
+}
