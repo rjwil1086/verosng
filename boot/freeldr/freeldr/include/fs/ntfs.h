@@ -66,6 +66,8 @@
 #define NTFS_FILE_ATTR_DIRECTORY    0x10000000
 
 #define NTFS_MFT_MASK 0x0000FFFFFFFFFFFFULL
+/* drivers/filesystems/ntfs/ntfs.h FRH_IN_USE. A clear bit is a free record. */
+#define NTFS_MFT_IN_USE 0x0001
 
 #include <pshpack1.h>
 typedef struct
@@ -255,3 +257,10 @@ NtfsGetVolumeSize(
     _In_ ULONG DeviceId);
 
 const DEVVTBL* NtfsMount(ULONG DeviceId);
+
+BOOLEAN NtfsPathExists(_In_ ULONG DeviceId, _In_ PCSTR Path);
+BOOLEAN NtfsMoveFile(_In_ ULONG DeviceId, _In_ PCSTR ExistingPath, _In_ PCSTR NewPath);
+BOOLEAN NtfsExchangeLinks(_In_ ULONG DeviceId, _In_ PCSTR StagedPath, _In_ PCSTR DestPath);
+ULONG NtfsLastExchangeCode(VOID);
+BOOLEAN NtfsStampFile(_In_ ULONG DeviceId, _In_ PCSTR Path, _In_ PCSTR Marker);
+BOOLEAN NtfsDeleteFile(_In_ ULONG DeviceId, _In_ PCSTR Path);

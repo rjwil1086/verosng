@@ -2,6 +2,7 @@
  *  FreeLoader
  *
  *  Copyright (C) 2003  Eric Kohl
+ *  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -70,6 +71,7 @@ LONG DiskReportError(BOOLEAN bShowError);
 BOOLEAN DiskResetController(UCHAR DriveNumber);
 
 BOOLEAN PcDiskReadLogicalSectors(UCHAR DriveNumber, ULONGLONG SectorNumber, ULONG SectorCount, PVOID Buffer);
+BOOLEAN PcDiskWriteLogicalSectors(UCHAR DriveNumber, ULONGLONG SectorNumber, ULONG SectorCount, PVOID Buffer);
 BOOLEAN PcDiskGetDriveGeometry(UCHAR DriveNumber, PGEOMETRY DriveGeometry);
 ULONG PcDiskGetCacheableBlockCount(UCHAR DriveNumber);
 

@@ -24,6 +24,7 @@ DBG_DEFAULT_CHANNEL(FILESYSTEM);
 #define TAG_NTFS_CONTEXT 'CftN'
 #define TAG_NTFS_LIST 'LftN'
 #define TAG_NTFS_DIR 'RftN'
+#define TAG_NTFS_DIR 'RftN'
 #define TAG_NTFS_MFT 'MftN'
 #define TAG_NTFS_INDEX_REC 'IftN'
 #define TAG_NTFS_BITMAP 'BftN'
@@ -212,6 +213,72 @@ static BOOLEAN NtfsDiskRead(PNTFS_VOLUME_INFO Volume, ULONGLONG Offset, ULONGLON
             return FALSE;
         Status = ArcRead(Volume->DeviceId, Buffer, (ULONG)Length, &Count);
         if (Status != ESUCCESS || Count != Length)
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOLEAN NtfsDiskWrite(PNTFS_VOLUME_INFO Volume, ULONGLONG Offset, ULONGLONG Length, PCHAR Buffer)
+{
+    LARGE_INTEGER Position;
+    ULONG Count;
+    ULONG WriteLength;
+    ARC_STATUS Status;
+    USHORT SectorSize = Volume->BootSector.BytesPerSector;
+
+    if (Offset % SectorSize)
+    {
+        Position.QuadPart = Offset & ~(SectorSize - 1);
+        Status = ArcSeek(Volume->DeviceId, &Position, SeekAbsolute);
+        if (Status != ESUCCESS)
+            return FALSE;
+        Status = ArcRead(Volume->DeviceId, Volume->TemporarySector, SectorSize, &Count);
+        if (Status != ESUCCESS || Count != SectorSize)
+            return FALSE;
+        WriteLength = (USHORT)min(Length, SectorSize - (Offset % SectorSize));
+        RtlCopyMemory(&Volume->TemporarySector[Offset % SectorSize], Buffer, WriteLength);
+        Status = ArcSeek(Volume->DeviceId, &Position, SeekAbsolute);
+        if (Status != ESUCCESS)
+            return FALSE;
+        Status = ArcWrite(Volume->DeviceId, Volume->TemporarySector, SectorSize, &Count);
+        if (Status != ESUCCESS || Count != SectorSize)
+            return FALSE;
+        Buffer += WriteLength;
+        Length -= WriteLength;
+        Offset += WriteLength;
+    }
+
+    if (Length >= SectorSize)
+    {
+        Position.QuadPart = Offset;
+        Status = ArcSeek(Volume->DeviceId, &Position, SeekAbsolute);
+        if (Status != ESUCCESS)
+            return FALSE;
+        WriteLength = Length & ~(SectorSize - 1);
+        Status = ArcWrite(Volume->DeviceId, Buffer, WriteLength, &Count);
+        if (Status != ESUCCESS || Count != WriteLength)
+            return FALSE;
+        Buffer += WriteLength;
+        Length -= WriteLength;
+        Offset += WriteLength;
+    }
+
+    if (Length)
+    {
+        Position.QuadPart = Offset;
+        Status = ArcSeek(Volume->DeviceId, &Position, SeekAbsolute);
+        if (Status != ESUCCESS)
+            return FALSE;
+        Status = ArcRead(Volume->DeviceId, Volume->TemporarySector, SectorSize, &Count);
+        if (Status != ESUCCESS || Count != SectorSize)
+            return FALSE;
+        RtlCopyMemory(Volume->TemporarySector, Buffer, (ULONG)Length);
+        Status = ArcSeek(Volume->DeviceId, &Position, SeekAbsolute);
+        if (Status != ESUCCESS)
+            return FALSE;
+        Status = ArcWrite(Volume->DeviceId, Volume->TemporarySector, SectorSize, &Count);
+        if (Status != ESUCCESS || Count != SectorSize)
             return FALSE;
     }
 
@@ -603,16 +670,33 @@ static BOOLEAN NtfsFixupRecord(PNTFS_VOLUME_INFO Volume, PNTFS_RECORD Record)
     return TRUE;
 }
 
+static ULONG NtfsExchangeCode;
+
 static BOOLEAN NtfsReadMftRecord(PNTFS_VOLUME_INFO Volume, ULONGLONG MFTIndex, PNTFS_MFT_RECORD Buffer)
 {
     ULONGLONG BytesRead;
 
+    /* The run cache is keyed by file offset. A stale entry makes a later
+     * record read return short, so decode the MFT run list every time. */
+    Volume->MFTContext->CacheRunLength = 0;
     BytesRead = NtfsReadAttribute(Volume, Volume->MFTContext, MFTIndex * Volume->MftRecordSize, (PCHAR)Buffer, Volume->MftRecordSize);
     if (BytesRead != Volume->MftRecordSize)
+    {
+        /* 8: short read. Bits 23-12 are the record, bits 11-0 are the bytes. */
+        NtfsExchangeCode = 0x08000000 |
+                           (((ULONG)MFTIndex & 0xFFF) << 12) |
+                           ((ULONG)BytesRead & 0xFFF);
         return FALSE;
+    }
 
     /* Apply update sequence array fixups. */
-    return NtfsFixupRecord(Volume, (PNTFS_RECORD)Buffer);
+    if (!NtfsFixupRecord(Volume, (PNTFS_RECORD)Buffer))
+    {
+        /* 9: the record was the right length and its update sequence did not match. */
+        NtfsExchangeCode = 0x09000000 | ((ULONG)MFTIndex & 0xFFFFFF);
+        return FALSE;
+    }
+    return TRUE;
 }
 
 #if DBG
@@ -778,12 +862,15 @@ NtfsFindMftRecord(
     SIZE_T FileNameLen;
     BOOLEAN Found = FALSE;
     BOOLEAN ScanComplete = FALSE;
+    BOOLEAN FixupFailed = FALSE;
+    BOOLEAN ReadFailed = FALSE;
 
     FileNameLen = strlen(FileName);
 
-    if (Volume->DirectoryCached && Volume->CachedDirectory == MFTIndex)
+    if (Volume->DirectoryCached && Volume->CachedDirectory == MFTIndex &&
+        NtfsFindCachedName(Volume, FileName, FileNameLen, OutMFTIndex, FileAttributes))
     {
-        return NtfsFindCachedName(Volume, FileName, FileNameLen, OutMFTIndex, FileAttributes);
+        return TRUE;
     }
 
     NtfsDiscardDirectoryCache(Volume);
@@ -791,6 +878,7 @@ NtfsFindMftRecord(
     MftRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
     if (MftRecord == NULL)
     {
+        NtfsExchangeCode = 1;
         return FALSE;
     }
 
@@ -801,6 +889,7 @@ NtfsFindMftRecord(
         IndexRootCtx = NtfsFindAttribute(Volume, MftRecord, MFTIndex, NTFS_ATTR_TYPE_INDEX_ROOT, L"$I30");
         if (IndexRootCtx == NULL)
         {
+            NtfsExchangeCode = 2;
             FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
             return FALSE;
         }
@@ -808,6 +897,7 @@ NtfsFindMftRecord(
         IndexRecord = FrLdrTempAlloc(Volume->IndexRecordSize, TAG_NTFS_INDEX_REC);
         if (IndexRecord == NULL)
         {
+            NtfsExchangeCode = 3;
             FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
             return FALSE;
         }
@@ -843,6 +933,7 @@ NtfsFindMftRecord(
             IndexBitmapCtx = NtfsFindAttribute(Volume, MftRecord, MFTIndex, NTFS_ATTR_TYPE_BITMAP, L"$I30");
             if (IndexBitmapCtx == NULL)
             {
+                NtfsExchangeCode = 4;
                 TRACE("Corrupted filesystem!\n");
                 FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
                 return FALSE;
@@ -856,6 +947,7 @@ NtfsFindMftRecord(
 
             if (BitmapData == NULL)
             {
+                NtfsExchangeCode = 5;
                 FrLdrTempFree(IndexRecord, TAG_NTFS_INDEX_REC);
                 FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
                 return FALSE;
@@ -866,6 +958,7 @@ NtfsFindMftRecord(
             IndexAllocationCtx = NtfsFindAttribute(Volume, MftRecord, MFTIndex, NTFS_ATTR_TYPE_INDEX_ALLOCATION, L"$I30");
             if (IndexAllocationCtx == NULL)
             {
+                NtfsExchangeCode = 6;
                 TRACE("Corrupted filesystem!\n");
                 FrLdrTempFree(BitmapData, TAG_NTFS_BITMAP);
                 FrLdrTempFree(IndexRecord, TAG_NTFS_INDEX_REC);
@@ -898,6 +991,7 @@ NtfsFindMftRecord(
 
                 if (!NtfsFixupRecord(Volume, (PNTFS_RECORD)IndexRecord))
                 {
+                    FixupFailed = TRUE;
                     ScanComplete = FALSE;
                     break;
                 }
@@ -935,6 +1029,7 @@ NtfsFindMftRecord(
     }
     else
     {
+        ReadFailed = TRUE;
         TRACE("Can't read MFT record\n");
     }
     FrLdrTempFree(MftRecord, TAG_NTFS_MFT);
@@ -949,6 +1044,16 @@ NtfsFindMftRecord(
         NtfsDiscardDirectoryCache(Volume);
     }
 
+    if (!Found && FixupFailed)
+        NtfsExchangeCode = 7;
+    else if (!Found && !ReadFailed)
+    {
+        /* High byte is the name we failed to find. Low word is how many
+         * directory entries the scan kept. */
+        NtfsExchangeCode = ((ULONG)(UCHAR)FileName[0] << 24) |
+                           ((ULONG)FileNameLen << 16) |
+                           (Volume->CachedNameCount & 0xFFFF);
+    }
     return Found;
 }
 
@@ -1200,6 +1305,1283 @@ NtfsGetVolumeSize(
     PNTFS_VOLUME_INFO Volume = NtfsVolumes[DeviceId];
     ASSERT(Volume);
     return Volume->BootSector.VolumeSectorCount * Volume->BootSector.BytesPerSector;
+}
+
+#include <pshpack1.h>
+typedef struct
+{
+    NTFS_RECORD Record;
+    ULONGLONG Lsn;
+    ULONGLONG Vcn;
+    NTFS_INDEX_HEADER Header;
+} NTFS_INDEX_BLOCK, *PNTFS_INDEX_BLOCK;
+#include <poppack.h>
+
+/* Index entries are 8-byte aligned. drivers/filesystems/ntfs/btree.c uses the same alignment. */
+#define NTFS_ENTRY_ALIGN 8
+#define NTFS_ENTRY_CAP 512
+
+static PNTFS_VOLUME_INFO
+NtfsVolumeFromId(ULONG DeviceId)
+{
+    if (DeviceId >= MAX_FDS)
+        return NULL;
+    return NtfsVolumes[DeviceId];
+}
+
+static VOID
+NtfsPrepareFixup(PNTFS_VOLUME_INFO Volume, PNTFS_RECORD Record)
+{
+    USHORT *USA;
+    USHORT USANumber;
+    USHORT Count;
+    USHORT *Block;
+    USHORT Index;
+
+    USA = (USHORT*)((PCHAR)Record + Record->USAOffset);
+    USANumber = USA[0];
+    Count = Record->USACount - 1;
+    Block = (USHORT*)((PCHAR)Record + Volume->BootSector.BytesPerSector - 2);
+    for (Index = 0; Index < Count; Index++)
+    {
+        USA[Index + 1] = *Block;
+        *Block = USANumber;
+        Block = (USHORT*)((PCHAR)Block + Volume->BootSector.BytesPerSector);
+    }
+}
+
+static BOOLEAN
+NtfsWriteAttribute(
+    PNTFS_VOLUME_INFO Volume,
+    PNTFS_ATTR_CONTEXT Context,
+    ULONGLONG Offset,
+    PCHAR Buffer,
+    ULONG Length)
+{
+    ULONG Done = 0;
+
+    if (Context->Record.IsNonResident == FALSE)
+        return FALSE;
+    Context->CacheRunLength = 0;
+    while (Done < Length)
+    {
+        PUCHAR DataRun;
+        LONGLONG LastLCN = 0;
+        ULONGLONG Current = 0;
+        ULONGLONG Target = Offset + Done;
+        BOOLEAN Found = FALSE;
+
+        DataRun = (PUCHAR)&Context->Record + Context->Record.NonResident.MappingPairsOffset;
+        while (*DataRun != 0)
+        {
+            LONGLONG Relative;
+            ULONGLONG RunLength;
+            LONGLONG Lcn;
+            ULONGLONG RunEnd;
+
+            DataRun = NtfsDecodeRun(DataRun, &Relative, &RunLength);
+            if (Relative != -1)
+            {
+                Lcn = LastLCN + Relative;
+                LastLCN = Lcn;
+            }
+            else
+            {
+                Lcn = -1;
+            }
+            RunEnd = Current + RunLength * Volume->ClusterSize;
+            if (Target >= Current && Target < RunEnd)
+            {
+                ULONG Chunk = (ULONG)min(RunEnd - Target, (ULONGLONG)(Length - Done));
+                if (Lcn == -1)
+                    return FALSE;
+                if (!NtfsDiskWrite(Volume,
+                                   Lcn * Volume->ClusterSize + (Target - Current),
+                                   Chunk,
+                                   Buffer + Done))
+                    return FALSE;
+                Done += Chunk;
+                Found = TRUE;
+                break;
+            }
+            Current = RunEnd;
+        }
+        if (!Found)
+            return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsWriteMftRecord(PNTFS_VOLUME_INFO Volume, ULONGLONG Index, PNTFS_MFT_RECORD Record)
+{
+    PNTFS_MFT_RECORD Copy;
+    BOOLEAN Ok;
+
+    Copy = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    if (Copy == NULL)
+        return FALSE;
+    RtlCopyMemory(Copy, Record, Volume->MftRecordSize);
+    NtfsPrepareFixup(Volume, (PNTFS_RECORD)Copy);
+    Ok = NtfsWriteAttribute(Volume,
+                            Volume->MFTContext,
+                            Index * Volume->MftRecordSize,
+                            (PCHAR)Copy,
+                            Volume->MftRecordSize);
+    FrLdrTempFree(Copy, TAG_NTFS_MFT);
+    return Ok;
+}
+
+static BOOLEAN
+NtfsLookupMft(PNTFS_VOLUME_INFO Volume, PCSTR Path, PULONGLONG IndexOut)
+{
+    ULONGLONG Current = NTFS_FILE_ROOT;
+    ULONG Attributes;
+    CHAR Part[261];
+    ULONG Parts;
+    ULONG Index;
+
+    if (Path == NULL)
+        return FALSE;
+    while (*Path == '\\' || *Path == '/')
+        Path++;
+    if (*Path == '\0')
+    {
+        *IndexOut = Current;
+        return TRUE;
+    }
+
+    NtfsDiscardDirectoryCache(Volume);
+    Parts = FsGetNumPathParts(Path);
+    for (Index = 0; Index < Parts; Index++)
+    {
+        FsGetFirstNameFromPath(Part, Path);
+        while (*Path != '\0' && *Path != '\\' && *Path != '/')
+            Path++;
+        if (*Path != '\0')
+            Path++;
+        if (!NtfsFindMftRecord(Volume, Current, Part, &Current, &Attributes))
+            return FALSE;
+    }
+    *IndexOut = Current;
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsSplitPath(PCSTR Path, PCHAR Parent, ULONG ParentSize, PCHAR Name, ULONG NameSize)
+{
+    PCSTR Slash = strrchr(Path, '\\');
+    SIZE_T ParentLen;
+
+    if (Slash == NULL)
+        Slash = strrchr(Path, '/');
+    if (Slash == NULL || Slash[1] == '\0')
+        return FALSE;
+    ParentLen = (SIZE_T)(Slash - Path);
+    if (ParentLen == 0)
+    {
+        if (RtlStringCbCopyA(Parent, ParentSize, "\\") != STATUS_SUCCESS)
+            return FALSE;
+    }
+    else
+    {
+        if (ParentLen >= ParentSize)
+            return FALSE;
+        RtlCopyMemory(Parent, Path, ParentLen);
+        Parent[ParentLen] = ANSI_NULL;
+    }
+    return RtlStringCbCopyA(Name, NameSize, Slash + 1) == STATUS_SUCCESS;
+}
+
+static INT
+NtfsOrderEntries(PNTFS_INDEX_ENTRY Left, PNTFS_INDEX_ENTRY Right)
+{
+    UCHAR Count;
+    UCHAR Index;
+
+    Count = min(Left->FileName.FileNameLength, Right->FileName.FileNameLength);
+    for (Index = 0; Index < Count; Index++)
+    {
+        UCHAR First = (UCHAR)tolower((UCHAR)Left->FileName.FileName[Index]);
+        UCHAR Second = (UCHAR)tolower((UCHAR)Right->FileName.FileName[Index]);
+        if (First != Second)
+            return (First < Second) ? -1 : 1;
+    }
+    if (Left->FileName.FileNameLength == Right->FileName.FileNameLength)
+        return 0;
+    return (Left->FileName.FileNameLength < Right->FileName.FileNameLength) ? -1 : 1;
+}
+
+static PNTFS_INDEX_ENTRY
+NtfsIndexEnd(PNTFS_INDEX_HEADER Header, PCHAR Limit)
+{
+    PNTFS_INDEX_ENTRY Entry;
+
+    Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Header + Header->EntriesOffset);
+    while ((PCHAR)Entry + sizeof(NTFS_INDEX_ENTRY) <= Limit &&
+           !(Entry->Flags & NTFS_INDEX_ENTRY_END))
+    {
+        if (Entry->Length < 16)
+            return NULL;
+        Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Entry + Entry->Length);
+    }
+    if ((PCHAR)Entry >= Limit || Entry->Length < 16)
+        return NULL;
+    return Entry;
+}
+
+static BOOLEAN
+NtfsIndexIsLeaf(PNTFS_INDEX_HEADER Header, PCHAR Limit)
+{
+    PNTFS_INDEX_ENTRY Entry;
+    PNTFS_INDEX_ENTRY End;
+
+    End = NtfsIndexEnd(Header, Limit);
+    if (End == NULL)
+        return FALSE;
+    Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Header + Header->EntriesOffset);
+    while (Entry < End)
+    {
+        if (Entry->Flags & NTFS_INDEX_ENTRY_NODE)
+            return FALSE;
+        Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Entry + Entry->Length);
+    }
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsIndexInsert(PNTFS_INDEX_HEADER Header, PCHAR Limit, PNTFS_INDEX_ENTRY NewEntry)
+{
+    PNTFS_INDEX_ENTRY Entry;
+    PNTFS_INDEX_ENTRY End;
+    ULONG Used;
+    ULONG Need;
+    ULONG Tail;
+
+    End = NtfsIndexEnd(Header, Limit);
+    if (End == NULL || NewEntry->Length < 16)
+        return FALSE;
+    if (!NtfsIndexIsLeaf(Header, Limit))
+        return FALSE;
+    Need = NewEntry->Length;
+    Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Header + Header->EntriesOffset);
+    while (Entry < End)
+    {
+        if (NtfsOrderEntries(NewEntry, Entry) < 0)
+            break;
+        Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Entry + Entry->Length);
+    }
+    Used = (ULONG)((PCHAR)End + End->Length - (PCHAR)Header);
+    if (Used + Need > Header->AllocatedSize)
+        return FALSE;
+    if ((PCHAR)Header + Used + Need > Limit)
+        return FALSE;
+    Tail = (ULONG)((PCHAR)End + End->Length - (PCHAR)Entry);
+    RtlMoveMemory((PCHAR)Entry + Need, Entry, Tail);
+    RtlCopyMemory(Entry, NewEntry, Need);
+    Header->IndexLength = Used + Need;
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsIndexRemove(PNTFS_INDEX_HEADER Header, PCHAR Limit, ULONGLONG FileIndex, PBOOLEAN Removed)
+{
+    PNTFS_INDEX_ENTRY Entry;
+    PNTFS_INDEX_ENTRY End;
+
+    *Removed = FALSE;
+    for (;;)
+    {
+        End = NtfsIndexEnd(Header, Limit);
+        if (End == NULL)
+            return FALSE;
+        Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Header + Header->EntriesOffset);
+        while (Entry < End)
+        {
+            if ((Entry->Data.Directory.IndexedFile & NTFS_MFT_MASK) == (FileIndex & NTFS_MFT_MASK))
+            {
+                ULONG Length = Entry->Length;
+                ULONG Tail = (ULONG)((PCHAR)End + End->Length - ((PCHAR)Entry + Length));
+                ULONG Used;
+                RtlMoveMemory(Entry, (PCHAR)Entry + Length, Tail);
+                Used = (ULONG)((PCHAR)End + End->Length - (PCHAR)Header);
+                if (Used < Length)
+                    return FALSE;
+                Header->IndexLength = Used - Length;
+                *Removed = TRUE;
+                break;
+            }
+            Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Entry + Entry->Length);
+        }
+        if (Entry >= End)
+            return TRUE;
+    }
+}
+
+static BOOLEAN
+NtfsAttrNameIs(PNTFS_ATTR_RECORD Attr, PCWSTR Name)
+{
+    PWCHAR Got;
+    ULONG Index;
+
+    Got = (PWCHAR)((PCHAR)Attr + Attr->NameOffset);
+    for (Index = 0; Name[Index] != 0; Index++)
+    {
+        if (Index >= Attr->NameLength || Got[Index] != Name[Index])
+            return FALSE;
+    }
+    return Index == Attr->NameLength;
+}
+
+static PNTFS_ATTR_RECORD
+NtfsResidentNamed(PNTFS_MFT_RECORD Record, ULONG Type, PCWSTR Name)
+{
+    PNTFS_ATTR_RECORD Attr;
+    PCHAR End;
+
+    Attr = (PNTFS_ATTR_RECORD)((PCHAR)Record + Record->AttributesOffset);
+    End = (PCHAR)Record + Record->BytesInUse;
+    while ((PCHAR)Attr + sizeof(ULONG) < End && Attr->Type != NTFS_ATTR_TYPE_END)
+    {
+        if (Attr->Length == 0)
+            return NULL;
+        if (Attr->Type == Type && Attr->IsNonResident == FALSE && NtfsAttrNameIs(Attr, Name))
+            return Attr;
+        Attr = (PNTFS_ATTR_RECORD)((PCHAR)Attr + Attr->Length);
+    }
+    return NULL;
+}
+
+static BOOLEAN
+NtfsCopyEntry(
+    PNTFS_INDEX_ENTRY Source,
+    ULONGLONG Parent,
+    PCSTR NewName,
+    PUCHAR Out,
+    PULONG OutLength)
+{
+    PNTFS_INDEX_ENTRY Dest;
+    ULONG Length = Source->Length;
+
+    if (Length < 16 || Length > NTFS_ENTRY_CAP)
+        return FALSE;
+    if (Source->Flags & NTFS_INDEX_ENTRY_NODE)
+        return FALSE;
+    RtlCopyMemory(Out, Source, Length);
+    Dest = (PNTFS_INDEX_ENTRY)Out;
+    Dest->FileName.ParentDirectory = Parent;
+    if (NewName != NULL)
+    {
+        SIZE_T NameLength = strlen(NewName);
+        ULONG KeyLength;
+        ULONG EntryLength;
+        ULONG Index;
+
+        if (NameLength == 0 || NameLength > 255)
+            return FALSE;
+        KeyLength = FIELD_OFFSET(NTFS_FILE_NAME_ATTR, FileName) + (ULONG)NameLength * sizeof(WCHAR);
+        EntryLength = (FIELD_OFFSET(NTFS_INDEX_ENTRY, FileName) + KeyLength + (NTFS_ENTRY_ALIGN - 1)) & ~(NTFS_ENTRY_ALIGN - 1);
+        if (EntryLength > NTFS_ENTRY_CAP)
+            return FALSE;
+        if (EntryLength > Length)
+            RtlZeroMemory(Out + Length, EntryLength - Length);
+        Dest->Length = (USHORT)EntryLength;
+        Dest->KeyLength = (USHORT)KeyLength;
+        Dest->FileName.FileNameLength = (UCHAR)NameLength;
+        for (Index = 0; Index < NameLength; Index++)
+            Dest->FileName.FileName[Index] = (WCHAR)(UCHAR)NewName[Index];
+        Length = EntryLength;
+    }
+    *OutLength = Length;
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsSameFileName(PCSTR Name, PNTFS_FILE_NAME_ATTR FileName)
+{
+    SIZE_T Length = strlen(Name);
+    UCHAR Index;
+
+    if (Length != FileName->FileNameLength)
+        return FALSE;
+    for (Index = 0; Index < FileName->FileNameLength; Index++)
+    {
+        if (tolower((UCHAR)FileName->FileName[Index]) != tolower((UCHAR)Name[Index]))
+            return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsRenameInRecord(PNTFS_MFT_RECORD Record, PCSTR OldName, PCSTR NewName, ULONGLONG Parent, BOOLEAN Apply)
+{
+    PNTFS_ATTR_RECORD Attr;
+    PCHAR End;
+    SIZE_T NewLength = NewName == NULL ? 0 : strlen(NewName);
+
+    Attr = (PNTFS_ATTR_RECORD)((PCHAR)Record + Record->AttributesOffset);
+    End = (PCHAR)Record + Record->BytesInUse;
+    while ((PCHAR)Attr + sizeof(ULONG) < End && Attr->Type != NTFS_ATTR_TYPE_END)
+    {
+        PNTFS_FILE_NAME_ATTR FileName;
+        if (Attr->Length == 0)
+            return FALSE;
+        if (Attr->Type == NTFS_ATTR_TYPE_FILENAME && Attr->IsNonResident == FALSE)
+        {
+            FileName = (PNTFS_FILE_NAME_ATTR)((PCHAR)Attr + Attr->Resident.ValueOffset);
+            if (NewName != NULL &&
+                FileName->FileNameType != NTFS_FILE_NAME_DOS &&
+                NtfsSameFileName(OldName, FileName))
+            {
+                ULONG NewValue = FIELD_OFFSET(NTFS_FILE_NAME_ATTR, FileName) + (ULONG)NewLength * sizeof(WCHAR);
+                ULONG NewAttr = (Attr->Resident.ValueOffset + NewValue + (NTFS_ENTRY_ALIGN - 1)) & ~(NTFS_ENTRY_ALIGN - 1);
+                LONG Delta = (LONG)NewAttr - (LONG)Attr->Length;
+                if ((LONG)Record->BytesInUse + Delta > (LONG)Record->BytesAllocated)
+                    return FALSE;
+                if (Apply && Delta != 0)
+                {
+                    PCHAR Next = (PCHAR)Attr + Attr->Length;
+                    ULONG Tail = Record->BytesInUse - (ULONG)(Next - (PCHAR)Record);
+                    RtlMoveMemory(Next + Delta, Next, Tail);
+                    Attr->Length = NewAttr;
+                    Attr->Resident.ValueLength = NewValue;
+                    Record->BytesInUse = (ULONG)((LONG)Record->BytesInUse + Delta);
+                    End = (PCHAR)Record + Record->BytesInUse;
+                    FileName = (PNTFS_FILE_NAME_ATTR)((PCHAR)Attr + Attr->Resident.ValueOffset);
+                }
+                if (Apply)
+                {
+                    ULONG Index;
+                    FileName->FileNameLength = (UCHAR)NewLength;
+                    for (Index = 0; Index < NewLength; Index++)
+                        FileName->FileName[Index] = (WCHAR)(UCHAR)NewName[Index];
+                }
+            }
+            if (Apply)
+                FileName->ParentDirectory = Parent;
+        }
+        Attr = (PNTFS_ATTR_RECORD)((PCHAR)Attr + Attr->Length);
+    }
+    return TRUE;
+}
+
+typedef struct
+{
+    PNTFS_INDEX_ENTRY Entry;
+    ULONGLONG FileIndex;
+    ULONGLONG Chosen;
+    BOOLEAN Insert;
+    BOOLEAN Remove;
+    BOOLEAN Select;
+    BOOLEAN Changed;
+    BOOLEAN Ok;
+    BOOLEAN HaveBest;
+    ULONGLONG BestOffset;
+    INT BestRank;
+    BOOLEAN HaveFallback;
+    ULONGLONG FallbackOffset;
+    INT FallbackRank;
+    BOOLEAN Retarget;
+    ULONGLONG FromIndex;
+    ULONGLONG ToRef;
+    ULONG Hits;
+} NTFS_INDEX_JOB;
+
+static PCHAR
+NtfsHeaderLimit(PNTFS_INDEX_HEADER Header, PCHAR HardLimit)
+{
+    PCHAR Soft = (PCHAR)Header + Header->AllocatedSize;
+    if (Soft > HardLimit)
+        return HardLimit;
+    return Soft;
+}
+
+static VOID
+NtfsConsiderLeaf(NTFS_INDEX_JOB *Job, PNTFS_INDEX_HEADER Header, PCHAR Limit, ULONGLONG Offset)
+{
+    PNTFS_INDEX_ENTRY First;
+    PNTFS_INDEX_ENTRY End;
+    INT Order;
+
+    if (!NtfsIndexIsLeaf(Header, Limit))
+        return;
+    End = NtfsIndexEnd(Header, Limit);
+    if (End == NULL)
+        return;
+    First = (PNTFS_INDEX_ENTRY)((PCHAR)Header + Header->EntriesOffset);
+    if (First == End)
+    {
+        if (!Job->HaveFallback)
+        {
+            Job->HaveFallback = TRUE;
+            Job->FallbackOffset = Offset;
+            Job->FallbackRank = 0x7FFFFFFF;
+        }
+        return;
+    }
+    Order = NtfsOrderEntries(First, Job->Entry);
+    if (Order <= 0)
+    {
+        if (!Job->HaveBest || Order > Job->BestRank)
+        {
+            Job->HaveBest = TRUE;
+            Job->BestOffset = Offset;
+            Job->BestRank = Order;
+        }
+    }
+    else if (!Job->HaveFallback || Order < Job->FallbackRank)
+    {
+        Job->HaveFallback = TRUE;
+        Job->FallbackOffset = Offset;
+        Job->FallbackRank = Order;
+    }
+}
+
+static BOOLEAN
+NtfsTouchHeader(NTFS_INDEX_JOB *Job, PNTFS_INDEX_HEADER Header, PCHAR Limit, ULONGLONG Offset)
+{
+    if (Job->Select)
+    {
+        NtfsConsiderLeaf(Job, Header, Limit, Offset);
+        return TRUE;
+    }
+    if (Job->Retarget)
+    {
+        PNTFS_INDEX_ENTRY Entry;
+        PNTFS_INDEX_ENTRY End;
+
+        if (!NtfsIndexIsLeaf(Header, Limit))
+            return TRUE;
+        End = NtfsIndexEnd(Header, Limit);
+        if (End == NULL)
+            return TRUE;
+        Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Header + Header->EntriesOffset);
+        while (Entry < End && (Entry->Flags & NTFS_INDEX_ENTRY_END) == 0)
+        {
+            if ((Entry->Data.Directory.IndexedFile & NTFS_MFT_MASK) == Job->FromIndex)
+            {
+                Entry->Data.Directory.IndexedFile = Job->ToRef;
+                Job->Changed = TRUE;
+                Job->Hits++;
+            }
+            if (Entry->Length < 16)
+            {
+                Job->Ok = FALSE;
+                return FALSE;
+            }
+            Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Entry + Entry->Length);
+        }
+        return TRUE;
+    }
+    if (Job->Insert && Offset == Job->Chosen)
+    {
+        Job->Ok = NtfsIndexInsert(Header, Limit, Job->Entry);
+        Job->Changed = Job->Ok;
+        return Job->Ok;
+    }
+    if (Job->Remove)
+    {
+        BOOLEAN Removed = FALSE;
+        if (!NtfsIndexRemove(Header, Limit, Job->FileIndex, &Removed))
+        {
+            Job->Ok = FALSE;
+            return FALSE;
+        }
+        if (Removed)
+            Job->Changed = TRUE;
+    }
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsGrowResidentRoot(PNTFS_MFT_RECORD Record, PNTFS_ATTR_RECORD RootAttr, ULONG Extra)
+{
+    PNTFS_INDEX_ROOT IndexRoot;
+    PCHAR Next;
+    PCHAR End;
+    ULONG Tail;
+
+    /* The new bytes stay in this file record. A full record is not split. */
+    Extra = (Extra + (NTFS_ENTRY_ALIGN - 1)) & ~(NTFS_ENTRY_ALIGN - 1);
+    if (Extra == 0)
+        return TRUE;
+    if ((ULONG)RootAttr->Resident.ValueOffset + RootAttr->Resident.ValueLength != RootAttr->Length)
+        return FALSE;
+    if (Record->BytesInUse > Record->BytesAllocated ||
+        Extra > Record->BytesAllocated - Record->BytesInUse)
+        return FALSE;
+    Next = (PCHAR)RootAttr + RootAttr->Length;
+    End = (PCHAR)Record + Record->BytesInUse;
+    if (Next > End)
+        return FALSE;
+    Tail = (ULONG)(End - Next);
+    RtlMoveMemory(Next + Extra, Next, Tail);
+    RtlZeroMemory(Next, Extra);
+    RootAttr->Length += Extra;
+    RootAttr->Resident.ValueLength += Extra;
+    Record->BytesInUse += Extra;
+    IndexRoot = (PNTFS_INDEX_ROOT)((PCHAR)RootAttr + RootAttr->Resident.ValueOffset);
+    IndexRoot->IndexHeader.AllocatedSize += Extra;
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsTouchDirectory(PNTFS_VOLUME_INFO Volume, ULONGLONG DirIndex, NTFS_INDEX_JOB *Job)
+{
+    PNTFS_MFT_RECORD Record;
+    PNTFS_ATTR_RECORD RootAttr;
+    PNTFS_INDEX_ROOT IndexRoot;
+    PCHAR RootLimit;
+    BOOLEAN Ok = TRUE;
+
+    Record = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    if (Record == NULL)
+        return FALSE;
+    if (!NtfsReadMftRecord(Volume, DirIndex, Record))
+    {
+        FrLdrTempFree(Record, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    RootAttr = NtfsResidentNamed(Record, NTFS_ATTR_TYPE_INDEX_ROOT, L"$I30");
+    if (RootAttr == NULL)
+    {
+        FrLdrTempFree(Record, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    IndexRoot = (PNTFS_INDEX_ROOT)((PCHAR)RootAttr + RootAttr->Resident.ValueOffset);
+    RootLimit = NtfsHeaderLimit(&IndexRoot->IndexHeader,
+                                (PCHAR)RootAttr + RootAttr->Resident.ValueOffset + RootAttr->Resident.ValueLength);
+    if ((IndexRoot->IndexHeader.Flags & NTFS_LARGE_INDEX) == 0)
+    {
+        if (Job->Insert && Job->Entry != NULL &&
+            Job->Entry->Length >= 16 &&
+            IndexRoot->IndexHeader.IndexLength + Job->Entry->Length >
+                IndexRoot->IndexHeader.AllocatedSize)
+        {
+            ULONG Extra = (IndexRoot->IndexHeader.IndexLength + Job->Entry->Length) -
+                          IndexRoot->IndexHeader.AllocatedSize;
+
+            if (!NtfsGrowResidentRoot(Record, RootAttr, Extra))
+            {
+                FrLdrTempFree(Record, TAG_NTFS_MFT);
+                return FALSE;
+            }
+            IndexRoot = (PNTFS_INDEX_ROOT)((PCHAR)RootAttr + RootAttr->Resident.ValueOffset);
+            RootLimit = NtfsHeaderLimit(&IndexRoot->IndexHeader,
+                                        (PCHAR)RootAttr + RootAttr->Resident.ValueOffset +
+                                        RootAttr->Resident.ValueLength);
+        }
+        Job->Changed = FALSE;
+        Ok = NtfsTouchHeader(Job, &IndexRoot->IndexHeader, RootLimit, (ULONGLONG)-1);
+        if (Ok && Job->Changed)
+            Ok = NtfsWriteMftRecord(Volume, DirIndex, Record);
+        FrLdrTempFree(Record, TAG_NTFS_MFT);
+        return Ok;
+    }
+
+    {
+        PNTFS_ATTR_CONTEXT BitmapCtx;
+        PNTFS_ATTR_CONTEXT AllocCtx;
+        ULONGLONG BitmapSize;
+        ULONGLONG AllocSize;
+        PCHAR Bitmap;
+        PCHAR Block;
+        ULONG BlockSize = IndexRoot->IndexBlockSize;
+        ULONG Offset;
+
+        if (BlockSize == 0 || BlockSize > Volume->IndexRecordSize)
+            BlockSize = Volume->IndexRecordSize;
+        BitmapCtx = NtfsFindAttribute(Volume, Record, DirIndex, NTFS_ATTR_TYPE_BITMAP, L"$I30");
+        AllocCtx = NtfsFindAttribute(Volume, Record, DirIndex, NTFS_ATTR_TYPE_INDEX_ALLOCATION, L"$I30");
+        if (BitmapCtx == NULL || AllocCtx == NULL)
+        {
+            if (BitmapCtx) NtfsReleaseAttributeContext(BitmapCtx);
+            if (AllocCtx) NtfsReleaseAttributeContext(AllocCtx);
+            FrLdrTempFree(Record, TAG_NTFS_MFT);
+            return FALSE;
+        }
+        BitmapSize = NtfsGetAttributeSize(&BitmapCtx->Record);
+        AllocSize = NtfsGetAttributeSize(&AllocCtx->Record);
+        Bitmap = FrLdrTempAlloc((ULONG)BitmapSize, TAG_NTFS_BITMAP);
+        Block = FrLdrTempAlloc(BlockSize, TAG_NTFS_INDEX_REC);
+        if (Bitmap == NULL || Block == NULL || BitmapSize > 0xFFFFFFFF)
+        {
+            if (Bitmap) FrLdrTempFree(Bitmap, TAG_NTFS_BITMAP);
+            if (Block) FrLdrTempFree(Block, TAG_NTFS_INDEX_REC);
+            NtfsReleaseAttributeContext(BitmapCtx);
+            NtfsReleaseAttributeContext(AllocCtx);
+            FrLdrTempFree(Record, TAG_NTFS_MFT);
+            return FALSE;
+        }
+        if (NtfsReadAttribute(Volume, BitmapCtx, 0, Bitmap, (ULONG)BitmapSize) != (ULONG)BitmapSize)
+            Ok = FALSE;
+        for (Offset = 0; Ok && Offset < AllocSize; Offset += BlockSize)
+        {
+            ULONG BitIndex = Offset / BlockSize;
+            PNTFS_INDEX_BLOCK IndexBlock;
+            PCHAR Limit;
+            BOOLEAN WriteBack;
+
+            if ((Bitmap[BitIndex >> 3] & (1 << (BitIndex & 7))) == 0)
+                continue;
+            if (NtfsReadAttribute(Volume, AllocCtx, Offset, Block, BlockSize) != BlockSize ||
+                !NtfsFixupRecord(Volume, (PNTFS_RECORD)Block))
+            {
+                Ok = FALSE;
+                break;
+            }
+            IndexBlock = (PNTFS_INDEX_BLOCK)Block;
+            Limit = NtfsHeaderLimit(&IndexBlock->Header, Block + BlockSize);
+            Job->Changed = FALSE;
+            if (!NtfsTouchHeader(Job, &IndexBlock->Header, Limit, Offset))
+            {
+                Ok = FALSE;
+                break;
+            }
+            WriteBack = Job->Changed;
+            if (WriteBack)
+            {
+                NtfsPrepareFixup(Volume, (PNTFS_RECORD)Block);
+                if (!NtfsWriteAttribute(Volume, AllocCtx, Offset, Block, BlockSize))
+                    Ok = FALSE;
+            }
+        }
+        FrLdrTempFree(Bitmap, TAG_NTFS_BITMAP);
+        FrLdrTempFree(Block, TAG_NTFS_INDEX_REC);
+        NtfsReleaseAttributeContext(BitmapCtx);
+        NtfsReleaseAttributeContext(AllocCtx);
+    }
+    FrLdrTempFree(Record, TAG_NTFS_MFT);
+    NtfsDiscardDirectoryCache(Volume);
+    return Ok;
+}
+
+static BOOLEAN
+NtfsDirectoryInsert(PNTFS_VOLUME_INFO Volume, ULONGLONG DirIndex, PNTFS_INDEX_ENTRY Entry)
+{
+    NTFS_INDEX_JOB Job;
+    ULONGLONG Chosen;
+    RtlZeroMemory(&Job, sizeof(Job));
+    Job.Entry = Entry;
+    Job.Select = TRUE;
+    Job.Ok = TRUE;
+    if (!NtfsTouchDirectory(Volume, DirIndex, &Job))
+        return FALSE;
+    if (Job.HaveBest)
+        Chosen = Job.BestOffset;
+    else if (Job.HaveFallback)
+        Chosen = Job.FallbackOffset;
+    else
+        return FALSE;
+    RtlZeroMemory(&Job, sizeof(Job));
+    Job.Entry = Entry;
+    Job.Insert = TRUE;
+    Job.Chosen = Chosen;
+    Job.Ok = TRUE;
+    return NtfsTouchDirectory(Volume, DirIndex, &Job) && Job.Ok;
+}
+
+BOOLEAN
+NtfsPathExists(_In_ ULONG DeviceId, _In_ PCSTR Path)
+{
+    PNTFS_VOLUME_INFO Volume = NtfsVolumeFromId(DeviceId);
+    ULONGLONG Index;
+
+    if (Volume == NULL)
+        return FALSE;
+    return NtfsLookupMft(Volume, Path, &Index);
+}
+
+BOOLEAN
+NtfsDeleteFile(_In_ ULONG DeviceId, _In_ PCSTR Path)
+{
+    PNTFS_VOLUME_INFO Volume = NtfsVolumeFromId(DeviceId);
+    CHAR Parent[261];
+    CHAR Name[261];
+    ULONGLONG FileIndex;
+    ULONGLONG DirIndex;
+    PNTFS_MFT_RECORD Record;
+    NTFS_INDEX_JOB Job;
+
+    if (Volume == NULL)
+        return FALSE;
+    if (!NtfsLookupMft(Volume, Path, &FileIndex))
+        return TRUE;
+    if (!NtfsSplitPath(Path, Parent, sizeof(Parent), Name, sizeof(Name)))
+        return FALSE;
+    if (!NtfsLookupMft(Volume, Parent, &DirIndex))
+        return FALSE;
+    RtlZeroMemory(&Job, sizeof(Job));
+    Job.Remove = TRUE;
+    Job.FileIndex = FileIndex;
+    Job.Ok = TRUE;
+    if (!NtfsTouchDirectory(Volume, DirIndex, &Job))
+        return FALSE;
+    Record = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    if (Record == NULL)
+        return FALSE;
+    if (!NtfsReadMftRecord(Volume, FileIndex, Record))
+    {
+        FrLdrTempFree(Record, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    if (NtfsResidentNamed(Record, NTFS_ATTR_TYPE_INDEX_ROOT, L"$I30") != NULL)
+    {
+        FrLdrTempFree(Record, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    Record->Flags &= ~NTFS_MFT_IN_USE;
+    if (!NtfsWriteMftRecord(Volume, FileIndex, Record))
+    {
+        FrLdrTempFree(Record, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    FrLdrTempFree(Record, TAG_NTFS_MFT);
+    return TRUE;
+}
+
+static BOOLEAN
+NtfsRetargetLinks(PNTFS_VOLUME_INFO Volume, ULONGLONG DirIndex, ULONGLONG FromIndex, ULONGLONG ToRef)
+{
+    NTFS_INDEX_JOB Job;
+
+    RtlZeroMemory(&Job, sizeof(Job));
+    Job.Retarget = TRUE;
+    Job.FromIndex = FromIndex & NTFS_MFT_MASK;
+    Job.ToRef = ToRef;
+    Job.Ok = TRUE;
+    if (!NtfsTouchDirectory(Volume, DirIndex, &Job))
+        return FALSE;
+    return Job.Ok && Job.Hits > 0;
+}
+
+static ULONGLONG
+NtfsFileRef(PNTFS_MFT_RECORD Record, ULONGLONG Index)
+{
+    return ((ULONGLONG)Record->SequenceNumber << 48) | (Index & NTFS_MFT_MASK);
+}
+
+BOOLEAN
+NtfsStampFile(_In_ ULONG DeviceId, _In_ PCSTR Path, _In_ PCSTR Marker)
+{
+    PNTFS_VOLUME_INFO Volume = NtfsVolumeFromId(DeviceId);
+    ULONGLONG Index;
+    PNTFS_MFT_RECORD Record;
+    PNTFS_ATTR_RECORD Attr;
+    PCHAR End;
+    SIZE_T MarkerLen;
+    BOOLEAN Stamped = FALSE;
+    BOOLEAN Resident = FALSE;
+
+    if (Volume == NULL || Marker == NULL)
+        return FALSE;
+    MarkerLen = strlen(Marker);
+    if (MarkerLen == 0 || MarkerLen > 0xFFFFFFFF || !NtfsLookupMft(Volume, Path, &Index))
+        return FALSE;
+    Record = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    if (Record == NULL || !NtfsReadMftRecord(Volume, Index, Record))
+    {
+        if (Record != NULL)
+            FrLdrTempFree(Record, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    Attr = (PNTFS_ATTR_RECORD)((PCHAR)Record + Record->AttributesOffset);
+    End = (PCHAR)Record + Record->BytesInUse;
+    while ((PCHAR)Attr + sizeof(ULONG) < End && Attr->Type != NTFS_ATTR_TYPE_END)
+    {
+        if (Attr->Length == 0)
+            break;
+        if (Attr->Type == NTFS_ATTR_TYPE_DATA && Attr->NameLength == 0)
+        {
+            if (Attr->IsNonResident == FALSE && Attr->Resident.ValueLength >= MarkerLen)
+            {
+                RtlCopyMemory((PCHAR)Attr + Attr->Resident.ValueOffset, Marker, MarkerLen);
+                Resident = TRUE;
+                Stamped = TRUE;
+            }
+            else if (Attr->IsNonResident != FALSE &&
+                     (ULONGLONG)Attr->NonResident.DataSize >= MarkerLen)
+            {
+                PNTFS_ATTR_CONTEXT Context;
+
+                Context = NtfsFindAttribute(Volume, Record, Index, NTFS_ATTR_TYPE_DATA, L"");
+                if (Context != NULL)
+                {
+                    Stamped = NtfsWriteAttribute(Volume, Context, 0, (PCHAR)Marker, (ULONG)MarkerLen);
+                    NtfsReleaseAttributeContext(Context);
+                }
+            }
+            break;
+        }
+        Attr = (PNTFS_ATTR_RECORD)((PCHAR)Attr + Attr->Length);
+    }
+    if (Stamped && Resident)
+        Stamped = NtfsWriteMftRecord(Volume, Index, Record);
+    FrLdrTempFree(Record, TAG_NTFS_MFT);
+    return Stamped;
+}
+
+ULONG
+NtfsLastExchangeCode(VOID)
+{
+    return NtfsExchangeCode;
+}
+
+BOOLEAN
+NtfsExchangeLinks(_In_ ULONG DeviceId, _In_ PCSTR StagedPath, _In_ PCSTR DestPath)
+{
+    PNTFS_VOLUME_INFO Volume = NtfsVolumeFromId(DeviceId);
+    CHAR StagedParent[261];
+    CHAR StagedName[261];
+    CHAR DestParent[261];
+    CHAR DestName[261];
+    ULONGLONG StagedIndex;
+    ULONGLONG DestIndex;
+    ULONGLONG StagedDir;
+    ULONGLONG DestDir;
+    PNTFS_MFT_RECORD StagedRecord = NULL;
+    PNTFS_MFT_RECORD DestRecord = NULL;
+    PNTFS_MFT_RECORD StagedDirRecord = NULL;
+    PNTFS_MFT_RECORD DestDirRecord = NULL;
+    ULONGLONG StagedRef = 0;
+    ULONGLONG DestRef = 0;
+    BOOLEAN Linked = FALSE;
+
+    NtfsExchangeCode = 1;
+    if (Volume == NULL)
+        return FALSE;
+    if (!NtfsSplitPath(StagedPath, StagedParent, sizeof(StagedParent), StagedName, sizeof(StagedName)) ||
+        !NtfsSplitPath(DestPath, DestParent, sizeof(DestParent), DestName, sizeof(DestName)))
+    {
+        NtfsExchangeCode = 2;
+        return FALSE;
+    }
+    if (!NtfsLookupMft(Volume, StagedPath, &StagedIndex) ||
+        !NtfsLookupMft(Volume, DestPath, &DestIndex) ||
+        !NtfsLookupMft(Volume, StagedParent, &StagedDir) ||
+        !NtfsLookupMft(Volume, DestParent, &DestDir))
+    {
+        NtfsExchangeCode = 3;
+        return FALSE;
+    }
+    if ((StagedIndex & NTFS_MFT_MASK) == (DestIndex & NTFS_MFT_MASK))
+    {
+        NtfsExchangeCode = 4;
+        return FALSE;
+    }
+
+    StagedRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    DestRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    StagedDirRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    DestDirRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    if (StagedRecord == NULL || DestRecord == NULL || StagedDirRecord == NULL || DestDirRecord == NULL)
+    {
+        NtfsExchangeCode = 5;
+        goto Fail;
+    }
+    if (!NtfsReadMftRecord(Volume, StagedIndex, StagedRecord) ||
+        !NtfsReadMftRecord(Volume, DestIndex, DestRecord) ||
+        !NtfsReadMftRecord(Volume, StagedDir, StagedDirRecord) ||
+        !NtfsReadMftRecord(Volume, DestDir, DestDirRecord))
+    {
+        NtfsExchangeCode = 6;
+        goto Fail;
+    }
+
+    StagedRef = NtfsFileRef(StagedRecord, StagedIndex);
+    DestRef = NtfsFileRef(DestRecord, DestIndex);
+    if (!NtfsRenameInRecord(StagedRecord, StagedName, DestName, NtfsFileRef(DestDirRecord, DestDir), TRUE) ||
+        !NtfsRenameInRecord(DestRecord, DestName, StagedName, NtfsFileRef(StagedDirRecord, StagedDir), TRUE))
+    {
+        NtfsExchangeCode = 7;
+        goto Fail;
+    }
+    if (!NtfsRetargetLinks(Volume, DestDir, DestIndex, StagedRef))
+    {
+        NtfsExchangeCode = 8;
+        goto Fail;
+    }
+    Linked = TRUE;
+    if (!NtfsRetargetLinks(Volume, StagedDir, StagedIndex, DestRef))
+    {
+        NtfsExchangeCode = 9;
+        goto Fail;
+    }
+    if (!NtfsWriteMftRecord(Volume, StagedIndex, StagedRecord) ||
+        !NtfsWriteMftRecord(Volume, DestIndex, DestRecord))
+    {
+        NtfsExchangeCode = 10;
+        goto Fail;
+    }
+
+    FrLdrTempFree(StagedRecord, TAG_NTFS_MFT);
+    FrLdrTempFree(DestRecord, TAG_NTFS_MFT);
+    FrLdrTempFree(StagedDirRecord, TAG_NTFS_MFT);
+    FrLdrTempFree(DestDirRecord, TAG_NTFS_MFT);
+    NtfsDiscardDirectoryCache(Volume);
+    return TRUE;
+
+Fail:
+    if (Linked)
+    {
+        NtfsRetargetLinks(Volume, DestDir, StagedIndex, DestRef);
+        NtfsRetargetLinks(Volume, StagedDir, DestIndex, StagedRef);
+    }
+    if (StagedRecord) FrLdrTempFree(StagedRecord, TAG_NTFS_MFT);
+    if (DestRecord) FrLdrTempFree(DestRecord, TAG_NTFS_MFT);
+    if (StagedDirRecord) FrLdrTempFree(StagedDirRecord, TAG_NTFS_MFT);
+    if (DestDirRecord) FrLdrTempFree(DestDirRecord, TAG_NTFS_MFT);
+    return FALSE;
+}
+
+BOOLEAN
+NtfsMoveFile(_In_ ULONG DeviceId, _In_ PCSTR ExistingPath, _In_ PCSTR NewPath)
+{
+    PNTFS_VOLUME_INFO Volume = NtfsVolumeFromId(DeviceId);
+    CHAR OldParent[261];
+    CHAR OldName[261];
+    CHAR NewParent[261];
+    CHAR NewName[261];
+    CHAR DestPath[261];
+    ULONGLONG FileIndex;
+    ULONGLONG OldDir;
+    ULONGLONG NewDir;
+    PNTFS_MFT_RECORD FileRecord;
+    PNTFS_MFT_RECORD DirRecord;
+    ULONGLONG ParentRef;
+    UCHAR Entries[3][NTFS_ENTRY_CAP];
+    ULONG Lengths[3];
+    ULONG Count = 0;
+
+    UNREFERENCED_PARAMETER(DestPath);
+    if (Volume == NULL)
+        return FALSE;
+    if (!NtfsSplitPath(ExistingPath, OldParent, sizeof(OldParent), OldName, sizeof(OldName)) ||
+        !NtfsSplitPath(NewPath, NewParent, sizeof(NewParent), NewName, sizeof(NewName)))
+        return FALSE;
+    if (!NtfsLookupMft(Volume, ExistingPath, &FileIndex) ||
+        !NtfsLookupMft(Volume, OldParent, &OldDir) ||
+        !NtfsLookupMft(Volume, NewParent, &NewDir))
+        return FALSE;
+    if (NtfsLookupMft(Volume, NewPath, &ParentRef))
+        return FALSE;
+
+    DirRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    FileRecord = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+    if (DirRecord == NULL || FileRecord == NULL)
+    {
+        if (DirRecord) FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+        if (FileRecord) FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    if (!NtfsReadMftRecord(Volume, NewDir, DirRecord) ||
+        !NtfsReadMftRecord(Volume, FileIndex, FileRecord))
+    {
+        FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+        FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    ParentRef = ((ULONGLONG)DirRecord->SequenceNumber << 48) | (NewDir & NTFS_MFT_MASK);
+    if (!NtfsRenameInRecord(FileRecord, OldName, NewName, ParentRef, FALSE))
+    {
+        FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+        FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+        return FALSE;
+    }
+
+    {
+        PNTFS_MFT_RECORD Source = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+        PNTFS_ATTR_RECORD RootAttr;
+        PNTFS_INDEX_ROOT IndexRoot;
+        PNTFS_INDEX_ENTRY Entry;
+        PNTFS_INDEX_ENTRY End;
+        PCHAR Limit;
+
+        if (Source == NULL || !NtfsReadMftRecord(Volume, OldDir, Source))
+        {
+            if (Source) FrLdrTempFree(Source, TAG_NTFS_MFT);
+            FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+            FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+            return FALSE;
+        }
+        RootAttr = NtfsResidentNamed(Source, NTFS_ATTR_TYPE_INDEX_ROOT, L"$I30");
+        if (RootAttr == NULL)
+        {
+            FrLdrTempFree(Source, TAG_NTFS_MFT);
+            FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+            FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+            return FALSE;
+        }
+        IndexRoot = (PNTFS_INDEX_ROOT)((PCHAR)RootAttr + RootAttr->Resident.ValueOffset);
+        if (IndexRoot->IndexHeader.Flags & NTFS_LARGE_INDEX)
+        {
+            FrLdrTempFree(Source, TAG_NTFS_MFT);
+        }
+        else
+        {
+            Limit = NtfsHeaderLimit(&IndexRoot->IndexHeader,
+                                    (PCHAR)RootAttr + RootAttr->Resident.ValueOffset + RootAttr->Resident.ValueLength);
+            End = NtfsIndexEnd(&IndexRoot->IndexHeader, Limit);
+            Entry = (PNTFS_INDEX_ENTRY)((PCHAR)&IndexRoot->IndexHeader + IndexRoot->IndexHeader.EntriesOffset);
+            while (Entry != NULL && End != NULL && Entry < End && Count < 3)
+            {
+                if ((Entry->Data.Directory.IndexedFile & NTFS_MFT_MASK) == FileIndex)
+                {
+                    PCSTR Rename = NULL;
+                    if (Entry->FileName.FileNameType != NTFS_FILE_NAME_DOS &&
+                        NtfsCompareFileName(OldName, strlen(OldName), Entry))
+                        Rename = (_stricmp(OldName, NewName) == 0) ? NULL : NewName;
+                    if (!NtfsCopyEntry(Entry, ParentRef, Rename, Entries[Count], &Lengths[Count]))
+                    {
+                        FrLdrTempFree(Source, TAG_NTFS_MFT);
+                        FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+                        FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+                        return FALSE;
+                    }
+                    Count++;
+                }
+                Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Entry + Entry->Length);
+            }
+            FrLdrTempFree(Source, TAG_NTFS_MFT);
+        }
+    }
+
+    if (Count == 0)
+    {
+        /* A large directory keeps the file in an index block. Read those blocks. */
+        PNTFS_MFT_RECORD Source = FrLdrTempAlloc(Volume->MftRecordSize, TAG_NTFS_MFT);
+        PNTFS_ATTR_RECORD RootAttr;
+        PNTFS_INDEX_ROOT IndexRoot;
+        PNTFS_ATTR_CONTEXT BitmapCtx = NULL;
+        PNTFS_ATTR_CONTEXT AllocCtx = NULL;
+        PCHAR Bitmap = NULL;
+        PCHAR Block = NULL;
+        ULONG BlockSize;
+        ULONGLONG BitmapSize;
+        ULONGLONG AllocSize;
+        ULONG Offset;
+        BOOLEAN Ok = TRUE;
+
+        if (Source == NULL || !NtfsReadMftRecord(Volume, OldDir, Source))
+            Ok = FALSE;
+        if (Ok)
+        {
+            RootAttr = NtfsResidentNamed(Source, NTFS_ATTR_TYPE_INDEX_ROOT, L"$I30");
+            Ok = RootAttr != NULL;
+        }
+        if (Ok)
+        {
+            IndexRoot = (PNTFS_INDEX_ROOT)((PCHAR)RootAttr + RootAttr->Resident.ValueOffset);
+            BlockSize = IndexRoot->IndexBlockSize;
+            if (BlockSize == 0 || BlockSize > Volume->IndexRecordSize)
+                BlockSize = Volume->IndexRecordSize;
+            BitmapCtx = NtfsFindAttribute(Volume, Source, OldDir, NTFS_ATTR_TYPE_BITMAP, L"$I30");
+            AllocCtx = NtfsFindAttribute(Volume, Source, OldDir, NTFS_ATTR_TYPE_INDEX_ALLOCATION, L"$I30");
+            Ok = BitmapCtx != NULL && AllocCtx != NULL;
+        }
+        if (Ok)
+        {
+            BitmapSize = NtfsGetAttributeSize(&BitmapCtx->Record);
+            AllocSize = NtfsGetAttributeSize(&AllocCtx->Record);
+            Bitmap = FrLdrTempAlloc((ULONG)BitmapSize, TAG_NTFS_BITMAP);
+            Block = FrLdrTempAlloc(BlockSize, TAG_NTFS_INDEX_REC);
+            Ok = Bitmap != NULL && Block != NULL &&
+                 NtfsReadAttribute(Volume, BitmapCtx, 0, Bitmap, (ULONG)BitmapSize) == (ULONG)BitmapSize;
+        }
+        if (Ok)
+        {
+            for (Offset = 0; Offset < AllocSize && Count < 3; Offset += BlockSize)
+            {
+                ULONG BitIndex = Offset / BlockSize;
+                PNTFS_INDEX_BLOCK IndexBlock;
+                PNTFS_INDEX_ENTRY Entry;
+                PNTFS_INDEX_ENTRY End;
+                PCHAR Limit;
+                if ((Bitmap[BitIndex >> 3] & (1 << (BitIndex & 7))) == 0)
+                    continue;
+                if (NtfsReadAttribute(Volume, AllocCtx, Offset, Block, BlockSize) != BlockSize ||
+                    !NtfsFixupRecord(Volume, (PNTFS_RECORD)Block))
+                {
+                    Ok = FALSE;
+                    break;
+                }
+                IndexBlock = (PNTFS_INDEX_BLOCK)Block;
+                Limit = NtfsHeaderLimit(&IndexBlock->Header, Block + BlockSize);
+                if (!NtfsIndexIsLeaf(&IndexBlock->Header, Limit))
+                    continue;
+                End = NtfsIndexEnd(&IndexBlock->Header, Limit);
+                Entry = (PNTFS_INDEX_ENTRY)((PCHAR)&IndexBlock->Header + IndexBlock->Header.EntriesOffset);
+                while (Entry < End && Count < 3)
+                {
+                    if ((Entry->Data.Directory.IndexedFile & NTFS_MFT_MASK) == FileIndex)
+                    {
+                        PCSTR Rename = NULL;
+                        if (Entry->FileName.FileNameType != NTFS_FILE_NAME_DOS &&
+                            NtfsCompareFileName(OldName, strlen(OldName), Entry))
+                            Rename = (_stricmp(OldName, NewName) == 0) ? NULL : NewName;
+                        if (!NtfsCopyEntry(Entry, ParentRef, Rename, Entries[Count], &Lengths[Count]))
+                            Ok = FALSE;
+                        else
+                            Count++;
+                    }
+                    Entry = (PNTFS_INDEX_ENTRY)((PCHAR)Entry + Entry->Length);
+                }
+            }
+        }
+        if (Bitmap) FrLdrTempFree(Bitmap, TAG_NTFS_BITMAP);
+        if (Block) FrLdrTempFree(Block, TAG_NTFS_INDEX_REC);
+        if (BitmapCtx) NtfsReleaseAttributeContext(BitmapCtx);
+        if (AllocCtx) NtfsReleaseAttributeContext(AllocCtx);
+        if (Source) FrLdrTempFree(Source, TAG_NTFS_MFT);
+        if (!Ok || Count == 0)
+        {
+            FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+            FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+            return FALSE;
+        }
+    }
+
+    {
+        ULONG Index;
+        NTFS_INDEX_JOB Undo;
+        for (Index = 0; Index < Count; Index++)
+        {
+            if (!NtfsDirectoryInsert(Volume, NewDir, (PNTFS_INDEX_ENTRY)Entries[Index]))
+            {
+                RtlZeroMemory(&Undo, sizeof(Undo));
+                Undo.Remove = TRUE;
+                Undo.FileIndex = FileIndex;
+                Undo.Ok = TRUE;
+                NtfsTouchDirectory(Volume, NewDir, &Undo);
+                FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+                FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+                return FALSE;
+            }
+        }
+        RtlZeroMemory(&Undo, sizeof(Undo));
+        Undo.Remove = TRUE;
+        Undo.FileIndex = FileIndex;
+        Undo.Ok = TRUE;
+        if (!NtfsTouchDirectory(Volume, OldDir, &Undo))
+        {
+            NtfsTouchDirectory(Volume, NewDir, &Undo);
+            FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+            FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+            return FALSE;
+        }
+    }
+
+    if (!NtfsRenameInRecord(FileRecord, OldName, NewName, ParentRef, TRUE) ||
+        !NtfsWriteMftRecord(Volume, FileIndex, FileRecord))
+    {
+        FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+        FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+        return FALSE;
+    }
+    FrLdrTempFree(DirRecord, TAG_NTFS_MFT);
+    FrLdrTempFree(FileRecord, TAG_NTFS_MFT);
+    NtfsDiscardDirectoryCache(Volume);
+    return TRUE;
 }
 
 

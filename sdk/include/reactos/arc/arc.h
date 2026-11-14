@@ -268,6 +268,15 @@ ARC_STATUS
 
 typedef
 ARC_STATUS
+(*ARC_WRITE)(
+    ULONG FileId,
+    VOID* Buffer,
+    ULONG N,
+    ULONG* Count
+);
+
+typedef
+ARC_STATUS
 (*ARC_SEEK)(
     ULONG FileId,
     LARGE_INTEGER* Position,

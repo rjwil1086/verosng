@@ -8,6 +8,7 @@
 @ cdecl ArcOpen()
 @ cdecl ArcRead()
 @ cdecl ArcSeek()
+@ cdecl ArcWrite()
 
 # Debug
 @ cdecl DbgParseDebugChannels()
@@ -96,8 +97,15 @@
 @ cdecl FrldrGetBootDrive()
 @ cdecl FrldrGetBootPartition()
 @ cdecl FrLdrGetBootPath()
+@ cdecl FsGetDeviceId()
 @ cdecl FsGetServiceName()
 @ cdecl FsOpenFile() # Why not ArcOpen?
+@ cdecl NtfsDeleteFile()
+@ cdecl NtfsMoveFile()
+@ cdecl NtfsExchangeLinks()
+@ cdecl NtfsLastExchangeCode()
+@ cdecl NtfsStampFile()
+@ cdecl NtfsPathExists()
 @ cdecl GetArgumentValue()
 @ cdecl GetBootMgrInfo()
 @ cdecl IsAcpiPresent()

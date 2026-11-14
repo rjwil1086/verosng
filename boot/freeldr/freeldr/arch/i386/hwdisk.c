@@ -3,6 +3,7 @@
  *
  *  Copyright (C) 2003, 2004  Eric Kohl
  *  Copyright (C) 2009  Hervé Poussineau
+ *  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -216,6 +217,65 @@ DiskRead(ULONG FileId, VOID* Buffer, ULONG N, ULONG* Count)
 }
 
 static ARC_STATUS
+DiskWrite(ULONG FileId, VOID* Buffer, ULONG N, ULONG* Count)
+{
+    DISKCONTEXT* Context = FsGetDeviceSpecific(FileId);
+    UCHAR* Ptr = (UCHAR*)Buffer;
+    ULONG Length, TotalSectors, MaxSectors, WriteSectors;
+    ULONGLONG SectorOffset;
+    BOOLEAN ret;
+
+    ASSERT(DiskReadBufferSize > 0);
+    if (MachVtbl.DiskWriteLogicalSectors == NULL)
+    {
+        *Count = 0;
+        return EACCES;
+    }
+
+    TotalSectors = (N + Context->SectorSize - 1) / Context->SectorSize;
+    MaxSectors = DiskReadBufferSize / Context->SectorSize;
+    SectorOffset = Context->SectorOffset + Context->SectorNumber;
+    ASSERT(MaxSectors > 0);
+    ret = TRUE;
+
+    while (TotalSectors)
+    {
+        WriteSectors = TotalSectors;
+        if (WriteSectors > MaxSectors)
+            WriteSectors = MaxSectors;
+        Length = WriteSectors * Context->SectorSize;
+        if (Length > N)
+            Length = N;
+
+        if (Length < WriteSectors * Context->SectorSize)
+        {
+            ret = MachDiskReadLogicalSectors(Context->DriveNumber,
+                                             SectorOffset,
+                                             WriteSectors,
+                                             DiskReadBuffer);
+            if (!ret)
+                break;
+        }
+        RtlCopyMemory(DiskReadBuffer, Ptr, Length);
+        ret = MachDiskWriteLogicalSectors(Context->DriveNumber,
+                                          SectorOffset,
+                                          WriteSectors,
+                                          DiskReadBuffer);
+        if (!ret)
+            break;
+
+        Ptr += Length;
+        N -= Length;
+        SectorOffset += WriteSectors;
+        TotalSectors -= WriteSectors;
+    }
+
+    *Count = (ULONG)((ULONG_PTR)Ptr - (ULONG_PTR)Buffer);
+    Context->SectorNumber = SectorOffset - Context->SectorOffset;
+    return (ret ? ESUCCESS : EIO);
+}
+
+static ARC_STATUS
 DiskSeek(ULONG FileId, LARGE_INTEGER* Position, SEEKMODE SeekMode)
 {
     DISKCONTEXT* Context = FsGetDeviceSpecific(FileId);
@@ -254,6 +314,8 @@ static const DEVVTBL DiskVtbl =
     DiskOpen,
     DiskRead,
     DiskSeek,
+    NULL,
+    DiskWrite,
 };
 
 

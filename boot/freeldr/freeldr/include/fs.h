@@ -29,6 +29,7 @@ typedef struct tagDEVVTBL
     ARC_READ Read;
     ARC_SEEK Seek;
     PCWSTR ServiceName;
+    ARC_WRITE Write;
 } DEVVTBL;
 
 #define MAX_FDS 60
@@ -41,6 +42,7 @@ ArcClose(
     _In_ ULONG FileId);
 
 ARC_STATUS ArcRead(ULONG FileId, VOID* Buffer, ULONG N, ULONG* Count);
+ARC_STATUS ArcWrite(ULONG FileId, VOID* Buffer, ULONG N, ULONG* Count);
 ARC_STATUS ArcSeek(ULONG FileId, LARGE_INTEGER* Position, SEEKMODE SeekMode);
 ARC_STATUS ArcGetFileInformation(ULONG FileId, FILEINFORMATION* Information);
 

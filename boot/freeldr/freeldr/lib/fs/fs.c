@@ -2,6 +2,7 @@
  *  FreeLoader
  *  Copyright (C) 1998-2003  Brian Palmer  <brianp@sginet.com>
  *  Copyright (C) 2008-2009  Hervé Poussineau  <hpoussin@reactos.org>
+ *  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -450,6 +451,15 @@ ARC_STATUS ArcRead(ULONG FileId, VOID* Buffer, ULONG N, ULONG* Count)
     if (!IS_VALID_FILEID(FileId))
         return EBADF;
     return FileData[FileId].FuncTable->Read(FileId, Buffer, N, Count);
+}
+
+ARC_STATUS ArcWrite(ULONG FileId, VOID* Buffer, ULONG N, ULONG* Count)
+{
+    if (!IS_VALID_FILEID(FileId))
+        return EBADF;
+    if (FileData[FileId].FuncTable->Write == NULL)
+        return EACCES;
+    return FileData[FileId].FuncTable->Write(FileId, Buffer, N, Count);
 }
 
 ARC_STATUS ArcSeek(ULONG FileId, LARGE_INTEGER* Position, SEEKMODE SeekMode)

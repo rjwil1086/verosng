@@ -1,6 +1,8 @@
 /*
  *  FreeLoader
  *
+ *  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
@@ -65,6 +67,7 @@ typedef struct tagMACHVTBL
 
     UCHAR (*GetFloppyCount)(VOID);
     BOOLEAN (*DiskReadLogicalSectors)(UCHAR DriveNumber, ULONGLONG SectorNumber, ULONG SectorCount, PVOID Buffer);
+    BOOLEAN (*DiskWriteLogicalSectors)(UCHAR DriveNumber, ULONGLONG SectorNumber, ULONG SectorCount, PVOID Buffer);
     BOOLEAN (*DiskGetDriveGeometry)(UCHAR DriveNumber, PGEOMETRY DriveGeometry);
     ULONG (*DiskGetCacheableBlockCount)(UCHAR DriveNumber);
 
@@ -119,6 +122,8 @@ VOID MachInit(const char *CmdLine);
     MachVtbl.GetFloppyCount()
 #define MachDiskReadLogicalSectors(Drive, Start, Count, Buf)    \
     MachVtbl.DiskReadLogicalSectors((Drive), (Start), (Count), (Buf))
+#define MachDiskWriteLogicalSectors(Drive, Start, Count, Buf)   \
+    MachVtbl.DiskWriteLogicalSectors((Drive), (Start), (Count), (Buf))
 #define MachDiskGetDriveGeometry(Drive, Geom)   \
     MachVtbl.DiskGetDriveGeometry((Drive), (Geom))
 #define MachDiskGetCacheableBlockCount(Drive)   \

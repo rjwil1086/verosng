@@ -1,6 +1,7 @@
 /*
  *  FreeLoader
  *  Copyright (C) 1998-2003  Brian Palmer  <brianp@sginet.com>
+ *  Copyright 2026 Ryan Wilson <ryan@verosnt.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -792,6 +793,143 @@ PcDiskReadLogicalSectors(
         TRACE("--> Using CHS\n");
         return PcDiskReadLogicalSectorsCHS(DriveNumber, DiskDrive, SectorNumber, SectorCount, Buffer);
     }
+}
+
+static BOOLEAN
+PcDiskWriteLogicalSectorsLBA(
+    IN UCHAR DriveNumber,
+    IN ULONGLONG SectorNumber,
+    IN ULONG SectorCount,
+    IN PVOID Buffer)
+{
+    PI386_DISK_ADDRESS_PACKET Packet = (PI386_DISK_ADDRESS_PACKET)BIOSCALLBUFFER;
+    REGS RegsIn, RegsOut;
+    ULONG RetryCount;
+
+    RtlZeroMemory(Packet, sizeof(*Packet));
+    Packet->PacketSize = sizeof(*Packet);
+    Packet->Reserved = 0;
+    Packet->TransferBufferOffset = ((ULONG_PTR)Buffer) & 0x0F;
+    Packet->TransferBufferSegment = (USHORT)(((ULONG_PTR)Buffer) >> 4);
+    Packet->LBAStartBlock = SectorNumber;
+
+    /*
+     * BIOS Int 13h, function 43h. AL = 0 writes without verify. The packet
+     * and registers match function 42h in PcDiskReadLogicalSectorsLBA.
+     * https://wiki.osdev.org/ATA_in_x86_RealMode_(BIOS)
+     */
+    RegsIn.b.ah = 0x43;
+    RegsIn.b.al = 0x00;
+    RegsIn.b.dl = DriveNumber;
+    RegsIn.x.ds = BIOSCALLBUFSEGMENT;
+    RegsIn.w.si = BIOSCALLBUFOFFSET;
+
+    for (RetryCount = 0; RetryCount < 3; ++RetryCount)
+    {
+        Packet->LBABlockCount = (USHORT)SectorCount;
+        ASSERT(Packet->LBABlockCount == SectorCount);
+        Int386(0x13, &RegsIn, &RegsOut);
+        if (INT386_SUCCESS(RegsOut))
+            return TRUE;
+        DiskResetController(DriveNumber);
+    }
+
+    DiskError("Disk Write Failed in LBA mode", RegsOut.b.ah);
+    ERR("Disk Write Failed in LBA mode: %x (%s) (DriveNumber: 0x%x SectorNumber: %I64u SectorCount: %u)\n",
+        RegsOut.b.ah, DiskGetErrorCodeString(RegsOut.b.ah),
+        DriveNumber, SectorNumber, SectorCount);
+    return FALSE;
+}
+
+static BOOLEAN
+PcDiskWriteLogicalSectorsCHS(
+    IN UCHAR DriveNumber,
+    IN PPC_DISK_DRIVE DiskDrive,
+    IN ULONGLONG SectorNumber,
+    IN ULONG SectorCount,
+    IN PVOID Buffer)
+{
+    UCHAR PhysicalSector;
+    UCHAR PhysicalHead;
+    ULONG PhysicalTrack;
+    GEOMETRY DriveGeometry;
+    ULONG NumberOfSectorsToWrite;
+    REGS RegsIn, RegsOut;
+    ULONG RetryCount;
+
+    DriveGeometry = DiskDrive->Geometry;
+    if (DriveGeometry.SectorsPerTrack == 0 || DriveGeometry.Heads == 0)
+        return FALSE;
+
+    while (SectorCount > 0)
+    {
+        PhysicalSector = 1 + (UCHAR)(SectorNumber % DriveGeometry.SectorsPerTrack);
+        PhysicalHead = (UCHAR)((SectorNumber / DriveGeometry.SectorsPerTrack) % DriveGeometry.Heads);
+        PhysicalTrack = (ULONG)((SectorNumber / DriveGeometry.SectorsPerTrack) / DriveGeometry.Heads);
+        if (PhysicalSector > 1)
+        {
+            NumberOfSectorsToWrite = min(SectorCount,
+                                         (DriveGeometry.SectorsPerTrack - (PhysicalSector - 1)));
+        }
+        else
+        {
+            NumberOfSectorsToWrite = min(SectorCount, DriveGeometry.SectorsPerTrack);
+        }
+        if ((PhysicalHead >= DriveGeometry.Heads) ||
+            (PhysicalTrack >= DriveGeometry.Cylinders) ||
+            ((NumberOfSectorsToWrite + PhysicalSector) > (DriveGeometry.SectorsPerTrack + 1)) ||
+            (PhysicalSector > DriveGeometry.SectorsPerTrack))
+        {
+            DiskError("Disk write exceeds drive geometry limits.", 0);
+            return FALSE;
+        }
+
+        /* AH=03h is the CHS write beside the AH=02h read in this file. */
+        RegsIn.b.ah = 0x03;
+        RegsIn.b.al = (UCHAR)NumberOfSectorsToWrite;
+        RegsIn.b.ch = (PhysicalTrack & 0xFF);
+        RegsIn.b.cl = (UCHAR)(PhysicalSector + ((PhysicalTrack & 0x300) >> 2));
+        RegsIn.b.dh = PhysicalHead;
+        RegsIn.b.dl = DriveNumber;
+        RegsIn.w.es = (USHORT)(((ULONG_PTR)Buffer) >> 4);
+        RegsIn.w.bx = ((ULONG_PTR)Buffer) & 0x0F;
+
+        for (RetryCount = 0; RetryCount < 3; ++RetryCount)
+        {
+            Int386(0x13, &RegsIn, &RegsOut);
+            if (INT386_SUCCESS(RegsOut))
+                break;
+            DiskResetController(DriveNumber);
+        }
+        if (RetryCount >= 3)
+        {
+            DiskError("Disk Write Failed in CHS mode, after retrying 3 times", RegsOut.b.ah);
+            return FALSE;
+        }
+
+        Buffer = (PVOID)((ULONG_PTR)Buffer + (NumberOfSectorsToWrite * DriveGeometry.BytesPerSector));
+        SectorCount -= NumberOfSectorsToWrite;
+        SectorNumber += NumberOfSectorsToWrite;
+    }
+    return TRUE;
+}
+
+BOOLEAN
+PcDiskWriteLogicalSectors(
+    IN UCHAR DriveNumber,
+    IN ULONGLONG SectorNumber,
+    IN ULONG SectorCount,
+    IN PVOID Buffer)
+{
+    PPC_DISK_DRIVE DiskDrive;
+
+    ASSERT(((ULONG_PTR)Buffer) <= 0xFFFFF);
+    DiskDrive = PcDiskDriveNumberToDrive(DriveNumber);
+    if (!DiskDrive)
+        return FALSE;
+    if ((DriveNumber >= 0x80) && DiskDrive->Int13ExtensionsSupported)
+        return PcDiskWriteLogicalSectorsLBA(DriveNumber, SectorNumber, SectorCount, Buffer);
+    return PcDiskWriteLogicalSectorsCHS(DriveNumber, DiskDrive, SectorNumber, SectorCount, Buffer);
 }
 
 #if defined(__i386__) || defined(_M_AMD64)
