@@ -95,6 +95,81 @@ UpdateStageClaimRemoved(PCSTR Root, PULONG Slot, PCHAR Hold, ULONG HoldSize)
     return FALSE;
 }
 
+/* A rename inside one directory removes every entry for that file index.
+ * Hop through sysupdate, then land on the aside name. */
+static BOOLEAN
+UpdateStageAside(PCSTR Root, PCSTR Source)
+{
+    CHAR Hop[260];
+    CHAR Aside[300];
+    CHAR List[260];
+    CHAR Line[320];
+
+    if (RtlStringCbPrintfA(Hop, sizeof(Hop),
+                           "%s\\System32\\config\\sysupdate\\aside-hop",
+                           Root) != STATUS_SUCCESS ||
+        RtlStringCbPrintfA(Aside, sizeof(Aside), "%s.update-aside", Source) != STATUS_SUCCESS)
+        return FALSE;
+    if (NtfsPathExists(UpdateStageDeviceId, Hop) &&
+        !NtfsDeleteFile(UpdateStageDeviceId, Hop))
+        return FALSE;
+    if (!NtfsMoveFile(UpdateStageDeviceId, Source, Hop))
+        return FALSE;
+    if (NtfsPathExists(UpdateStageDeviceId, Aside) &&
+        !NtfsDeleteFile(UpdateStageDeviceId, Aside))
+    {
+        NtfsMoveFile(UpdateStageDeviceId, Hop, Source);
+        return FALSE;
+    }
+    if (!NtfsMoveFile(UpdateStageDeviceId, Hop, Aside))
+    {
+        NtfsMoveFile(UpdateStageDeviceId, Hop, Source);
+        return FALSE;
+    }
+    if (RtlStringCbPrintfA(List, sizeof(List),
+                           "%s\\System32\\config\\sysupdate\\aside.list",
+                           Root) == STATUS_SUCCESS &&
+        RtlStringCbPrintfA(Line, sizeof(Line), "%s\n", Aside) == STATUS_SUCCESS)
+        NtfsStampFile(UpdateStageDeviceId, List, Line);
+    return TRUE;
+}
+
+static VOID
+UpdateStageSweepAsides(PCSTR BootPath)
+{
+    CHAR Root[260];
+    CHAR ListPath[260];
+    ULONG FileId;
+    CHAR Body[320];
+    ULONG ReadCount = 0;
+    PCHAR End;
+
+    if (!UpdateStageBootRoot(BootPath, Root, sizeof(Root)) ||
+        RtlStringCbPrintfA(ListPath, sizeof(ListPath),
+                           "%s\\System32\\config\\sysupdate\\aside.list",
+                           Root) != STATUS_SUCCESS)
+        return;
+    if (FsOpenFile("System32\\config\\sysupdate\\aside.list",
+                   BootPath, OpenReadOnly, &FileId) != ESUCCESS)
+        return;
+    if (UpdateStageDeviceId == 0)
+        UpdateStageDeviceId = FsGetDeviceId(FileId);
+    ArcRead(FileId, Body, sizeof(Body) - 1, &ReadCount);
+    ArcClose(FileId);
+    Body[ReadCount] = ANSI_NULL;
+    if (Body[0] != '\\')
+        return;
+    End = strchr(Body, '\n');
+    if (End != NULL)
+    {
+        if (End > Body && End[-1] == '\r')
+            End[-1] = ANSI_NULL;
+        *End = ANSI_NULL;
+    }
+    NtfsDeleteFile(UpdateStageDeviceId, Body);
+    NtfsStampFile(UpdateStageDeviceId, ListPath, "aside-spent-1\n");
+}
+
 static BOOLEAN
 UpdateStageVolumePath(PCSTR BootPath, PCSTR WindowsPath, PCHAR Out, ULONG OutSize)
 {
@@ -219,11 +294,50 @@ UpdateStageCanWrite(VOID)
 }
 
 static BOOLEAN
+UpdateStageParkStaged(UPDATE_STAGE_ENTRY *Entry)
+{
+    CHAR Hold[260];
+    PCSTR System;
+    PCSTR StagedSlash;
+    PCSTR DestSlash;
+    SIZE_T RootLen;
+
+    /* A rename inside one directory removes every entry for that file
+     * index. Park the new file under the stage directory first, as
+     * UpdateStageCommitReverse does for the undo file. */
+    StagedSlash = strrchr(Entry->Staged, '\\');
+    DestSlash = strrchr(Entry->Destination, '\\');
+    if (StagedSlash == NULL || DestSlash == NULL)
+        return FALSE;
+    if ((StagedSlash - Entry->Staged) != (DestSlash - Entry->Destination) ||
+        _strnicmp(Entry->Staged, Entry->Destination, StagedSlash - Entry->Staged) != 0)
+        return TRUE;
+    System = strstr(Entry->Destination, "\\System32\\");
+    if (System == NULL)
+        return FALSE;
+    RootLen = (SIZE_T)(System - Entry->Destination);
+    if (RootLen == 0 || RootLen >= sizeof(Hold))
+        return FALSE;
+    RtlCopyMemory(Hold, Entry->Destination, RootLen);
+    Hold[RootLen] = ANSI_NULL;
+    if (RtlStringCbCatA(Hold, sizeof(Hold),
+                        "\\System32\\config\\sysupdate\\stage\\swap-file") != STATUS_SUCCESS)
+        return FALSE;
+    if (NtfsPathExists(UpdateStageDeviceId, Hold) &&
+        !NtfsDeleteFile(UpdateStageDeviceId, Hold))
+        return FALSE;
+    if (!NtfsMoveFile(UpdateStageDeviceId, Entry->Staged, Hold))
+        return FALSE;
+    return RtlStringCbCopyA(Entry->Staged, sizeof(Entry->Staged), Hold) == STATUS_SUCCESS;
+}
+
+static BOOLEAN
 UpdateStageReplace(UPDATE_STAGE_ENTRY *Entry)
 {
     if (NtfsPathExists(UpdateStageDeviceId, Entry->Destination))
     {
-        if (!NtfsExchangeLinks(UpdateStageDeviceId, Entry->Staged, Entry->Destination))
+        if (!UpdateStageParkStaged(Entry) ||
+            !NtfsExchangeLinks(UpdateStageDeviceId, Entry->Staged, Entry->Destination))
             return FALSE;
         Entry->Exchanged = TRUE;
         return TRUE;
@@ -299,6 +413,7 @@ UpdateStageApply(PCSTR BootPath, PCSTR BootOptions)
         return TRUE;
     }
     UpdateStageDeviceId = FsGetDeviceId(fileId);
+    UpdateStageSweepAsides(BootPath);
     ArcRead(fileId, body, sizeof(body) - 1, &readCount);
     body[readCount] = ANSI_NULL;
     if (!UpdateStageSignatureOk(body))
@@ -423,15 +538,32 @@ UpdateStageApply(PCSTR BootPath, PCSTR BootOptions)
     {
         CHAR Hold[260];
 
+        /* A source that is already gone is a finished delete. The rollback
+           of C:\VerOS\a.txt stamped "fail 3" and dir of that path was
+           "File not found". Code 3 is the lookup miss in NtfsMoveFile. */
+        if (!NtfsPathExists(UpdateStageDeviceId, deletes[Index]))
+        {
+            removedSlot[Index] = UPDATE_STAGE_MAX;
+            continue;
+        }
         if (!UpdateStageClaimRemoved(deleteRoot,
                                     &removedSlot[Index],
                                     Hold,
                                     sizeof(Hold)) ||
             !NtfsMoveFile(UpdateStageDeviceId, deletes[Index], Hold))
         {
+            /* A delete that cannot reach a removed slot is parked under
+             * its aside name. The next boot removes that file. */
+            if (UpdateStageAside(deleteRoot, deletes[Index]))
+            {
+                removedSlot[Index] = UPDATE_STAGE_MAX;
+                continue;
+            }
             while (Index > 0)
             {
                 Index--;
+                if (removedSlot[Index] >= UPDATE_STAGE_MAX)
+                    continue;
                 if (UpdateStageRemovedPath(deleteRoot,
                                            removedSlot[Index],
                                            Hold,
@@ -460,6 +592,8 @@ UpdateStageApply(PCSTR BootPath, PCSTR BootOptions)
                 CHAR Hold[260];
 
                 deleteCount--;
+                if (removedSlot[deleteCount] >= UPDATE_STAGE_MAX)
+                    continue;
                 if (UpdateStageRemovedPath(deleteRoot,
                                            removedSlot[deleteCount],
                                            Hold,

@@ -1,0 +1,10 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why does a missing delete count as finished, a same-directory replace park through swap-file, and a blocked delete hop through aside-hop?",
+  "allowedInputs": [
+    "boot/freeldr/freeldr/ntldr/updatestage.c UpdateStageReplace already exchanges two paths, and UpdateStageUndo exchanges them again when a later line fails",
+    "Reported: a guest delete whose source was already gone stamped update-spent-1, and hold\\victim.txt was stage\\removed-0",
+    "Reported: a same-directory replace of msgina.dll left the old file at stage\\swap-file and the new file at msgina.dll. A later line did not fail, so that undo was not run",
+    "Reported: a delete that could not take a removed-N slot became stuck.txt.update-aside, and the next boot deleted it and stamped aside-spent-1"
+  ]
+}
