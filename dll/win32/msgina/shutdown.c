@@ -11,7 +11,7 @@
  */
 
 #include "msgina.h"
-#include <veros_shutdown.h>
+#include <update_shutdown.h>
 #include <wingdi.h>
 #include <windowsx.h>
 #include <commctrl.h>
@@ -1403,24 +1403,40 @@ ShellShutdownDialog(
         HKEY hookKey;
         WCHAR library[MAX_PATH];
         DWORD libraryBytes = sizeof(library);
-        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, VEROS_SHUTDOWN_HOOK_KEY, 0, KEY_QUERY_VALUE, &hookKey) == ERROR_SUCCESS)
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                          UPDATE_SHUTDOWN_HOOK_KEY,
+                          0,
+                          KEY_QUERY_VALUE,
+                          &hookKey) == ERROR_SUCCESS)
         {
-            if (RegQueryValueExW(hookKey, VEROS_SHUTDOWN_HOOK_VALUE, NULL, NULL, (LPBYTE)library, &libraryBytes) == ERROR_SUCCESS)
+            if (RegQueryValueExW(hookKey,
+                                 UPDATE_SHUTDOWN_HOOK_VALUE,
+                                 NULL,
+                                 NULL,
+                                 (LPBYTE)library,
+                                 &libraryBytes) == ERROR_SUCCESS)
             {
                 HMODULE hook = LoadLibraryW(library);
                 if (hook)
                 {
-                    PFN_VEROS_SHUTDOWN_QUERY query = (PFN_VEROS_SHUTDOWN_QUERY)GetProcAddress(hook, "VerosShutdownQuery");
-                    PFN_VEROS_SHUTDOWN_COMMIT commit = (PFN_VEROS_SHUTDOWN_COMMIT)GetProcAddress(hook, "VerosShutdownCommit");
-                    VEROS_SHUTDOWN_QUERY choices;
+                    PFN_UPDATE_SHUTDOWN_QUERY query;
+                    PFN_UPDATE_SHUTDOWN_COMMIT commit;
+
+                    query = (PFN_UPDATE_SHUTDOWN_QUERY)
+                        GetProcAddress(hook, "UpdateShutdownQuery");
+                    commit = (PFN_UPDATE_SHUTDOWN_COMMIT)
+                        GetProcAddress(hook, "UpdateShutdownCommit");
+                    UPDATE_SHUTDOWN_QUERY choices;
                     ZeroMemory(&choices, sizeof(choices));
                     if (query && commit && query(&choices) && choices.Count > 0)
                     {
                         UINT index;
-                        for (index = 0; index < choices.Count && index < VEROS_SHUTDOWN_MAX_CHOICES; index++)
+                        for (index = 0;
+                             index < choices.Count && index < UPDATE_SHUTDOWN_MAX_CHOICES;
+                             index++)
                         {
                             WCHAR text[400];
-                            VEROS_SHUTDOWN_COMMIT committed;
+                            UPDATE_SHUTDOWN_COMMIT committed;
                             StringCbCopyW(text, sizeof(text), choices.Choices[index].Label);
                             StringCbCatW(text, sizeof(text), L"\n");
                             StringCbCatW(text, sizeof(text), choices.Choices[index].Detail);

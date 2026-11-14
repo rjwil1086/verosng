@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "How does the shutdown dialog learn the update client's choices?",
+  "allowedInputs": [
+    "sdk/include/update_shutdown.h names the registry value the dialog loads.",
+    "Reported: the installed dialog still showed Sleep, Shut down, and Restart, because that msgina binary does not call the hook."
+  ]
+}
