@@ -909,20 +909,15 @@ function Get-CompatibilityTrend {
 function Merge-SdkSnapshot {
     param([string]$Path, $Groups, $Summary, [string]$Note, $Modules)
     if (-not (Test-Path -LiteralPath $Path)) { throw "Website snapshot was not found at $Path" }
-    $site = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
-    function Set-Field {
-        param($Object, [string]$Name, $Value)
-        if ($Object.PSObject.Properties.Name -contains $Name) { $Object.$Name = $Value; return }
-        $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
-    }
-    Set-Field $site "sdkTargets" @($Groups)
-    Set-Field $site "sdkTargetsSummary" @($Summary)
-    Set-Field $site "sdkTargetsNote" $Note
     $level = Get-SdkLevelPercent $Modules
-    Set-Field $site "sdkLevel" $level
-    $history = Join-Path (Split-Path -Parent $Path) "history.json"
-    Set-Field $site "compatibilityTrend" @(Get-CompatibilityTrend -Site $site -HistoryPath $history -SdkLevel $level)
-    Write-JsonFile $Path $site
+    $captured = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    . (Join-Path $PSScriptRoot "DashboardStore.ps1")
+    Write-DashboardSection -DashboardRoot (Split-Path -Parent $Path) -Name "sdk-targets" -CapturedAt $captured -Values ([ordered]@{
+        sdkTargets        = @($Groups)
+        sdkTargetsSummary = @($Summary)
+        sdkTargetsNote    = $Note
+        sdkLevel          = $level
+    })
 }
 
 $SdkNote = "Core kernel components (ntoskrnl, hal, and win32k) remain intentionally pinned to 0x0502 for stability while user-mode modules advance incrementally to 0x0A00 (NTDDI_WIN10_CO, Windows 10 version 21H2, build 19044) per Milestone 14."

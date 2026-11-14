@@ -1,0 +1,41 @@
+{
+  "capturedAt": "2026-11-08T00:21:28Z",
+  "section": "graphics",
+  "graphics": [
+    {
+      "label": "Software framebuffer",
+      "value": "Partial",
+      "tone": "warn"
+    },
+    {
+      "label": "DRM",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "Compositor",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "DXVK",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "D3D11",
+      "value": "Untested",
+      "tone": "warn"
+    },
+    {
+      "label": "D3D12",
+      "value": "Untested",
+      "tone": "warn"
+    },
+    {
+      "label": "WDDM",
+      "value": "Partial",
+      "tone": "warn"
+    }
+  ]
+}

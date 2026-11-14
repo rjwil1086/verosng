@@ -193,9 +193,17 @@ function Update-WebsiteAbi {
     $site.driverAbi = $(if ($driverMeasured) { [double]$driverPercent } else { $null })
     $site.notes = $notes
     $site.unmeasured = @($gaps)
-    $json = ConvertTo-PlainJson $site
-    $utf8 = New-Object System.Text.UTF8Encoding $false
-    [System.IO.File]::WriteAllText($WebsiteFile, $json + [Environment]::NewLine, $utf8)
+    $dashRoot = Split-Path -Parent $WebsiteFile
+    . (Join-Path $PSScriptRoot "..\dashboard\DashboardStore.ps1")
+    $captured = [string]$site.capturedAt
+    if (-not $captured) { $captured = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
+    Write-DashboardSection -DashboardRoot $dashRoot -Name "driver-abi" -CapturedAt $captured -Values ([ordered]@{
+        driverAbi = $site.driverAbi
+    })
+    Update-DashboardSection -DashboardRoot $dashRoot -Name "syscalls" -CapturedAt $captured -Values ([ordered]@{
+        notes      = [string]$site.notes
+        unmeasured = @($site.unmeasured)
+    })
     Write-Host "Updated $WebsiteFile kernelAbi=$($site.kernelAbi) driverAbi=$($site.driverAbi)"
     return $true
 }

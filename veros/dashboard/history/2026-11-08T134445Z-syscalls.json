@@ -1,0 +1,411 @@
+{
+  "capturedAt": "2026-11-08T13:44:45Z",
+  "section": "syscalls",
+  "overall": 87.1,
+  "syscalls": [
+    {
+      "name": "NtAdjustPrivilegesToken",
+      "compatibility": 100
+    },
+    {
+      "name": "NtAllocateVirtualMemory",
+      "compatibility": 100
+    },
+    {
+      "name": "NtAlpcConnectPort",
+      "compatibility": 0
+    },
+    {
+      "name": "NtAlpcSendWaitReceivePort",
+      "compatibility": 0
+    },
+    {
+      "name": "NtCancelIoFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCancelTimer",
+      "compatibility": 100
+    },
+    {
+      "name": "NtClose",
+      "compatibility": 100
+    },
+    {
+      "name": "NtConnectPort",
+      "compatibility": 100
+    },
+    {
+      "name": "NtContinue",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateDirectoryObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateEvent",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateIoCompletion",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateMutant",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreatePort",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateProcess",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateProcessEx",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateSection",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateSemaphore",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateSymbolicLinkObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateThread",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateThreadEx",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateTimer",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateUserProcess",
+      "compatibility": 100
+    },
+    {
+      "name": "NtCreateWorkerFactory",
+      "compatibility": 0
+    },
+    {
+      "name": "NtDelayExecution",
+      "compatibility": 100
+    },
+    {
+      "name": "NtDeleteKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtDeleteValueKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtDeviceIoControlFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtDuplicateObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtEnumerateKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtEnumerateValueKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtFlushBuffersFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtFlushKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtFreeVirtualMemory",
+      "compatibility": 100
+    },
+    {
+      "name": "NtFsControlFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtInitiatePowerAction",
+      "compatibility": 0
+    },
+    {
+      "name": "NtLockFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtMapViewOfSection",
+      "compatibility": 100
+    },
+    {
+      "name": "NtNotifyChangeDirectoryFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenDirectoryObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenEvent",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenFile",
+      "compatibility": 0
+    },
+    {
+      "name": "NtOpenIoCompletion",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenMutant",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenProcess",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenProcessToken",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenSection",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenSemaphore",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenSymbolicLinkObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenThread",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenThreadToken",
+      "compatibility": 100
+    },
+    {
+      "name": "NtOpenTimer",
+      "compatibility": 100
+    },
+    {
+      "name": "NtPowerInformation",
+      "compatibility": 0
+    },
+    {
+      "name": "NtProtectVirtualMemory",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryAttributesFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryDirectoryFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryFullAttributesFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryInformationFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryInformationProcess",
+      "compatibility": 0
+    },
+    {
+      "name": "NtQueryInformationThread",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryInformationToken",
+      "compatibility": 0
+    },
+    {
+      "name": "NtQueryKey",
+      "compatibility": 0
+    },
+    {
+      "name": "NtQueryObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQuerySection",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQuerySymbolicLinkObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQuerySystemInformation",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryValueKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryVirtualMemory",
+      "compatibility": 100
+    },
+    {
+      "name": "NtQueryVolumeInformationFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtRaiseException",
+      "compatibility": 100
+    },
+    {
+      "name": "NtReadFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtReadVirtualMemory",
+      "compatibility": 100
+    },
+    {
+      "name": "NtReleaseMutant",
+      "compatibility": 100
+    },
+    {
+      "name": "NtReleaseSemaphore",
+      "compatibility": 100
+    },
+    {
+      "name": "NtRemoveIoCompletion",
+      "compatibility": 100
+    },
+    {
+      "name": "NtReplyWaitReceivePort",
+      "compatibility": 0
+    },
+    {
+      "name": "NtRequestWaitReplyPort",
+      "compatibility": 0
+    },
+    {
+      "name": "NtResetEvent",
+      "compatibility": 100
+    },
+    {
+      "name": "NtResumeThread",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetEvent",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetInformationFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetInformationProcess",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetInformationThread",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetIoCompletion",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetSystemInformation",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetTimer",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSetValueKey",
+      "compatibility": 100
+    },
+    {
+      "name": "NtSuspendThread",
+      "compatibility": 100
+    },
+    {
+      "name": "NtTerminateProcess",
+      "compatibility": 100
+    },
+    {
+      "name": "NtTerminateThread",
+      "compatibility": 100
+    },
+    {
+      "name": "NtUnlockFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtUnmapViewOfSection",
+      "compatibility": 100
+    },
+    {
+      "name": "NtWaitForMultipleObjects",
+      "compatibility": 100
+    },
+    {
+      "name": "NtWaitForSingleObject",
+      "compatibility": 100
+    },
+    {
+      "name": "NtWaitForWorkViaWorkerFactory",
+      "compatibility": 0
+    },
+    {
+      "name": "NtWriteFile",
+      "compatibility": 100
+    },
+    {
+      "name": "NtWriteVirtualMemory",
+      "compatibility": 100
+    },
+    {
+      "name": "NtYieldExecution",
+      "compatibility": 0
+    }
+  ]
+}

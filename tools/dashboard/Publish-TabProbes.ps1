@@ -336,15 +336,12 @@ function Update-Regression {
     $change = $null
     $improvements = @()
     $regressions = @()
-    $same = $false
     if ($previous -and $previous.syscalls) {
         $older = @{}
         foreach ($row in @($previous.syscalls)) { $older[[string]$row.name] = $row.compatibility }
-        $same = $true
         foreach ($name in $current.Keys) {
-            if (-not $older.ContainsKey($name) -or $null -eq $older[$name]) { $same = $false; continue }
+            if (-not $older.ContainsKey($name) -or $null -eq $older[$name]) { continue }
             $delta = Get-RoundScore ($current[$name] - [double]$older[$name])
-            if ($delta -ne 0) { $same = $false }
             if ($delta -gt 0) { $improvements += [ordered]@{ name = $name; delta = $delta } }
             elseif ($delta -lt 0) { $regressions += [ordered]@{ name = $name; delta = $delta } }
         }
@@ -365,18 +362,6 @@ function Update-Regression {
         regressions     = @($regressions)
     }
     Set-SiteField $Site "regression" $regression
-    if (-not $same) {
-        $stored = @()
-        foreach ($name in ($current.Keys | Sort-Object)) {
-            $stored += [ordered]@{ name = $name; compatibility = (Get-RoundScore $current[$name]) }
-        }
-        $points += [ordered]@{
-            capturedAt = [string]$Site.capturedAt
-            overall    = $Site.overall
-            syscalls   = $stored
-        }
-        Write-JsonFile $Path @($points)
-    }
     return $Site
 }
 
@@ -626,6 +611,30 @@ if ($sections -contains "Traces" -and -not ($filled -contains "traceCorpus")) {
     $sentence += " Trace records were counted. A numeric syscall id was not given a name."
 }
 $site = Set-TabNote -Site $site -Sentence $sentence
-Write-JsonFile $WebsitePath $site
+. (Join-Path $PSScriptRoot "DashboardStore.ps1")
+$dashRoot = Split-Path -Parent $WebsitePath
+$captured = [string]$site.capturedAt
+if (-not $captured) { $captured = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
+if ($filled -contains "regression") {
+    Write-DashboardSection -DashboardRoot $dashRoot -Name "regression" -CapturedAt $captured -Values $site
+}
+if (($filled -contains "subsystems") -or ($filled -contains "task")) {
+    Write-DashboardSection -DashboardRoot $dashRoot -Name "areas" -CapturedAt $captured -Values $site
+}
+if (($filled -contains "traceWorkloads") -or ($filled -contains "traceCorpus")) {
+    Write-DashboardSection -DashboardRoot $dashRoot -Name "traces" -CapturedAt $captured -Values $site
+}
+if ($filled -contains "driverAbi") {
+    Write-DashboardSection -DashboardRoot $dashRoot -Name "driver-abi" -CapturedAt $captured -Values $site
+}
+if ($filled -contains "graphics") {
+    Write-DashboardSection -DashboardRoot $dashRoot -Name "graphics" -CapturedAt $captured -Values $site
+}
+if ($site.notes -or $site.unmeasured) {
+    Update-DashboardSection -DashboardRoot $dashRoot -Name "syscalls" -CapturedAt $captured -Values ([ordered]@{
+        notes      = [string]$site.notes
+        unmeasured = @($site.unmeasured)
+    })
+}
 Write-Host ("Updated $WebsitePath " + ($filled -join ", "))
 exit 0

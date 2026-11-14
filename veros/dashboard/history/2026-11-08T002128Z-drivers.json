@@ -1,0 +1,9 @@
+{
+  "capturedAt": "2026-11-08T00:21:28Z",
+  "section": "drivers",
+  "driversSummary": {
+    "working": 50,
+    "partial": 0,
+    "failing": 2
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "capturedAt": "2026-11-09T02:07:21Z",
+  "section": "areas",
+  "subsystems": [
+    {
+      "name": "Memory manager",
+      "score": 100
+    },
+    {
+      "name": "Filesystem",
+      "score": 94.1
+    },
+    {
+      "name": "Processes",
+      "score": 85.7
+    },
+    {
+      "name": "Threads",
+      "score": 75
+    },
+    {
+      "name": "Objects",
+      "score": 100
+    },
+    {
+      "name": "Registry",
+      "score": 90
+    },
+    {
+      "name": "Security",
+      "score": 75
+    },
+    {
+      "name": "Power",
+      "score": 0
+    },
+    {
+      "name": "IPC",
+      "score": 60
+    },
+    {
+      "name": "System",
+      "score": 100
+    }
+  ],
+  "highestImpact": "Power",
+  "task": {
+    "id": "NtPowerInformation",
+    "subsystem": "Power",
+    "functionName": "NtPowerInformation",
+    "mismatchCount": 1,
+    "affectedApplications": [
+      "amd64 syscall probe"
+    ],
+    "estimatedGain": 1,
+    "body": "NtPowerInformation returned STATUS_INVALID_PARAMETER on Windows 10 22H2 and STATUS_NOT_IMPLEMENTED on this boot."
+  }
+}

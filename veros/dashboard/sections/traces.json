@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-11-08T00:21:28Z",
+  "section": "traces",
+  "traceWorkloads": [
+    {
+      "name": "browser",
+      "records": 2785358
+    },
+    {
+      "name": "explorer",
+      "records": 2674211
+    },
+    {
+      "name": "notepad",
+      "records": 2302626
+    },
+    {
+      "name": "office",
+      "records": 2039909
+    }
+  ]
+}

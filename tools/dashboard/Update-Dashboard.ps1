@@ -424,7 +424,16 @@ if ($refreshApps -or $refreshDrivers) {
     if (-not (Test-Path -LiteralPath $WebsitePath)) { throw "Website snapshot was not found at $WebsitePath" }
     $site = Get-Content -LiteralPath $WebsitePath -Raw | ConvertFrom-Json
     $site = Update-HostSections -Site $site -Applications $refreshApps -Drivers $refreshDrivers -CatalogPath $AppCatalog -LogPath $DriverLog
-    Write-JsonFile $WebsitePath $site
+    . (Join-Path $PSScriptRoot "DashboardStore.ps1")
+    $dashRoot = Split-Path -Parent $WebsitePath
+    $captured = [string]$site.capturedAt
+    if (-not $captured) { $captured = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
+    if ($refreshApps) { Write-DashboardSection -DashboardRoot $dashRoot -Name "applications" -CapturedAt $captured -Values $site }
+    if ($refreshDrivers) { Write-DashboardSection -DashboardRoot $dashRoot -Name "drivers" -CapturedAt $captured -Values $site }
+    Update-DashboardSection -DashboardRoot $dashRoot -Name "syscalls" -CapturedAt $captured -Values ([ordered]@{
+        notes      = [string]$site.notes
+        unmeasured = @($site.unmeasured)
+    })
     $appText = "unchanged"
     $driverText = "unchanged"
     if ($refreshApps) { $appText = "$($site.applicationsSummary.working) working, $($site.applicationsSummary.partial) partial, $($site.applicationsSummary.failing) failing" }

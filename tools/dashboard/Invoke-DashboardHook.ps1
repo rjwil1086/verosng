@@ -121,6 +121,8 @@ if ($Stage) {
     $paths = @(
         "veros/dashboard/latest.json",
         "veros/dashboard/history.json",
+        "veros/dashboard/sections",
+        "veros/dashboard/history",
         "dashboard/data/snapshot.json",
         "dashboard/data/snapshot.js"
     )

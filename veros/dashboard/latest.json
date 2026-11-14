@@ -5,397 +5,6 @@
   "capturedAt": "2026-11-11T14:16:26Z",
   "target": "Win10 22H2",
   "overall": 87.1,
-  "kernelAbi": 95.2,
-  "kernelAbiDetail": {
-    "reference": 62,
-    "matched": 59,
-    "partial": 1,
-    "broken": 1,
-    "missing": 1,
-    "untested": 0,
-    "rule": "Exact token agreement between the Windows 10 22H2 kernel and the VerOS NT kernel. Untested names count as zero.",
-    "names": [
-      {
-        "name": "IoCallDriver",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "IoCompleteRequest",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoAllocateIrp",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoFreeIrp",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoBuildDeviceIoControlRequest",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoBuildSynchronousFsdRequest",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IofCallDriver",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "IofCompleteRequest",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoCreateDevice",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "IoDeleteDevice",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoCreateSymbolicLink",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "IoDeleteSymbolicLink",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "IoAttachDeviceToDeviceStack",
-        "status": "works",
-        "windows": "NULL",
-        "veros": "NULL"
-      },
-      {
-        "name": "IoDetachDevice",
-        "status": "works",
-        "windows": "SKIPPED",
-        "veros": "SKIPPED"
-      },
-      {
-        "name": "IoAllocateMdl",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoFreeMdl",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoBuildPartialMdl",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "MmProbeAndLockPages",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "MmUnlockPages",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "MmMapLockedPagesSpecifyCache",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "MmGetSystemRoutineAddress",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "KeWaitForSingleObject",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "KeSetEvent",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "KeInitializeEvent",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "ExAllocatePoolWithTag",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "ExFreePoolWithTag",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "ObReferenceObjectByHandle",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "ObfDereferenceObject",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "PsCreateSystemThread",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "PsTerminateSystemThread",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "ZwCreateFile",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "ZwReadFile",
-        "status": "works",
-        "windows": "0xC0000011",
-        "veros": "0xC0000011"
-      },
-      {
-        "name": "ZwWriteFile",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "ZwClose",
-        "status": "works",
-        "windows": "0xC0000008",
-        "veros": "0xC0000008"
-      },
-      {
-        "name": "ZwDeviceIoControlFile",
-        "status": "works",
-        "windows": "0xC0000010",
-        "veros": "0xC0000010"
-      },
-      {
-        "name": "RtlInitUnicodeString",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "DbgPrint",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "KeBugCheckEx",
-        "status": "works",
-        "windows": "PRESENT",
-        "veros": "PRESENT"
-      },
-      {
-        "name": "PoCallDriver",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "PoStartNextPowerIrp",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "PoRequestPowerIrp",
-        "status": "works",
-        "windows": "0x00000103",
-        "veros": "0x00000103"
-      },
-      {
-        "name": "IoGetDeviceProperty",
-        "status": "works",
-        "windows": "0xC0000010",
-        "veros": "0xC0000010"
-      },
-      {
-        "name": "IoRegisterDeviceInterface",
-        "status": "works",
-        "windows": "0xC0000010",
-        "veros": "0xC0000010"
-      },
-      {
-        "name": "IoSetDeviceInterfaceState",
-        "status": "broken",
-        "windows": "0x00000000",
-        "veros": "0xC000000D"
-      },
-      {
-        "name": "IoReportDetectedDevice",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "IoInvalidateDeviceRelations",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoInvalidateDeviceState",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoAllocateWorkItem",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoQueueWorkItem",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoFreeWorkItem",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "MmAllocateContiguousMemory",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "MmFreeContiguousMemory",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoMapTransfer",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "IoAllocateAdapterChannel",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "IoConnectInterrupt",
-        "status": "works",
-        "windows": "0xC000000D",
-        "veros": "0xC000000D"
-      },
-      {
-        "name": "IoDisconnectInterrupt",
-        "status": "works",
-        "windows": "SKIPPED",
-        "veros": "SKIPPED"
-      },
-      {
-        "name": "KeFlushIoBuffers",
-        "status": "missing",
-        "windows": "RETURNED",
-        "veros": "MISSING"
-      },
-      {
-        "name": "HalAllocateAdapterChannel",
-        "status": "works",
-        "windows": "0x00000000",
-        "veros": "0x00000000"
-      },
-      {
-        "name": "HalGetAdapter",
-        "status": "works",
-        "windows": "RETURNED",
-        "veros": "RETURNED"
-      },
-      {
-        "name": "HalTranslateBusAddress",
-        "status": "works",
-        "windows": "0x00000001",
-        "veros": "0x00000001"
-      },
-      {
-        "name": "HalGetInterruptVector",
-        "status": "partial",
-        "windows": "0x000000A0",
-        "veros": "0x00000090"
-      },
-      {
-        "name": "HalReturnToFirmware",
-        "status": "works",
-        "windows": "PRESENT",
-        "veros": "PRESENT"
-      }
-    ]
-  },
-  "lastBuild": null,
-  "northStar": {
-    "label": "amd64 probe syscalls",
-    "current": 87.1,
-    "lastWeek": null,
-    "lastMonth": null
-  },
   "syscallOverall": 87.1,
   "syscalls": [
     {
@@ -1186,33 +795,12 @@
       "count": 1
     }
   ],
-  "applicationsSummary": {
-    "working": null,
-    "partial": null,
-    "failing": null
+  "northStar": {
+    "label": "amd64 probe syscalls",
+    "current": 87.1,
+    "lastWeek": null,
+    "lastMonth": null
   },
-  "applications": null,
-  "driversSummary": {
-    "working": null,
-    "partial": null,
-    "failing": null
-  },
-  "driverGroups": null,
-  "regression": {
-    "previousLabel": "Previous snapshot",
-    "previousOverall": 87.1,
-    "currentBuild": null,
-    "currentOverall": 87.1,
-    "change": 0,
-    "improvements": [],
-    "regressions": []
-  },
-  "subsystems": null,
-  "highestImpact": null,
-  "traceCorpus": null,
-  "task": null,
-  "driverAbi": 50,
-  "graphics": null,
   "formula": [
     {
       "label": "Syscall compatibility",
@@ -1294,6 +882,680 @@
     {
       "section": "graphics",
       "reason": "The amd64 probe does not exercise the display stack."
+    }
+  ],
+  "lastBuild": null,
+  "kernelAbi": 95.2,
+  "kernelAbiDetail": {
+    "reference": 62,
+    "matched": 59,
+    "partial": 1,
+    "broken": 1,
+    "missing": 1,
+    "untested": 0,
+    "rule": "Exact token agreement between the Windows 10 22H2 kernel and the VerOS NT kernel. Untested names count as zero.",
+    "names": [
+      {
+        "name": "IoCallDriver",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoCompleteRequest",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoAllocateIrp",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoFreeIrp",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoBuildDeviceIoControlRequest",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoBuildSynchronousFsdRequest",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IofCallDriver",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IofCompleteRequest",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoCreateDevice",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoDeleteDevice",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoCreateSymbolicLink",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoDeleteSymbolicLink",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoAttachDeviceToDeviceStack",
+        "status": "works",
+        "windows": "NULL",
+        "veros": "NULL"
+      },
+      {
+        "name": "IoDetachDevice",
+        "status": "works",
+        "windows": "SKIPPED",
+        "veros": "SKIPPED"
+      },
+      {
+        "name": "IoAllocateMdl",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoFreeMdl",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoBuildPartialMdl",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "MmProbeAndLockPages",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "MmUnlockPages",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "MmMapLockedPagesSpecifyCache",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "MmGetSystemRoutineAddress",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "KeWaitForSingleObject",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "KeSetEvent",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "KeInitializeEvent",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "ExAllocatePoolWithTag",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "ExFreePoolWithTag",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "ObReferenceObjectByHandle",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "ObfDereferenceObject",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "PsCreateSystemThread",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "PsTerminateSystemThread",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "ZwCreateFile",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "ZwReadFile",
+        "status": "works",
+        "windows": "0xC0000011",
+        "veros": "0xC0000011"
+      },
+      {
+        "name": "ZwWriteFile",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "ZwClose",
+        "status": "works",
+        "windows": "0xC0000008",
+        "veros": "0xC0000008"
+      },
+      {
+        "name": "ZwDeviceIoControlFile",
+        "status": "works",
+        "windows": "0xC0000010",
+        "veros": "0xC0000010"
+      },
+      {
+        "name": "RtlInitUnicodeString",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "DbgPrint",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "KeBugCheckEx",
+        "status": "works",
+        "windows": "PRESENT",
+        "veros": "PRESENT"
+      },
+      {
+        "name": "PoCallDriver",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "PoStartNextPowerIrp",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "PoRequestPowerIrp",
+        "status": "works",
+        "windows": "0x00000103",
+        "veros": "0x00000103"
+      },
+      {
+        "name": "IoGetDeviceProperty",
+        "status": "works",
+        "windows": "0xC0000010",
+        "veros": "0xC0000010"
+      },
+      {
+        "name": "IoRegisterDeviceInterface",
+        "status": "works",
+        "windows": "0xC0000010",
+        "veros": "0xC0000010"
+      },
+      {
+        "name": "IoSetDeviceInterfaceState",
+        "status": "broken",
+        "windows": "0x00000000",
+        "veros": "0xC000000D"
+      },
+      {
+        "name": "IoReportDetectedDevice",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoInvalidateDeviceRelations",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoInvalidateDeviceState",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoAllocateWorkItem",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoQueueWorkItem",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoFreeWorkItem",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "MmAllocateContiguousMemory",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "MmFreeContiguousMemory",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoMapTransfer",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "IoAllocateAdapterChannel",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "IoConnectInterrupt",
+        "status": "works",
+        "windows": "0xC000000D",
+        "veros": "0xC000000D"
+      },
+      {
+        "name": "IoDisconnectInterrupt",
+        "status": "works",
+        "windows": "SKIPPED",
+        "veros": "SKIPPED"
+      },
+      {
+        "name": "KeFlushIoBuffers",
+        "status": "missing",
+        "windows": "RETURNED",
+        "veros": "MISSING"
+      },
+      {
+        "name": "HalAllocateAdapterChannel",
+        "status": "works",
+        "windows": "0x00000000",
+        "veros": "0x00000000"
+      },
+      {
+        "name": "HalGetAdapter",
+        "status": "works",
+        "windows": "RETURNED",
+        "veros": "RETURNED"
+      },
+      {
+        "name": "HalTranslateBusAddress",
+        "status": "works",
+        "windows": "0x00000001",
+        "veros": "0x00000001"
+      },
+      {
+        "name": "HalGetInterruptVector",
+        "status": "partial",
+        "windows": "0x000000A0",
+        "veros": "0x00000090"
+      },
+      {
+        "name": "HalReturnToFirmware",
+        "status": "works",
+        "windows": "PRESENT",
+        "veros": "PRESENT"
+      }
+    ]
+  },
+  "applicationsSummary": {
+    "working": 4,
+    "partial": 0,
+    "failing": 0
+  },
+  "applications": [
+    {
+      "slug": "7-zip",
+      "name": "7-Zip",
+      "status": "working"
+    },
+    {
+      "slug": "git",
+      "name": "git",
+      "status": "working"
+    },
+    {
+      "slug": "notepad",
+      "name": "notepad++",
+      "status": "working"
+    },
+    {
+      "slug": "python",
+      "name": "python",
+      "status": "working"
+    }
+  ],
+  "driversSummary": {
+    "working": 50,
+    "partial": 0,
+    "failing": 2
+  },
+  "driverGroups": [
+    {
+      "category": "Drivers",
+      "drivers": [
+        {
+          "name": "acpi",
+          "status": "working"
+        },
+        {
+          "name": "Afd",
+          "status": "working"
+        },
+        {
+          "name": "atapi",
+          "status": "working"
+        },
+        {
+          "name": "Beep",
+          "status": "working"
+        },
+        {
+          "name": "Blue",
+          "status": "working"
+        },
+        {
+          "name": "bochsmp",
+          "status": "working"
+        },
+        {
+          "name": "BusLogic",
+          "status": "failing"
+        },
+        {
+          "name": "cdrom",
+          "status": "working"
+        },
+        {
+          "name": "Disk",
+          "status": "working"
+        },
+        {
+          "name": "e1000",
+          "status": "working"
+        },
+        {
+          "name": "fdc",
+          "status": "working"
+        },
+        {
+          "name": "Floppy",
+          "status": "working"
+        },
+        {
+          "name": "hidusb",
+          "status": "working"
+        },
+        {
+          "name": "i8042prt",
+          "status": "working"
+        },
+        {
+          "name": "isapnp",
+          "status": "working"
+        },
+        {
+          "name": "kbdclass",
+          "status": "working"
+        },
+        {
+          "name": "ksecdd",
+          "status": "working"
+        },
+        {
+          "name": "mouclass",
+          "status": "working"
+        },
+        {
+          "name": "mouhid",
+          "status": "working"
+        },
+        {
+          "name": "MountMgr",
+          "status": "working"
+        },
+        {
+          "name": "Ndis",
+          "status": "working"
+        },
+        {
+          "name": "Ndisuio",
+          "status": "working"
+        },
+        {
+          "name": "Netio",
+          "status": "working"
+        },
+        {
+          "name": "NMIDebug",
+          "status": "working"
+        },
+        {
+          "name": "Null",
+          "status": "working"
+        },
+        {
+          "name": "parport",
+          "status": "working"
+        },
+        {
+          "name": "partmgr",
+          "status": "working"
+        },
+        {
+          "name": "Pci",
+          "status": "working"
+        },
+        {
+          "name": "pciide",
+          "status": "working"
+        },
+        {
+          "name": "RamDisk",
+          "status": "working"
+        },
+        {
+          "name": "sacdrv",
+          "status": "failing"
+        },
+        {
+          "name": "serial",
+          "status": "working"
+        },
+        {
+          "name": "storahci",
+          "status": "working"
+        },
+        {
+          "name": "swenum",
+          "status": "working"
+        },
+        {
+          "name": "Tcpip",
+          "status": "working"
+        },
+        {
+          "name": "ucx01000",
+          "status": "working"
+        },
+        {
+          "name": "usbccgp",
+          "status": "working"
+        },
+        {
+          "name": "usbehci",
+          "status": "working"
+        },
+        {
+          "name": "usbhub",
+          "status": "working"
+        },
+        {
+          "name": "usbhub3",
+          "status": "working"
+        },
+        {
+          "name": "usbohci",
+          "status": "working"
+        },
+        {
+          "name": "usbstor",
+          "status": "working"
+        },
+        {
+          "name": "usbuhci",
+          "status": "working"
+        },
+        {
+          "name": "usbxhci",
+          "status": "working"
+        },
+        {
+          "name": "vga",
+          "status": "working"
+        },
+        {
+          "name": "VgaSave",
+          "status": "working"
+        },
+        {
+          "name": "Wdf01000",
+          "status": "working"
+        }
+      ]
+    },
+    {
+      "category": "File systems",
+      "drivers": [
+        {
+          "name": "Cdfs",
+          "status": "working"
+        },
+        {
+          "name": "Fs_Rec",
+          "status": "working"
+        },
+        {
+          "name": "Msfs",
+          "status": "working"
+        },
+        {
+          "name": "Mup",
+          "status": "working"
+        },
+        {
+          "name": "Npfs",
+          "status": "working"
+        }
+      ]
+    }
+  ],
+  "graphics": [
+    {
+      "label": "Software framebuffer",
+      "value": "Working",
+      "tone": "ok"
+    },
+    {
+      "label": "DRM",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "Compositor",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "DXVK",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "D3D11",
+      "value": "Missing",
+      "tone": "bad"
+    },
+    {
+      "label": "D3D12",
+      "value": "Untested",
+      "tone": "warn"
+    },
+    {
+      "label": "WDDM",
+      "value": "Partial",
+      "tone": "warn"
     }
   ],
   "sdkTargets": [
@@ -8817,19 +9079,116 @@
   ],
   "sdkTargetsNote": "Core kernel components (ntoskrnl, hal, and win32k) remain intentionally pinned to 0x0502 for stability while user-mode modules advance incrementally to 0x0A00 (NTDDI_WIN10_CO, Windows 10 version 21H2, build 19044) per Milestone 14.",
   "sdkLevel": 3.5,
+  "driverAbi": 50,
+  "traceCorpus": null,
+  "traceWorkloads": [
+    {
+      "name": "browser",
+      "records": 2785358
+    },
+    {
+      "name": "explorer",
+      "records": 2674211
+    },
+    {
+      "name": "notepad",
+      "records": 2302626
+    },
+    {
+      "name": "office",
+      "records": 2039909
+    }
+  ],
+  "subsystems": [
+    {
+      "name": "Memory manager",
+      "score": 100
+    },
+    {
+      "name": "Filesystem",
+      "score": 94.1
+    },
+    {
+      "name": "Processes",
+      "score": 85.7
+    },
+    {
+      "name": "Threads",
+      "score": 75
+    },
+    {
+      "name": "Objects",
+      "score": 100
+    },
+    {
+      "name": "Registry",
+      "score": 90
+    },
+    {
+      "name": "Security",
+      "score": 75
+    },
+    {
+      "name": "Power",
+      "score": 0
+    },
+    {
+      "name": "IPC",
+      "score": 60
+    },
+    {
+      "name": "System",
+      "score": 100
+    }
+  ],
+  "highestImpact": "Power",
+  "task": {
+    "id": "NtPowerInformation",
+    "subsystem": "Power",
+    "functionName": "NtPowerInformation",
+    "mismatchCount": 1,
+    "affectedApplications": [
+      "amd64 syscall probe"
+    ],
+    "estimatedGain": 1,
+    "body": "NtPowerInformation returned STATUS_INVALID_PARAMETER on Windows 10 22H2 and STATUS_NOT_IMPLEMENTED on this boot."
+  },
+  "regression": {
+    "previousLabel": "Previous snapshot",
+    "previousOverall": 87.1,
+    "currentBuild": null,
+    "currentOverall": 87.1,
+    "change": 0,
+    "improvements": [],
+    "regressions": []
+  },
   "compatibilityTrend": [
     {
-      "at": "2026-11-08T00:21:28Z",
+      "at": "2026-11-07T17:34:14Z",
       "kernelAbi": null,
-      "syscall": 87.1,
       "graphics": null,
-      "sdkLevel": null
+      "sdkLevel": null,
+      "syscall": 78.2
+    },
+    {
+      "at": "2026-11-08T22:33:05Z",
+      "sdkLevel": null,
+      "kernelAbi": 24.2,
+      "graphics": 25,
+      "syscall": 87.1
+    },
+    {
+      "at": "2026-11-09T02:07:21Z",
+      "sdkLevel": null,
+      "syscall": 87.1,
+      "kernelAbi": 95.2,
+      "graphics": 25
     },
     {
       "at": "2026-11-11T14:16:26Z",
-      "kernelAbi": 95.2,
-      "syscall": 87.1,
       "graphics": null,
+      "syscall": 87.1,
+      "kernelAbi": 95.2,
       "sdkLevel": 3.5
     }
   ]

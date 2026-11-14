@@ -1,0 +1,229 @@
+{
+  "capturedAt": "2026-11-09T02:07:21Z",
+  "section": "drivers",
+  "driversSummary": {
+    "working": 50,
+    "partial": 0,
+    "failing": 2
+  },
+  "driverGroups": [
+    {
+      "category": "Drivers",
+      "drivers": [
+        {
+          "name": "acpi",
+          "status": "working"
+        },
+        {
+          "name": "Afd",
+          "status": "working"
+        },
+        {
+          "name": "atapi",
+          "status": "working"
+        },
+        {
+          "name": "Beep",
+          "status": "working"
+        },
+        {
+          "name": "Blue",
+          "status": "working"
+        },
+        {
+          "name": "bochsmp",
+          "status": "working"
+        },
+        {
+          "name": "BusLogic",
+          "status": "failing"
+        },
+        {
+          "name": "cdrom",
+          "status": "working"
+        },
+        {
+          "name": "Disk",
+          "status": "working"
+        },
+        {
+          "name": "e1000",
+          "status": "working"
+        },
+        {
+          "name": "fdc",
+          "status": "working"
+        },
+        {
+          "name": "Floppy",
+          "status": "working"
+        },
+        {
+          "name": "hidusb",
+          "status": "working"
+        },
+        {
+          "name": "i8042prt",
+          "status": "working"
+        },
+        {
+          "name": "isapnp",
+          "status": "working"
+        },
+        {
+          "name": "kbdclass",
+          "status": "working"
+        },
+        {
+          "name": "ksecdd",
+          "status": "working"
+        },
+        {
+          "name": "mouclass",
+          "status": "working"
+        },
+        {
+          "name": "mouhid",
+          "status": "working"
+        },
+        {
+          "name": "MountMgr",
+          "status": "working"
+        },
+        {
+          "name": "Ndis",
+          "status": "working"
+        },
+        {
+          "name": "Ndisuio",
+          "status": "working"
+        },
+        {
+          "name": "Netio",
+          "status": "working"
+        },
+        {
+          "name": "NMIDebug",
+          "status": "working"
+        },
+        {
+          "name": "Null",
+          "status": "working"
+        },
+        {
+          "name": "parport",
+          "status": "working"
+        },
+        {
+          "name": "partmgr",
+          "status": "working"
+        },
+        {
+          "name": "Pci",
+          "status": "working"
+        },
+        {
+          "name": "pciide",
+          "status": "working"
+        },
+        {
+          "name": "RamDisk",
+          "status": "working"
+        },
+        {
+          "name": "sacdrv",
+          "status": "failing"
+        },
+        {
+          "name": "serial",
+          "status": "working"
+        },
+        {
+          "name": "storahci",
+          "status": "working"
+        },
+        {
+          "name": "swenum",
+          "status": "working"
+        },
+        {
+          "name": "Tcpip",
+          "status": "working"
+        },
+        {
+          "name": "ucx01000",
+          "status": "working"
+        },
+        {
+          "name": "usbccgp",
+          "status": "working"
+        },
+        {
+          "name": "usbehci",
+          "status": "working"
+        },
+        {
+          "name": "usbhub",
+          "status": "working"
+        },
+        {
+          "name": "usbhub3",
+          "status": "working"
+        },
+        {
+          "name": "usbohci",
+          "status": "working"
+        },
+        {
+          "name": "usbstor",
+          "status": "working"
+        },
+        {
+          "name": "usbuhci",
+          "status": "working"
+        },
+        {
+          "name": "usbxhci",
+          "status": "working"
+        },
+        {
+          "name": "vga",
+          "status": "working"
+        },
+        {
+          "name": "VgaSave",
+          "status": "working"
+        },
+        {
+          "name": "Wdf01000",
+          "status": "working"
+        }
+      ]
+    },
+    {
+      "category": "File systems",
+      "drivers": [
+        {
+          "name": "Cdfs",
+          "status": "working"
+        },
+        {
+          "name": "Fs_Rec",
+          "status": "working"
+        },
+        {
+          "name": "Msfs",
+          "status": "working"
+        },
+        {
+          "name": "Mup",
+          "status": "working"
+        },
+        {
+          "name": "Npfs",
+          "status": "working"
+        }
+      ]
+    }
+  ]
+}

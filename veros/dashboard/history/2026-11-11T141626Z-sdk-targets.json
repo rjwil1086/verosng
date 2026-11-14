@@ -1,0 +1,50 @@
+{
+  "capturedAt": "2026-11-11T14:16:26Z",
+  "section": "sdk-targets",
+  "sdkLevel": 3.5,
+  "sdkTargetsSummary": [
+    {
+      "win32Winnt": "0x0502",
+      "ntddiVersion": "0x05020100",
+      "label": "Windows Server 2003 SP1",
+      "count": 731
+    },
+    {
+      "win32Winnt": "0x0502",
+      "ntddiVersion": "0x05020400",
+      "label": "Windows Server 2003 SP4",
+      "count": 4
+    },
+    {
+      "win32Winnt": "0x0600",
+      "ntddiVersion": "0x06000000",
+      "label": "Windows Vista",
+      "count": 65
+    },
+    {
+      "win32Winnt": "0x0601",
+      "ntddiVersion": "0x06010000",
+      "label": "Windows 7",
+      "count": 13
+    },
+    {
+      "win32Winnt": "0x0602",
+      "ntddiVersion": "0x06020000",
+      "label": "Windows 8",
+      "count": 4
+    },
+    {
+      "win32Winnt": "0x0603",
+      "ntddiVersion": "0x06030000",
+      "label": "Windows 8.1",
+      "count": 9
+    },
+    {
+      "win32Winnt": "0x0A00",
+      "ntddiVersion": "0x0A00000B",
+      "label": "Windows 10.0.19044 / 21H2 / Cobalt",
+      "count": 1
+    }
+  ],
+  "sdkTargetsNote": "Core kernel components (ntoskrnl, hal, and win32k) remain intentionally pinned to 0x0502 for stability while user-mode modules advance incrementally to 0x0A00 (NTDDI_WIN10_CO, Windows 10 version 21H2, build 19044) per Milestone 14."
+}

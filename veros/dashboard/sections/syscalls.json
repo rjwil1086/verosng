@@ -1,0 +1,888 @@
+{
+  "capturedAt": "2026-11-11T14:16:26Z",
+  "section": "syscalls",
+  "overall": 87.1,
+  "syscallOverall": 87.1,
+  "syscalls": [
+    {
+      "name": "NtClose",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtReadFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtWriteFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtDeviceIoControlFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateUserProcess",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateThreadEx",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtAllocateVirtualMemory",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtFreeVirtualMemory",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtMapViewOfSection",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtUnmapViewOfSection",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryInformationProcess",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtQueryInformationThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetInformationProcess",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetInformationThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenProcess",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtTerminateProcess",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtTerminateThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateProcess",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateProcessEx",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtResumeThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSuspendThread",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtWaitForSingleObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtWaitForMultipleObjects",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtDelayExecution",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQuerySystemInformation",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetSystemInformation",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenFile",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtQueryInformationFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetInformationFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryDirectoryFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryAttributesFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryFullAttributesFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtFlushBuffersFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateSection",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenSection",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQuerySection",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtProtectVirtualMemory",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryVirtualMemory",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtReadVirtualMemory",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtWriteVirtualMemory",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateEvent",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenEvent",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetEvent",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtResetEvent",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateMutant",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenMutant",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtReleaseMutant",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateSemaphore",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenSemaphore",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtReleaseSemaphore",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateTimer",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenTimer",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetTimer",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCancelTimer",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtDeleteKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtEnumerateKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtEnumerateValueKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryKey",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtQueryValueKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetValueKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtDeleteValueKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtFlushKey",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryVolumeInformationFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtDuplicateObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreateSymbolicLinkObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenSymbolicLinkObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQuerySymbolicLinkObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtFsControlFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtNotifyChangeDirectoryFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtLockFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtUnlockFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCancelIoFile",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtYieldExecution",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtContinue",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtRaiseException",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenProcessToken",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenThreadToken",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtAdjustPrivilegesToken",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtQueryInformationToken",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtCreateDirectoryObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenDirectoryObject",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtCreatePort",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtConnectPort",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtRequestWaitReplyPort",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtReplyWaitReceivePort",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtCreateIoCompletion",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtOpenIoCompletion",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtSetIoCompletion",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtRemoveIoCompletion",
+      "compatibility": 100,
+      "windowsCalls": 1,
+      "matches": 1,
+      "mismatches": 0
+    },
+    {
+      "name": "NtPowerInformation",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtInitiatePowerAction",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtAlpcConnectPort",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtAlpcSendWaitReceivePort",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtCreateWorkerFactory",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    },
+    {
+      "name": "NtWaitForWorkViaWorkerFactory",
+      "compatibility": 0,
+      "windowsCalls": 1,
+      "matches": 0,
+      "mismatches": 1
+    }
+  ],
+  "spdx": "GPL-2.0-or-later",
+  "schemaVersion": 1,
+  "sample": false,
+  "target": "Win10 22H2",
+  "divergences": [
+    {
+      "syscall": "NtQueryInformationProcess",
+      "windows": "STATUS_SUCCESS",
+      "veros": "STATUS_INFO_LENGTH_MISMATCH",
+      "count": 1
+    },
+    {
+      "syscall": "NtOpenFile",
+      "windows": "STATUS_ACCESS_DENIED",
+      "veros": "0xC0000005",
+      "count": 1
+    },
+    {
+      "syscall": "NtQueryKey",
+      "windows": "0xC0000005",
+      "veros": "STATUS_INVALID_HANDLE",
+      "count": 1
+    },
+    {
+      "syscall": "NtYieldExecution",
+      "windows": "STATUS_SUCCESS",
+      "veros": "0x40000024",
+      "count": 1
+    },
+    {
+      "syscall": "NtQueryInformationToken",
+      "windows": "0xC0000005",
+      "veros": "0xC0000003",
+      "count": 1
+    },
+    {
+      "syscall": "NtRequestWaitReplyPort",
+      "windows": "STATUS_INVALID_HANDLE",
+      "veros": "0xC0000005",
+      "count": 1
+    },
+    {
+      "syscall": "NtReplyWaitReceivePort",
+      "windows": "0xC0000005",
+      "veros": "STATUS_INVALID_HANDLE",
+      "count": 1
+    },
+    {
+      "syscall": "NtPowerInformation",
+      "windows": "STATUS_INVALID_PARAMETER",
+      "veros": "STATUS_NOT_IMPLEMENTED",
+      "count": 1
+    },
+    {
+      "syscall": "NtInitiatePowerAction",
+      "windows": "0xC0000061",
+      "veros": "STATUS_NOT_IMPLEMENTED",
+      "count": 1
+    },
+    {
+      "syscall": "NtAlpcConnectPort",
+      "windows": "0xC0000005",
+      "veros": "missing",
+      "count": 1
+    },
+    {
+      "syscall": "NtAlpcSendWaitReceivePort",
+      "windows": "STATUS_INVALID_HANDLE",
+      "veros": "missing",
+      "count": 1
+    },
+    {
+      "syscall": "NtCreateWorkerFactory",
+      "windows": "0xC0000005",
+      "veros": "missing",
+      "count": 1
+    },
+    {
+      "syscall": "NtWaitForWorkViaWorkerFactory",
+      "windows": "STATUS_INVALID_PARAMETER",
+      "veros": "missing",
+      "count": 1
+    }
+  ],
+  "northStar": {
+    "label": "amd64 probe syscalls",
+    "current": 87.1,
+    "lastWeek": null,
+    "lastMonth": null
+  },
+  "formula": [
+    {
+      "label": "Syscall compatibility",
+      "weight": 40
+    },
+    {
+      "label": "Application compatibility",
+      "weight": 25
+    },
+    {
+      "label": "Driver compatibility",
+      "weight": 20
+    },
+    {
+      "label": "Graphics compatibility",
+      "weight": 10
+    },
+    {
+      "label": "Test pass rate",
+      "weight": 5
+    }
+  ],
+  "lastHarnessRun": {
+    "guest": "ReactOS amd64",
+    "harness": "syscall-diff",
+    "bootResult": "Windows probe DIFF END OK; VerOS NT probe DIFF END OK",
+    "crashCount": 0
+  },
+  "notes": "overall and syscallOverall are exact status matches from the amd64 probe: 88 of 101 names. 7 names failed on both sides with different codes, 2 disagreed on success, and 4 were missing on the amd64 side. A different error is a mismatch. 0 names were not reached. lastBuild, applications, drivers, subsystems, traceCorpus, task, and graphics were not measured by this probe. northStar.lastWeek and northStar.lastMonth come only from an older snapshot in this file. The formula weights are the website contract and were not applied. driverAbi is 50 from the driver ABI category (1 export returned or bugchecked; log output/abi-boot/abi.jsonl). Untested rows stay out of that percent.",
+  "unmeasured": [
+    {
+      "section": "lastBuild",
+      "reason": "The guest banner is a date and commit, not a monotonic build number."
+    },
+    {
+      "section": "northStar.lastWeek",
+      "reason": "No snapshot in this file is at least seven days old."
+    },
+    {
+      "section": "northStar.lastMonth",
+      "reason": "No snapshot in this file is at least thirty days old."
+    },
+    {
+      "section": "applicationsSummary",
+      "reason": "The amd64 probe does not launch applications."
+    },
+    {
+      "section": "applications",
+      "reason": "The amd64 probe does not launch applications."
+    },
+    {
+      "section": "driversSummary",
+      "reason": "The amd64 probe does not load drivers."
+    },
+    {
+      "section": "driverGroups",
+      "reason": "The amd64 probe does not load drivers."
+    },
+    {
+      "section": "regression.currentBuild",
+      "reason": "The guest banner is a date and commit, not a monotonic build number."
+    },
+    {
+      "section": "subsystems",
+      "reason": "The probe does not score subsystems."
+    },
+    {
+      "section": "highestImpact",
+      "reason": "The probe does not score subsystems."
+    },
+    {
+      "section": "traceCorpus",
+      "reason": "The probe records one call per name, not a usage share."
+    },
+    {
+      "section": "task",
+      "reason": "Each mismatch is one probe call. No estimated gain was measured."
+    },
+    {
+      "section": "graphics",
+      "reason": "The amd64 probe does not exercise the display stack."
+    }
+  ]
+}

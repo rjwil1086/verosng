@@ -1,0 +1,31 @@
+{
+  "capturedAt": "2026-11-09T02:07:21Z",
+  "section": "applications",
+  "applicationsSummary": {
+    "working": 4,
+    "partial": 0,
+    "failing": 0
+  },
+  "applications": [
+    {
+      "slug": "7-zip",
+      "name": "7-Zip",
+      "status": "working"
+    },
+    {
+      "slug": "git",
+      "name": "git",
+      "status": "working"
+    },
+    {
+      "slug": "notepad",
+      "name": "notepad++",
+      "status": "working"
+    },
+    {
+      "slug": "python",
+      "name": "python",
+      "status": "working"
+    }
+  ]
+}
