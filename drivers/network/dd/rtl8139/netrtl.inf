@@ -25,9 +25,12 @@ DefaultDestDir = 12
 %Realtek8139.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_10EC&DEV_8139
 %Realtek8139.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_10EC&DEV_8138
 
-; setupapi may index the manufacturer section name instead of the DDInstall
-; section. NetCfg needs Characteristics on that name so PnP can finish.
+; setupapi indexes the decorated models section. The device lines have to
+; live there, or the hardware ID never reaches the compatible-driver list.
+; NetCfg still reads Characteristics from this same section.
 [RealtekMfg.NT]
+%Realtek8139.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_10EC&DEV_8139
+%Realtek8139.DeviceDesc% = RTL8139_Inst.ndi,PCI\VEN_10EC&DEV_8138
 Characteristics = 0x4 ; NCF_PHYSICAL
 BusType = 5 ; PCIBus
 AddReg = RTL8139_AddReg.NT

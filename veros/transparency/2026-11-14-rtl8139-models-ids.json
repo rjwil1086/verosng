@@ -1,0 +1,15 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Why did the live CD return DevInstallW error 259 for the RTL8139 and then load the driver after the models section gained the hardware ID?",
+  "allowedInputs": [
+    "dll/win32/setupapi/driver.c IndexOneInf calls SetupDiGetActualSectionToInstallW on the manufacturer section, and BuildCompatListFromInfIndex returns success without scanning other INF files when that section has no hardware ID",
+    "drivers/network/dd/rtl8139/netrtl.inf already listed PCI\\VEN_10EC&DEV_8139 and PCI\\VEN_10EC&DEV_8138 under RealtekMfg",
+    "output/live-presence-boot.log DriverEntry returned 0x00000000 for rtl8139.sys, and ipconfig then showed 10.0.2.15",
+    "Reported: the previous live CD serial log, overwritten when QEMU reopened that file, showed DevInstallW error 259 for PCI\\VEN_10EC&DEV_8139 before this INF change"
+  ],
+  "harness": {
+    "guest": "VerOS NT live CD",
+    "name": "guest-presence",
+    "traceOrReplayId": "output/live-presence-boot.log"
+  }
+}
