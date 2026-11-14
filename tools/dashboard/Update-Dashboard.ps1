@@ -7,7 +7,7 @@
 
 param(
     [string]$SourceRoot = "",
-    [ValidateSet("All", "Syscalls", "KernelAbi", "Applications", "Drivers", "Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "Graphics")]
+    [ValidateSet("All", "Syscalls", "KernelAbi", "Applications", "Drivers", "Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "Graphics", "SdkTargets")]
     [string[]]$Section = @("All"),
     [string]$WebsitePath = "",
     [string]$DriverLog = "",
@@ -76,7 +76,7 @@ function Write-JsonFile {
 function Get-SectionSet {
     param([string[]]$Names)
     if ($Names -contains "All") {
-        return @("Syscalls", "KernelAbi", "Applications", "Drivers", "Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "Graphics")
+        return @("Syscalls", "KernelAbi", "Applications", "Drivers", "Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "Graphics", "SdkTargets")
     }
     return @($Names | Select-Object -Unique)
 }
@@ -442,5 +442,10 @@ foreach ($name in @("Regressions", "HeatMap", "Traces", "Tasks", "DriverAbi", "G
 $tabUnique = @($tabSections | Select-Object -Unique)
 if ($tabUnique.Count -gt 0) {
     & (Join-Path $PSScriptRoot "Publish-TabProbes.ps1") -SourceRoot $SourceRoot -WebsitePath $WebsitePath -Section $tabUnique
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+
+if ($sections -contains "SdkTargets") {
+    & (Join-Path $PSScriptRoot "Publish-SdkTargets.ps1") -SourceRoot $SourceRoot -WebsitePath $WebsitePath
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

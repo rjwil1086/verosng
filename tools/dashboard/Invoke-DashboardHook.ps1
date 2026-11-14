@@ -87,6 +87,10 @@ $graphicsPaths = @(
     "compat/catalog/graphics.json",
     "compat/reference/win10-22h2-graphics.txt"
 )
+$sdkPaths = @(
+    "sdk/include/psdk/sdkddkver.h",
+    "tools/dashboard/Publish-SdkTargets.ps1"
+)
 
 $sections = New-Object System.Collections.Generic.List[string]
 foreach ($path in $staged) {
@@ -98,6 +102,13 @@ foreach ($path in $staged) {
     if (Test-PathHit $path $tracePaths) { $sections.Add("Traces") | Out-Null }
     if (Test-PathHit $path $driverAbiPaths) { $sections.Add("DriverAbi") | Out-Null }
     if (Test-PathHit $path $graphicsPaths) { $sections.Add("Graphics") | Out-Null }
+    if (Test-PathHit $path $sdkPaths) { $sections.Add("SdkTargets") | Out-Null }
+    $sdkName = ($path -replace '\\', '/').TrimStart('./')
+    if ($sdkName.EndsWith("/CMakeLists.txt", [System.StringComparison]::OrdinalIgnoreCase) -or
+        $sdkName.EndsWith(".cmake", [System.StringComparison]::OrdinalIgnoreCase) -or
+        $sdkName.Equals("CMakeLists.txt", [System.StringComparison]::OrdinalIgnoreCase)) {
+        $sections.Add("SdkTargets") | Out-Null
+    }
 }
 $unique = @($sections | Select-Object -Unique)
 if ($unique.Count -eq 0) { exit 0 }
