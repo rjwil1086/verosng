@@ -1538,15 +1538,15 @@ RemovePackageStore(
 {
     static const PCWSTR Tails[] =
     {
-        L"\\System32\\config\\verosupd\\pkgdb.db",
-        L"\\System32\\config\\verosupd\\pkgdb.db-journal",
-        L"\\System32\\config\\verosupd\\pkgdb.db-wal",
-        L"\\System32\\config\\verosupd\\pkgdb.db-shm"
+        L"\\System32\\config\\sysupdate\\pkgdb.db",
+        L"\\System32\\config\\sysupdate\\pkgdb.db-journal",
+        L"\\System32\\config\\sysupdate\\pkgdb.db-wal",
+        L"\\System32\\config\\sysupdate\\pkgdb.db-shm"
     };
     static const PCWSTR Trees[] =
     {
-        L"\\System32\\config\\verosupd\\chunks",
-        L"\\System32\\config\\verosupd\\RollbackStore"
+        L"\\System32\\config\\sysupdate\\chunks",
+        L"\\System32\\config\\sysupdate\\RollbackStore"
     };
     ULONG Index;
     WCHAR Path[512];
@@ -1577,11 +1577,11 @@ SchedulePackageReset(
     _In_ PUSETUP_DATA pSetupData)
 {
     static const WCHAR Command[] =
-        L"cmd.exe /c set VEROSUPD_STATE=%SystemRoot%\\System32\\config\\verosupd& "
-        L"set VEROSUPD_SCAN=%SystemRoot%\\System32& "
-        L"set VEROSUPD_ROOT=%SystemRoot%& "
+        L"cmd.exe /c set SYSUPDATE_STATE=%SystemRoot%\\System32\\config\\sysupdate& "
+        L"set SYSUPDATE_SCAN=%SystemRoot%\\System32& "
+        L"set SYSUPDATE_ROOT=%SystemRoot%& "
         L"verosupd.exe /resetdb";
-    static const PCWSTR Mount = L"\\Registry\\Machine\\VerosUpgradeReset";
+    static const PCWSTR Mount = L"\\Registry\\Machine\\SystemUpgradeReset";
     NTSTATUS Status;
     BOOLEAN WasEnabled = FALSE;
     HANDLE Key;
@@ -1616,7 +1616,8 @@ SchedulePackageReset(
     }
 
     RtlInitUnicodeString(&KeyName,
-                         L"\\Registry\\Machine\\VerosUpgradeReset\\Microsoft\\Windows\\CurrentVersion\\RunOnce");
+                         L"\\Registry\\Machine\\SystemUpgradeReset\\"
+                         L"Microsoft\\Windows\\CurrentVersion\\RunOnce");
     InitializeObjectAttributes(&Attributes, &KeyName, OBJ_CASE_INSENSITIVE, NULL, NULL);
     Status = CreateNestedKey(&Key, KEY_SET_VALUE, &Attributes, REG_OPTION_NON_VOLATILE);
     if (NT_SUCCESS(Status))
@@ -1648,7 +1649,7 @@ ResetUpgradePackageDatabase(
         return;
 
     /*
-     * verosupd.exe /resetdb rebuilds the baseline. This session is native
+     * The update client's reset rebuilds the baseline. This session is native
      * text-mode setup, so the installed boot runs that command. The stale
      * database is removed here, before that boot can roll the old files back.
      */

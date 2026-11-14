@@ -92,14 +92,14 @@ UpgradeCreateProgress(
 
     ZeroMemory(Progress, sizeof(*Progress));
     ZeroMemory(&Class, sizeof(Class));
-    if (!GetClassInfoW(Instance, L"VerosUpgradeProgress", &Class))
+    if (!GetClassInfoW(Instance, L"SystemUpgradeProgress", &Class))
     {
         Class.style = CS_HREDRAW | CS_VREDRAW;
         Class.lpfnWndProc = DefWindowProcW;
         Class.hInstance = Instance;
         Class.hCursor = LoadCursor(NULL, IDC_ARROW);
         Class.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
-        Class.lpszClassName = L"VerosUpgradeProgress";
+        Class.lpszClassName = L"SystemUpgradeProgress";
         if (RegisterClassW(&Class) == 0)
             return FALSE;
     }
@@ -119,7 +119,7 @@ UpgradeCreateProgress(
     X = (GetSystemMetrics(SM_CXSCREEN) - (Bounds.right - Bounds.left)) / 2;
     Y = (GetSystemMetrics(SM_CYSCREEN) - (Bounds.bottom - Bounds.top)) / 2;
     Progress->Window = CreateWindowExW(WS_EX_TOPMOST | WS_EX_DLGMODALFRAME,
-                                       L"VerosUpgradeProgress",
+                                       L"SystemUpgradeProgress",
                                        Title,
                                        WS_POPUP | WS_CAPTION | WS_VISIBLE | WS_CLIPCHILDREN,
                                        X,
@@ -597,7 +597,8 @@ ResetPackageDatabase(
     BOOL Started = FALSE;
 
     if (FAILED(StringCchPrintfW(Exe, ARRAYSIZE(Exe), L"%s\\System32\\verosupd.exe", InstallDir)) ||
-        FAILED(StringCchPrintfW(State, ARRAYSIZE(State), L"%s\\System32\\config\\verosupd", InstallDir)) ||
+        FAILED(StringCchPrintfW(State, ARRAYSIZE(State),
+                                L"%s\\System32\\config\\sysupdate", InstallDir)) ||
         FAILED(StringCchPrintfW(Scan, ARRAYSIZE(Scan), L"%s\\System32", InstallDir)))
     {
         return;
@@ -605,9 +606,9 @@ ResetPackageDatabase(
 
     if (GetFileAttributesW(Exe) != INVALID_FILE_ATTRIBUTES)
     {
-        SetEnvironmentVariableW(L"VEROSUPD_STATE", State);
-        SetEnvironmentVariableW(L"VEROSUPD_SCAN", Scan);
-        SetEnvironmentVariableW(L"VEROSUPD_ROOT", InstallDir);
+        SetEnvironmentVariableW(L"SYSUPDATE_STATE", State);
+        SetEnvironmentVariableW(L"SYSUPDATE_SCAN", Scan);
+        SetEnvironmentVariableW(L"SYSUPDATE_ROOT", InstallDir);
         ZeroMemory(&Start, sizeof(Start));
         Start.cb = sizeof(Start);
         ZeroMemory(&Process, sizeof(Process));

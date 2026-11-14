@@ -3358,8 +3358,8 @@ FileCopyPage(PINPUT_RECORD Ir)
 
     /*
      * The copied files no longer match pkgdb.db. Text-mode setup cannot
-     * host verosupd.exe, so the database is removed now and the installed
-     * boot runs verosupd.exe /resetdb when that program is present.
+     * host the update client, so the database is removed now and the
+     * installed boot runs its reset when that program is present.
      */
     ResetUpgradePackageDatabase(&USetupData);
 
