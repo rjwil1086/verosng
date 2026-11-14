@@ -200,14 +200,25 @@ function Sync-UpdaterClient {
     $digest = ([BitConverter]::ToString($payload.Hash)).Replace("-", "").ToLower()
     $key = $env:PUBLISH_API_KEY
     if (-not $key) {
+        $publish = ""
+        $license = ""
         $envFile = Join-Path (Split-Path $ClientRoot -Parent) ".env"
         foreach ($line in Get-Content $envFile) {
-            if ($line -like "PUBLISH_API_KEY=*") { $key = $line.Substring(16); break }
+            if ($line -like "PUBLISH_API_KEY=*") { $publish = $line.Substring(16).Trim() }
+            if ($line -like "LICENSE_API_KEY=*") { $license = $line.Substring(16).Trim() }
         }
+        if ($publish) { $key = $publish } else { $key = $license }
+    }
+    if (-not $key) {
+        Write-Warning "The updater payload was built but not uploaded. No publish API key is set."
+        return
     }
     $body = @{ channel = $Track; version = 0; sha256 = $digest; enabled = $true } | ConvertTo-Json
     try {
         $response = Invoke-RestMethod -Method Post -Uri "$PublishUrl/v1/updater" -Headers @{ "x-api-key" = $key } -ContentType "application/json" -Body $body
+        if ($null -eq $response -or $null -eq $response.version) {
+            throw "The updater publish returned no version."
+        }
         @{ hash = $hash; version = [int]$response.version } | ConvertTo-Json | Set-Content $stampPath -Encoding ascii
     } catch {
         Write-Warning "The updater payload was built but not uploaded. The boot CD will still include it. $($_.Exception.Message)"
