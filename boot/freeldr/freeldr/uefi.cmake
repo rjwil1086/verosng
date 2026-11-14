@@ -66,7 +66,7 @@ list(APPEND FREELDR_NTLDR_SOURCE
     ntldr/registry.c
     ntldr/setupldr.c
     ntldr/winldr.c
-    ntldr/verosstage.c
+    ntldr/updatestage.c
     ntldr/wlmemory.c
     ntldr/wlregistry.c)
 

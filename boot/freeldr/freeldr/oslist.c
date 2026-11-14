@@ -53,7 +53,7 @@ static PCSTR CopyString(PCSTR Source)
     return Dest;
 }
 
-static ULONG VerosAppendRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity);
+static ULONG AppendUpdateRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity);
 
 OperatingSystemItem*
 InitOperatingSystemList(
@@ -300,7 +300,7 @@ InitOperatingSystemList(
               // i, SettingName, Items[i].SectionId, Items[i].LoadIdentifier);
     }
 
-    Count = VerosAppendRollback(Items, Count, Count + 1);
+    Count = AppendUpdateRollback(Items, Count, Count + 1);
 
     /* Return success */
     *OperatingSystemCount = Count;
@@ -309,7 +309,7 @@ InitOperatingSystemList(
 }
 
 static ULONG
-VerosAppendRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity)
+AppendUpdateRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity)
 {
     ULONG FileId;
     CHAR Body[256];
@@ -322,7 +322,7 @@ VerosAppendRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity)
     CHAR Title[64];
     ULONG_PTR SectionId;
 
-    if (Count == 0 || ArcOpen("veros.revs", OpenReadOnly, &FileId) != ESUCCESS)
+    if (Count == 0 || ArcOpen("update.revs", OpenReadOnly, &FileId) != ESUCCESS)
     {
         return Count;
     }
@@ -362,8 +362,8 @@ VerosAppendRollback(OperatingSystemItem *Items, ULONG Count, ULONG Capacity)
         {
             continue;
         }
-        RtlStringCbPrintfA(Section, sizeof(Section), "VerosRollback%lu", Slot);
-        RtlStringCbPrintfA(Options, sizeof(Options), "VEROSROLLBACK=%lu", Slot);
+        RtlStringCbPrintfA(Section, sizeof(Section), "UpdateRollback%lu", Slot);
+        RtlStringCbPrintfA(Options, sizeof(Options), "UPDATEROLLBACK=%lu", Slot);
         RtlStringCbPrintfA(Title, sizeof(Title), "Roll back to build %lu", Build);
         if (!IniAddSection(Section, &SectionId))
         {

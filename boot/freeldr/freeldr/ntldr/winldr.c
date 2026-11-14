@@ -26,7 +26,7 @@ ULONG ArcGetDiskCount(VOID);
 PARC_DISK_SIGNATURE_EX ArcGetDiskInfo(ULONG Index);
 
 BOOLEAN IsAcpiPresent(VOID);
-BOOLEAN VerosStageApply(PCSTR BootPath, PCSTR BootOptions);
+BOOLEAN UpdateStageApply(PCSTR BootPath, PCSTR BootOptions);
 
 extern HEADLESS_LOADER_BLOCK LoaderRedirectionInformation;
 extern BOOLEAN WinLdrTerminalConnected;
@@ -1444,7 +1444,7 @@ LoadAndBootWindowsCommon(
     PeLdrImportDllLoadCallback = NtLdrImportDllLoadCallback;
 
     /* Move staged update files onto their real names before the kernel is loaded. */
-    VerosStageApply(BootPath, BootOptions);
+    UpdateStageApply(BootPath, BootOptions);
 
     /* Load the operating system core: the Kernel, the HAL and the Kernel Debugger Transport DLL */
     Success = LoadWindowsCore(OperatingSystemVersion,

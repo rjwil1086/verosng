@@ -1,0 +1,8 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which manifest does the loader apply, and how does a failed update return to the previous build?",
+  "allowedInputs": [
+    "boot/freeldr/freeldr/ntldr/updatestage.c looks for the marker update-stage-1 and writes update-spent-1 when the pass finishes.",
+    "Reported: the guest manifest that applied began with update-stage-1, and the successful pass left update-spent-1."
+  ]
+}
