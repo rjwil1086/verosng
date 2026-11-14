@@ -3117,11 +3117,11 @@
         {
           "name": "kernelbase_static",
           "path": "dll/win32/kernelbase/wine/CMakeLists.txt",
-          "win32Winnt": "0x0A01",
-          "ntddiVersion": "0x0A010000",
+          "win32Winnt": "0x0A00",
+          "ntddiVersion": "0x0A00000B",
           "winntFrom": "cmake",
-          "ntddiFrom": "header",
-          "label": "Unlisted"
+          "ntddiFrom": "cmake",
+          "label": "Windows 10.0.19044 / 21H2 / Cobalt"
         },
         {
           "name": "l3codeca.acm",
@@ -8809,13 +8809,13 @@
       "count": 9
     },
     {
-      "win32Winnt": "0x0A01",
-      "ntddiVersion": "0x0A010000",
-      "label": "Unlisted",
+      "win32Winnt": "0x0A00",
+      "ntddiVersion": "0x0A00000B",
+      "label": "Windows 10.0.19044 / 21H2 / Cobalt",
       "count": 1
     }
   ],
-  "sdkTargetsNote": "Core kernel components (ntoskrnl, hal, and win32k) remain intentionally pinned to 0x0502 for stability while user-mode modules advance incrementally to 0x0A00 (NTDDI_WIN10_CO / 19045) per Milestone 14.",
+  "sdkTargetsNote": "Core kernel components (ntoskrnl, hal, and win32k) remain intentionally pinned to 0x0502 for stability while user-mode modules advance incrementally to 0x0A00 (NTDDI_WIN10_CO, Windows 10 version 21H2, build 19044) per Milestone 14.",
   "sdkLevel": 3.5,
   "compatibilityTrend": [
     {

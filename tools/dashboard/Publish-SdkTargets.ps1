@@ -925,7 +925,7 @@ function Merge-SdkSnapshot {
     Write-JsonFile $Path $site
 }
 
-$SdkNote = "Core kernel components (ntoskrnl, hal, and win32k) remain intentionally pinned to 0x0502 for stability while user-mode modules advance incrementally to 0x0A00 (NTDDI_WIN10_CO / 19045) per Milestone 14."
+$SdkNote = "Core kernel components (ntoskrnl, hal, and win32k) remain intentionally pinned to 0x0502 for stability while user-mode modules advance incrementally to 0x0A00 (NTDDI_WIN10_CO, Windows 10 version 21H2, build 19044) per Milestone 14."
 
 function Invoke-SdkSelfTest {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("sdk-targets-" + [guid]::NewGuid().ToString("N"))

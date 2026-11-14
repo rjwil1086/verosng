@@ -1,0 +1,9 @@
+{
+  "spdx": "GPL-2.0-or-later",
+  "question": "Which defined SDK constant replaces kernelbase_static's 0xA01 target?",
+  "allowedInputs": [
+    "sdk/include/psdk/sdkddkver.h NTDDI_WIN10_CO is 0x0A00000B, commented Windows 10.0.19044 / 21H2 / Cobalt, and _WIN32_WINNT_WIN10 is 0x0A00",
+    "dll/win32/kernelbase/wine/CMakeLists.txt previously set _WIN32_WINNT and WINVER to 0xA01",
+    "https://learn.microsoft.com/en-us/windows/win32/winprog/using-the-windows-headers NTDDI_WIN10_CO (0x0A00000B) is Windows 10, version 21H2"
+  ]
+}

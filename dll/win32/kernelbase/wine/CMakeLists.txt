@@ -1,4 +1,4 @@
-add_definitions(-D_WIN32_WINNT=0xA01 -DWINVER=0xA01)
+add_definitions(-D_WIN32_WINNT=0x0A00 -DWINVER=0x0A00 -DNTDDI_VERSION=0x0A00000B)
 
 add_definitions(
     -D__WINESRC__
